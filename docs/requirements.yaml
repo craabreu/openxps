@@ -1,9 +1,11 @@
 name: docs
 channels:
+  - conda-forge
 dependencies:
     # Base depends
   - python
   - pip
+  - sphinxcontrib-bibtex
   - openmm
 
 
