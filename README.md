@@ -4,7 +4,7 @@ Extended Phase-Space Methods with OpenMM
 [//]: # (Badges)
 [![License](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 [![GitHub Actions Build Status](https://github.com/craabreu/openxps/workflows/CI/badge.svg)](https://github.com/craabreu/openxps/actions?query=workflow%3ACI)
-[![codecov](https://codecov.io/gh/craabreu/openxps/branch/master/graph/badge.svg)](https://codecov.io/gh/craabreu/openxps/branch/master)
+[![codecov](https://codecov.io/gh/craabreu/openxps/branch/main/graph/badge.svg)](https://codecov.io/gh/craabreu/openxps/branch/main)
 [![Documentation Status](https://readthedocs.org/projects/openxps/badge/?style=flat)](https://readthedocs.org/projects/openxps)
 
 ## Documentation
