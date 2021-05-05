@@ -4,7 +4,8 @@ Extended Phase-Space Methods for Free Energy Calculation with OpenMM
 """
 
 # Add imports here
-from .openxps import *
+from .openxps import *  # noqa: F401, F403
+from .testmodels import *  # noqa: F401, F403
 
 # Handle versioneer
 from ._version import get_versions

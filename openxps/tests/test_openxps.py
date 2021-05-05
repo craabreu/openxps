@@ -3,9 +3,10 @@ Unit and regression test for the openxps package.
 """
 
 # Import package, test suite, and other packages as needed
-import openxps
-import pytest
+# import openxps
+# import pytest
 import sys
+
 
 def test_openxps_imported():
     """Sample test, will always pass so long as import statement worked"""
