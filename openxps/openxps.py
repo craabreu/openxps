@@ -47,20 +47,28 @@ class CollectiveVariable:
             An OpenMM Force_ object whose energy function is used to evaluate this collective
             variable.
 
+    Keyword Arguments
+    -----------------
+        unit : unit.Unit, default=None
+            The unity of measurement of the collective variable. If this is `None`, then a
+            numerical value is returned based on the OpenMM default units.
+
     Example
     -------
         >>> import openxps
         >>> from simtk import openmm, unit
-        >>> cv = openxps.CollectiveVariable('psi', openmm.CustomTorsionForce('theta'))
+        >>> dihedral_angle = openmm.CustomTorsionForce('theta')
+        >>> cv = openxps.CollectiveVariable('psi', dihedral_angle, unit.radians)
         >>> cv.force.addTorsion(0, 1, 2, 3, [])
         0
 
     """
-    def __init__(self, id, force):
+    def __init__(self, id, force, unit=None):
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid variable identifier')
         self.id = id
         self.force = force
+        self.unit = unit
 
     def __repr__(self):
         return f'{self.id}: {self.force.__class__.__name__}'
@@ -77,10 +85,10 @@ class CollectiveVariable:
         context.setPositions(positions)
         return context
 
-    def evaluate(self, system, positions, cv_unit=None):
+    def evaluate(self, system, positions):
         """
-        Computes the value of the collective variable for a given system and a given set of particle
-        coordinates.
+        Computes the value of the collective variable for a given system and a given set of
+        particle coordinates.
 
         Parameters
         ----------
@@ -89,12 +97,6 @@ class CollectiveVariable:
             positions : list of openmm.Vec3
                 A list whose size equals the number of particles in the system and which contains
                 the coordinates of these particles.
-
-        Keyword Args
-        ------------
-            cv_unit : unit.Unit, default=None
-                The unity of measurement of the collective variable. If this is `None`, then a
-                numerical value is returned based on the OpenMM default units.
 
         Returns
         -------
@@ -105,20 +107,20 @@ class CollectiveVariable:
             >>> import openxps
             >>> from simtk import unit
             >>> model = openxps.AlanineDipeptideModel()
-            >>> model.phi.evaluate(model.system, model.positions, cv_unit=unit.degrees)
-            Quantity(value=180.0, unit=degree)
-            >>> model.psi.evaluate(model.system, model.positions, cv_unit=unit.degrees)
-            Quantity(value=180.0, unit=degree)
+            >>> model.phi.evaluate(model.system, model.positions)
+            Quantity(value=3.141592653589793, unit=radian)
+            >>> model.psi.evaluate(model.system, model.positions)
+            Quantity(value=3.141592653589793, unit=radian)
 
         """
         context = self._create_context(system, positions)
         energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy()
         value = energy.value_in_unit(unit.kilojoules_per_mole)
-        if cv_unit is not None:
-            value *= cv_unit/_standardized(1*cv_unit)
+        if self.unit is not None:
+            value *= self.unit/_standardized(1*self.unit)
         return value
 
-    def effective_mass(self, system, positions, cv_unit=None):
+    def effective_mass(self, system, positions):
         """
         Computes the effective mass of the collective variable for a given system and a given set of
         particle coordinates.
@@ -139,12 +141,6 @@ class CollectiveVariable:
                 A list whose size equals the number of particles in the system and which contains
                 the coordinates of these particles.
 
-        Keyword Args
-        ------------
-            cv_unit : unit.Unit, default=None
-                The unity of measurement of the collective variable. If this is `None`, then a
-                numerical value is returned based on the OpenMM default units.
-
         Returns
         -------
             float or unit.Quantity
@@ -154,9 +150,9 @@ class CollectiveVariable:
             >>> import openxps
             >>> from simtk import unit
             >>> model = openxps.AlanineDipeptideModel()
-            >>> model.phi.effective_mass(model.system, model.positions, cv_unit=unit.radians)
+            >>> model.phi.effective_mass(model.system, model.positions)
             Quantity(value=0.0479588726559707, unit=nanometer**2*dalton/(radian**2))
-            >>> model.psi.effective_mass(model.system, model.positions, cv_unit=unit.radians)
+            >>> model.psi.effective_mass(model.system, model.positions)
             Quantity(value=0.05115582071188152, unit=nanometer**2*dalton/(radian**2))
 
         """
@@ -164,7 +160,7 @@ class CollectiveVariable:
         forces = _standardized(context.getState(getForces=True, groups={1}).getForces(asNumpy=True))
         denom = sum(f.dot(f)/_standardized(system.getParticleMass(i)) for i, f in enumerate(forces))
         effective_mass = 1.0/float(denom)
-        if cv_unit is not None:
-            factor = _standardized(1*cv_unit)**2
-            effective_mass *= factor*unit.dalton*(unit.nanometers/cv_unit)**2
+        if self.unit is not None:
+            factor = _standardized(1*self.unit)**2
+            effective_mass *= factor*unit.dalton*(unit.nanometers/self.unit)**2
         return effective_mass

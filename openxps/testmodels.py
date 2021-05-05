@@ -87,8 +87,8 @@ class AlanineDipeptideModel:
         )
         atoms = [(a.name, a.residue.name) for a in self.topology.atoms()]
         phi_atoms = [('C', 'ACE'), ('N', 'ALA'), ('CA', 'ALA'), ('C', 'ALA')]
-        self.phi = openxps.CollectiveVariable('phi', openmm.CustomTorsionForce('theta'))
+        self.phi = openxps.CollectiveVariable('phi', openmm.CustomTorsionForce('theta'), unit.radians)
         self.phi.force.addTorsion(*[atoms.index(i) for i in phi_atoms], [])
         psi_atoms = [('N', 'ALA'), ('CA', 'ALA'), ('C', 'ALA'), ('N', 'NME')]
-        self.psi = openxps.CollectiveVariable('psi', openmm.CustomTorsionForce('theta'))
+        self.psi = openxps.CollectiveVariable('psi', openmm.CustomTorsionForce('theta'), unit.radians)
         self.psi.force.addTorsion(*[atoms.index(i) for i in psi_atoms], [])
