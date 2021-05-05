@@ -52,6 +52,13 @@ class AlanineDipeptideModel:
         psi : openm.CustomTorsionForce
             The Ramachandran dihedral angle :math:`\\psi` of the alanine dipeptide molecule.
 
+    Examples
+    --------
+        >>> import openxps
+        >>> from simtk import unit
+        >>> model = openxps.AlanineDipeptideModel(water='tip3p')
+        >>> model.phi
+        phi: CustomTorsionForce
 
     """
 

@@ -62,6 +62,9 @@ class CollectiveVariable:
         self.id = id
         self.force = force
 
+    def __repr__(self):
+        return f'{self.id}: {self.force.__class__.__name__}'
+
     def _create_context(self, system, positions):
         system_copy = deepcopy(system)
         for force in system_copy.getForces():
@@ -102,10 +105,10 @@ class CollectiveVariable:
             >>> import openxps
             >>> from simtk import unit
             >>> model = openxps.AlanineDipeptideModel()
-            >>> model.phi.evaluate(model.system, model.positions)
-            3.141592653589793
-            >>> model.psi.evaluate(model.system, model.positions)
-            3.141592653589793
+            >>> model.phi.evaluate(model.system, model.positions, cv_unit=unit.degrees)
+            Quantity(value=180.0, unit=degree)
+            >>> model.psi.evaluate(model.system, model.positions, cv_unit=unit.degrees)
+            Quantity(value=180.0, unit=degree)
 
         """
         context = self._create_context(system, positions)
@@ -151,10 +154,10 @@ class CollectiveVariable:
             >>> import openxps
             >>> from simtk import unit
             >>> model = openxps.AlanineDipeptideModel()
-            >>> model.phi.effective_mass(model.system, model.positions)
-            0.0479588726559707
-            >>> model.psi.effective_mass(model.system, model.positions)
-            0.05115582071188152
+            >>> model.phi.effective_mass(model.system, model.positions, cv_unit=unit.radians)
+            Quantity(value=0.0479588726559707, unit=nanometer**2*dalton/(radian**2))
+            >>> model.psi.effective_mass(model.system, model.positions, cv_unit=unit.radians)
+            Quantity(value=0.05115582071188152, unit=nanometer**2*dalton/(radian**2))
 
         """
         context = self._create_context(system, positions)
