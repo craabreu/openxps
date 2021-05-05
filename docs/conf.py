@@ -178,3 +178,4 @@ texinfo_documents = [
 
 
 # -- Extension configuration -------------------------------------------------
+bibtex_bibfiles = ['references.bib']
