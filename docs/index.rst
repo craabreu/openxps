@@ -4,14 +4,15 @@
    contain the root `toctree` directive.
 
 Welcome to Extended Phase-Space Methods with OpenMM's documentation!
-=========================================================
+====================================================================
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
    getting_started
-   api
+   api/index
+   references
 
 
 
