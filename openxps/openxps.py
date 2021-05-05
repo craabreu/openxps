@@ -12,6 +12,7 @@
 
 from copy import deepcopy
 
+import numpy as np
 from simtk import openmm, unit
 
 
@@ -51,7 +52,7 @@ class CollectiveVariable:
     -----------------
         unit : unit.Unit, default=None
             The unity of measurement of the collective variable. If this is `None`, then a
-            numerical value is returned based on the OpenMM default units.
+            numerical value is used based on OpenMM's default units.
 
     Example
     -------
@@ -164,3 +165,130 @@ class CollectiveVariable:
             factor = _standardized(1*self.unit)**2
             effective_mass *= factor*unit.dalton*(unit.nanometers/self.unit)**2
         return effective_mass
+
+
+class ExtendedSpaceVariable:
+    """
+    An extended phase-space variable, whose dynamics is coupled to that of one of more collective
+    variables of a system.
+
+    The coupling occurs in the form of a potential energy term that involves this extended
+    phase-space variable and its associated collective variables.
+
+    For a non-periodic variable, the default potential is a harmonic driving of the type:
+
+    .. math::
+        V(s, \\mathbf r) = \\frac{\\kappa}{2} [s - q(\\mathbf r)]^2
+
+    where :math:`s` is the new dynamical variable, :math:`q(\\mathbf r)` is its associated
+    collective variable, and :math:`kappa` is a force constant.
+
+    For a periodic variable with period `L`, the default potential is:
+
+    .. math::
+        V(s, \\mathbf r) = \\frac{\\kappa}{2} \\min(|s-q(\\mathbf r)|, L-|s-q(\\mathbf r)|)^2
+
+    Parameters
+    ----------
+        id : str
+            A valid identifier string for this dynamical variable.
+        min_value : float or unit.Quantity
+            The minimum allowable value for this dynamical variable.
+        max_value : float or unit.Quantity
+            The maximum allowable value for this dynamical variable.
+        periodic : bool
+            Whether the collective variable is periodic with period `L=max_value-min_value`.
+        mass : float or unit.Quantity
+            The mass assigned to this dynamical variable, whose unit of measurement must be
+            compatible with `unit.dalton*(unit.nanometers/X)**2`, where `X` is the unit of
+            measurement of the dynamical variable itself.
+        colvars : :class:`~openxps.openxps.CollectiveVariable` or list thereof
+            Either a single colective variable or a list.
+        potential : float or unit.Quantity or str
+            Either the value of the force constant of a harmonic driving potential or an algebraic
+            expression giving the energy of the system as a function of this dynamical variable and
+            its associated collective variable. Such expression can also contain a set of global
+            parameters, whose values must be passed as keyword arguments (see below).
+
+    Keyword Args
+    ------------
+        unit : unit.Unit, default=None
+            The unity of measurement of the collective variable. If this is `None`, then a
+            numerical value is used based on OpenMM's default units.
+        sigma : float or unit.Quantity, default=None
+            The standard deviation. If this is `None`, then no bias will be considered.
+        grid_size : int, default=None
+            The grid size. If this is `None` and `sigma` is finite, then a convenient value will
+            be automatically chosen.
+        **parameters
+            Names and values of global parameters present in the algebraic expression defined as
+            `potential` (see above).
+
+    Example
+    -------
+        >>> import openxps
+        >>> from simtk import openmm, unit
+        >>> cv = openxps.CollectiveVariable('psi', openmm.CustomTorsionForce('theta'))
+        >>> cv.force.addTorsion(0, 1, 2, 3, [])
+        0
+        >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
+        >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
+        >>> limit = 180*unit.degrees
+        >>> openxps.ExtendedSpaceVariable('s_psi', -limit, limit, True, mass, cv, K)
+        <s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50>
+
+    """
+    def __init__(self, id, min_value, max_value, periodic, mass, colvars, potential,
+                 sigma=None, grid_size=None, **parameters):
+        self.id = id
+        self.min_value = _standardized(min_value)
+        self.max_value = _standardized(max_value)
+        self.mass = _standardized(mass)
+        self._range = self.max_value - self.min_value
+
+        self.colvars = colvars if isinstance(colvars, (list, tuple)) else [colvars]
+
+        if isinstance(potential, str):
+            self.potential = potential
+            self.parameters = {key: _standardized(value) for key, value in parameters.items()}
+        else:
+            cv = self.colvars[0].id
+            if periodic:
+                self.potential = f'0.5*K_{cv}*min(d{cv},{self._range}-d{cv})^2'
+                self.potential += f'; d{cv}=abs({cv}-{self.id})'
+            else:
+                self.potential = f'0.5*K_{cv}*({cv}-{self.id})^2'
+            self.parameters = {f'K_{cv}': _standardized(potential)}
+
+        self.periodic = periodic
+
+        if sigma is None or sigma == 0.0:
+            self.sigma = self.grid_size = None
+        else:
+            self.sigma = _standardized(sigma)
+            self._scaled_variance = (self.sigma/self._range)**2
+            if grid_size is None:
+                self.grid_size = int(np.ceil(5*self._range/self.sigma)) + 1
+            else:
+                self.grid_size = grid_size
+
+    def __repr__(self):
+        status = 'periodic' if self.periodic else 'non-periodic'
+        return f'<{self.id} in [{self.min_value}, {self.max_value}], {status}, m={self.mass}>'
+
+    def __getstate__(self):
+        return dict(
+            id=self.id,
+            min_value=self.min_value,
+            max_value=self.max_value,
+            mass=self.mass,
+            colvars=self.colvars,
+            potential=self.potential,
+            periodic=self.periodic,
+            sigma=self.sigma,
+            grid_size=self.grid_size,
+            **self.parameters,
+        )
+
+    def __setstate__(self, kw):
+        self.__init__(**kw)
