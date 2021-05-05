@@ -4,9 +4,9 @@ dependencies:
     # Base depends
   - python
   - pip
+  - openmm
 
 
 
     # Pip-only installs
   #- pip:
-
