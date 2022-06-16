@@ -23,7 +23,7 @@ class _add_unit_module(ast.NodeTransformer):
             return ast.Attribute(value=mod, attr=node.id, ctx=ast.Load())
 
 
-def in_md_units(quantity: Union[unit.Quantity, float]) -> Union[unit.Quantity, float]:
+def in_md_units(quantity: Quantity) -> Quantity:
     """
     Returns the numerical value of a quantity in a unit of measurement compatible with OpenMM's
     standard unit system (mass in Da, distance in nm, time in ps, temperature in K, energy in
