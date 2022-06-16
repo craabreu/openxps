@@ -14,7 +14,7 @@ import openmm
 import openxps
 import os
 
-from openmm import app, unit
+from openmm import app
 from typing import Optional
 
 
@@ -34,7 +34,7 @@ class AlanineDipeptideModel:
     ----------
         topology : openmm.app.Topology
             The topology of the alanine dipeptide model
-        positions : list of openmm.Vec3
+        positions : list[openmm.Vec3]
             The positions of all alanine dipeptide and water (if any) atoms
         phi : `openxps.CollectiveVariable`
             The Ramachandran dihedral angle :math:`\\phi` of the alanine dipeptide molecule

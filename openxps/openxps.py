@@ -11,7 +11,7 @@
 """
 
 from copy import deepcopy
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import openmm
@@ -82,7 +82,11 @@ class CollectiveVariable:
     def __setstate__(self, kw: dict):
         self.__init__(**kw)
 
-    def _create_context(self, system: openmm.System, positions: list[openmm.Vec3]):
+    def _create_context(
+        self,
+        system: openmm.System,
+        positions: List[openmm.Vec3],
+    ) -> openmm.Context:
         system_copy = deepcopy(system)
         for force in system_copy.getForces():
             force.setForceGroup(0)
@@ -94,7 +98,11 @@ class CollectiveVariable:
         context.setPositions(positions)
         return context
 
-    def evaluate(self, system: openmm.System, positions: list[openmm.Vec3]):
+    def evaluate(
+        self,
+        system: openmm.System,
+        positions: List[openmm.Vec3],
+    ) -> utils.Quantity:
         """
         Computes the value of the collective variable for a given system and a given set of
         particle coordinates.
@@ -103,7 +111,7 @@ class CollectiveVariable:
         ----------
             system : openmm.System
                 The system for which the collective variable will be evaluated.
-            positions : list[openmm.Vec3]
+            positions : List[openmm.Vec3]
                 A list whose size equals the number of particles in the system and which contains
                 the coordinates of these particles.
 
@@ -118,10 +126,10 @@ class CollectiveVariable:
             >>> model = openxps.AlanineDipeptideModel()
             >>> force_field = app.ForceField('amber03.xml')
             >>> system = force_field.createSystem(model.topology)
-            >>> model.phi.evaluate(system, model.positions)
-            Quantity(value=3.141592653589793, unit=radian)
-            >>> model.psi.evaluate(system, model.positions)
-            Quantity(value=3.141592653589793, unit=radian)
+            >>> print(model.phi.evaluate(system, model.positions))
+            3.141592653589793 rad
+            >>> print(model.psi.evaluate(system, model.positions))
+            3.141592653589793 rad
 
         """
         context = self._create_context(system, positions)
@@ -131,7 +139,10 @@ class CollectiveVariable:
             value *= self.unit/utils.in_md_units(1*self.unit)
         return value
 
-    def effective_mass(self, system: openmm.System, positions: list[openmm.Vec3]):
+    def effective_mass(
+        self, system: openmm.System,
+        positions: List[openmm.Vec3],
+    ) -> utils.Quantity:
         """
         Computes the effective mass of the collective variable for a given system and a given set of
         particle coordinates.
@@ -148,7 +159,7 @@ class CollectiveVariable:
         ----------
             system : openmm.System
                 The system for which the collective variable will be evaluated.
-            positions : list[openmm.Vec3]
+            positions : List[openmm.Vec3]
                 A list whose size equals the number of particles in the system and which contains
                 the coordinates of these particles.
 
@@ -163,16 +174,17 @@ class CollectiveVariable:
             >>> model = openxps.AlanineDipeptideModel()
             >>> force_field = app.ForceField('amber03.xml')
             >>> system = force_field.createSystem(model.topology)
-            >>> model.phi.effective_mass(system, model.positions)
-            Quantity(value=0.0479588726559707, unit=nanometer**2*dalton/(radian**2))
-            >>> model.psi.effective_mass(system, model.positions)
-            Quantity(value=0.05115582071188152, unit=nanometer**2*dalton/(radian**2))
+            >>> print(model.phi.effective_mass(system, model.positions))
+            0.0479588726559707 nm**2 Da/(rad**2)
+            >>> print(model.psi.effective_mass(system, model.positions))
+            0.05115582071188152 nm**2 Da/(rad**2)
 
         """
         context = self._create_context(system, positions)
-        forces = utils.in_md_units(context.getState(getForces=True, groups={1}).getForces(asNumpy=True))
-        denom = sum(f.dot(f)/utils.in_md_units(system.getParticleMass(i)) for i, f in enumerate(forces))
-        effective_mass = 1.0/float(denom)
+        state = context.getState(getForces=True, groups={1})
+        forces = state.getForces(asNumpy=True)
+        masses = [system.getParticleMass(i) for i in range(system.getNumParticles())]
+        effective_mass = 1.0/sum(utils.in_md_units(f.dot(f)/m) for f, m in zip(forces, masses))
         if self.unit is not None:
             factor = utils.in_md_units(1*self.unit)**2
             effective_mass *= factor*unit.dalton*(unit.nanometers/self.unit)**2
