@@ -10,17 +10,17 @@
 
 """
 
+import openmm
 import openxps
 import os
 
-from simtk import openmm, unit
-from simtk.openmm import app
+from openmm import app, unit
 
 
 class AlanineDipeptideModel:
     """
-    A system consisting of a single alanine-dipeptide molecule in a vacuum or solvated in explicit
-    water.
+    A system consisting of a single alanine-dipeptide molecule, either in a vacuum or solvated
+    in explicit water.
 
     Keyword Args
     ------------
@@ -58,7 +58,7 @@ class AlanineDipeptideModel:
         >>> from simtk import unit
         >>> model = openxps.AlanineDipeptideModel(water='tip3p')
         >>> model.phi
-        phi: CustomTorsionForce
+        phi: CustomTorsionForce in radian
 
     """
 

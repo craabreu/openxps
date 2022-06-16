@@ -11,22 +11,13 @@
 """
 
 from copy import deepcopy
+from typing import Optional, Union
 
 import numpy as np
-from simtk import openmm, unit
+import openmm
+from openmm import unit
 
-
-def _standardized(quantity):
-    """
-    Returns the numerical value of a quantity in a unit of measurement compatible with the
-    Molecular Dynamics unit system (mass in Da, distance in nm, time in ps, temperature in K,
-    energy in kJ/mol, angle in rad).
-
-    """
-    if unit.is_quantity(quantity):
-        return quantity.value_in_unit_system(unit.md_unit_system)
-    else:
-        return quantity
+from openxps import utils
 
 
 class CollectiveVariable:
@@ -50,31 +41,48 @@ class CollectiveVariable:
 
     Keyword Arguments
     -----------------
-        unit : unit.Unit, default=None
+        unit : openmm.unit.Unit or str, default=None
             The unity of measurement of the collective variable. If this is `None`, then a
             numerical value is used based on OpenMM's default units.
 
     Example
     -------
         >>> import openxps
-        >>> from simtk import openmm, unit
         >>> dihedral_angle = openmm.CustomTorsionForce('theta')
-        >>> cv = openxps.CollectiveVariable('psi', dihedral_angle, unit.radians)
-        >>> cv.force.addTorsion(0, 1, 2, 3, [])
+        >>> dihedral_angle.addTorsion(0, 1, 2, 3, [])
         0
+        >>> openxps.CollectiveVariable('psi', dihedral_angle, 'radians')
+        psi: CustomTorsionForce in radian
 
     """
-    def __init__(self, id, force, unit=None):
+    def __init__(
+        self,
+        id: str,
+        force: openmm.Force,
+        unit: Optional[Union[openmm.unit.Unit, str]] = None,
+    ):
         if not id.isidentifier():
-            raise ValueError('Parameter id must be a valid variable identifier')
+            raise ValueError('Parameter id must be a valid Python variable name')
         self.id = id
         self.force = force
-        self.unit = unit
+        self.unit = utils.str2unit(unit) if isinstance(unit, str) else unit
 
     def __repr__(self):
-        return f'{self.id}: {self.force.__class__.__name__}'
+        description = f'{self.id}: {self.force.getName()}'
+        unit = '' if self.unit is None else f' in {self.unit}'
+        return description + unit
 
-    def _create_context(self, system, positions):
+    def __getstate__(self):
+        return dict(
+            id=self.id,
+            force=self.force,
+            unit=self.unit.get_name(),
+        )
+
+    def __setstate__(self, kw):
+        self.__init__(**kw)
+
+    def _create_context(self, system: openmm.System, positions: list[openmm.Vec3]):
         system_copy = deepcopy(system)
         for force in system_copy.getForces():
             force.setForceGroup(0)
@@ -86,7 +94,7 @@ class CollectiveVariable:
         context.setPositions(positions)
         return context
 
-    def evaluate(self, system, positions):
+    def evaluate(self, system: openmm.System, positions: list[openmm.Vec3]):
         """
         Computes the value of the collective variable for a given system and a given set of
         particle coordinates.
@@ -95,7 +103,7 @@ class CollectiveVariable:
         ----------
             system : openmm.System
                 The system for which the collective variable will be evaluated.
-            positions : list of openmm.Vec3
+            positions : list[openmm.Vec3]
                 A list whose size equals the number of particles in the system and which contains
                 the coordinates of these particles.
 
@@ -106,7 +114,6 @@ class CollectiveVariable:
         Example
         -------
             >>> import openxps
-            >>> from simtk import unit
             >>> model = openxps.AlanineDipeptideModel()
             >>> model.phi.evaluate(model.system, model.positions)
             Quantity(value=3.141592653589793, unit=radian)
@@ -118,10 +125,10 @@ class CollectiveVariable:
         energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy()
         value = energy.value_in_unit(unit.kilojoules_per_mole)
         if self.unit is not None:
-            value *= self.unit/_standardized(1*self.unit)
+            value *= self.unit/utils.in_md_units(1*self.unit)
         return value
 
-    def effective_mass(self, system, positions):
+    def effective_mass(self, system: openmm.System, positions: list[openmm.Vec3]):
         """
         Computes the effective mass of the collective variable for a given system and a given set of
         particle coordinates.
@@ -138,7 +145,7 @@ class CollectiveVariable:
         ----------
             system : openmm.System
                 The system for which the collective variable will be evaluated.
-            positions : list of openmm.Vec3
+            positions : list[openmm.Vec3]
                 A list whose size equals the number of particles in the system and which contains
                 the coordinates of these particles.
 
@@ -158,11 +165,11 @@ class CollectiveVariable:
 
         """
         context = self._create_context(system, positions)
-        forces = _standardized(context.getState(getForces=True, groups={1}).getForces(asNumpy=True))
-        denom = sum(f.dot(f)/_standardized(system.getParticleMass(i)) for i, f in enumerate(forces))
+        forces = utils.in_md_units(context.getState(getForces=True, groups={1}).getForces(asNumpy=True))
+        denom = sum(f.dot(f)/utils.in_md_units(system.getParticleMass(i)) for i, f in enumerate(forces))
         effective_mass = 1.0/float(denom)
         if self.unit is not None:
-            factor = _standardized(1*self.unit)**2
+            factor = utils.in_md_units(1*self.unit)**2
             effective_mass *= factor*unit.dalton*(unit.nanometers/self.unit)**2
         return effective_mass
 
@@ -241,16 +248,16 @@ class ExtendedSpaceVariable:
     def __init__(self, id, min_value, max_value, periodic, mass, colvars, potential,
                  sigma=None, grid_size=None, **parameters):
         self.id = id
-        self.min_value = _standardized(min_value)
-        self.max_value = _standardized(max_value)
-        self.mass = _standardized(mass)
+        self.min_value = utils.in_md_units(min_value)
+        self.max_value = utils.in_md_units(max_value)
+        self.mass = utils.in_md_units(mass)
         self._range = self.max_value - self.min_value
 
         self.colvars = colvars if isinstance(colvars, (list, tuple)) else [colvars]
 
         if isinstance(potential, str):
             self.potential = potential
-            self.parameters = {key: _standardized(value) for key, value in parameters.items()}
+            self.parameters = {key: utils.in_md_units(value) for key, value in parameters.items()}
         else:
             cv = self.colvars[0].id
             if periodic:
@@ -258,14 +265,14 @@ class ExtendedSpaceVariable:
                 self.potential += f'; d{cv}=abs({cv}-{self.id})'
             else:
                 self.potential = f'0.5*K_{cv}*({cv}-{self.id})^2'
-            self.parameters = {f'K_{cv}': _standardized(potential)}
+            self.parameters = {f'K_{cv}': utils.in_md_units(potential)}
 
         self.periodic = periodic
 
         if sigma is None or sigma == 0.0:
             self.sigma = self.grid_size = None
         else:
-            self.sigma = _standardized(sigma)
+            self.sigma = utils.in_md_units(sigma)
             self._scaled_variance = (self.sigma/self._range)**2
             if grid_size is None:
                 self.grid_size = int(np.ceil(5*self._range/self.sigma)) + 1
