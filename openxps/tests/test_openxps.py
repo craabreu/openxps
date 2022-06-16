@@ -4,14 +4,15 @@ Unit and regression test for the openxps package.
 
 # Import package, test suite, and other packages as needed
 import io
-# import pytest
-import openxps
-import openmm
 import os
 import sys
 import tempfile
 
 import numpy as np
+import openmm
+
+# import pytest
+import openxps
 
 
 def test_openxps_imported():

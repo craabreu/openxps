@@ -7,7 +7,8 @@
 
 """
 
-from typing import Any, Union, IO
+from typing import IO, Any, Union
+
 import yaml
 
 

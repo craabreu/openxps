@@ -10,12 +10,13 @@
 
 """
 
-import openmm
-import openxps
 import os
-
-from openmm import app
 from typing import Optional
+
+import openmm
+from openmm import app
+
+import openxps
 
 
 class AlanineDipeptideModel:

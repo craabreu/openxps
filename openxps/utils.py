@@ -7,9 +7,9 @@
 
 """
 import ast
-from openmm import unit
 from typing import Union
 
+from openmm import unit
 
 Quantity = Union[unit.Quantity, float]
 
