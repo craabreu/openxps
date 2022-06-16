@@ -79,7 +79,7 @@ class CollectiveVariable:
             unit=self.unit.get_name(),
         )
 
-    def __setstate__(self, kw):
+    def __setstate__(self, kw: dict):
         self.__init__(**kw)
 
     def _create_context(self, system: openmm.System, positions: list[openmm.Vec3]):
@@ -114,10 +114,13 @@ class CollectiveVariable:
         Example
         -------
             >>> import openxps
+            >>> from openmm import app
             >>> model = openxps.AlanineDipeptideModel()
-            >>> model.phi.evaluate(model.system, model.positions)
+            >>> force_field = app.ForceField('amber03.xml')
+            >>> system = force_field.createSystem(model.topology)
+            >>> model.phi.evaluate(system, model.positions)
             Quantity(value=3.141592653589793, unit=radian)
-            >>> model.psi.evaluate(model.system, model.positions)
+            >>> model.psi.evaluate(system, model.positions)
             Quantity(value=3.141592653589793, unit=radian)
 
         """
@@ -156,11 +159,13 @@ class CollectiveVariable:
         Example
         -------
             >>> import openxps
-            >>> from simtk import unit
+            >>> from openmm import app
             >>> model = openxps.AlanineDipeptideModel()
-            >>> model.phi.effective_mass(model.system, model.positions)
+            >>> force_field = app.ForceField('amber03.xml')
+            >>> system = force_field.createSystem(model.topology)
+            >>> model.phi.effective_mass(system, model.positions)
             Quantity(value=0.0479588726559707, unit=nanometer**2*dalton/(radian**2))
-            >>> model.psi.effective_mass(model.system, model.positions)
+            >>> model.psi.effective_mass(system, model.positions)
             Quantity(value=0.05115582071188152, unit=nanometer**2*dalton/(radian**2))
 
         """

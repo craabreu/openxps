@@ -11,6 +11,9 @@ from openmm import unit
 from typing import Union
 
 
+Quantity = Union[unit.Quantity, float]
+
+
 class _add_unit_module(ast.NodeTransformer):
     def visit_Name(self, node: ast.Name) -> Union[ast.Attribute, ast.Name]:
         if node.id == 'unit':
