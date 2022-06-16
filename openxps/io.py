@@ -7,10 +7,11 @@
 
 """
 
+from typing import Any, Union, IO
 import yaml
 
 
-def serialize(object, file):
+def serialize(object: Any, file: Union[IO, str]):
     """
     Serializes a openxps object.
 
@@ -23,7 +24,7 @@ def serialize(object, file):
         file.write(dump)
 
 
-def deserialize(file):
+def deserialize(file: Union[IO, str]) -> Any:
     """
     Deserializes a openxps object.
 
