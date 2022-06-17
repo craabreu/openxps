@@ -11,7 +11,7 @@
 """
 
 from copy import deepcopy
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import openmm
@@ -60,26 +60,26 @@ class CollectiveVariable:
         id: str,
         force: openmm.Force,
         unit: Optional[Union[openmm.unit.Unit, str]] = None,
-    ):
+    ) -> None:
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid Python variable name')
         self.id = id
         self.force = force
         self.unit = utils.str2unit(unit) if isinstance(unit, str) else unit
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         description = f'{self.id}: {self.force.getName()}'
         unit = '' if self.unit is None else f' in {self.unit}'
         return description + unit
 
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         return dict(
             id=self.id,
             force=self.force,
             unit=self.unit.get_name(),
         )
 
-    def __setstate__(self, kw: dict):
+    def __setstate__(self, kw: Dict[str, Any]) -> None:
         self.__init__(**kw)
 
     def _create_context(
@@ -181,10 +181,10 @@ class CollectiveVariable:
 
         """
         context = self._create_context(system, positions)
-        state = context.getState(getForces=True, groups={1})
-        forces = state.getForces(asNumpy=True)
-        masses = [system.getParticleMass(i) for i in range(system.getNumParticles())]
-        effective_mass = 1.0/sum(utils.in_md_units(f.dot(f)/m) for f, m in zip(forces, masses))
+        get_masses = np.vectorize(lambda i: system.getParticleMass(i).value_in_unit(unit.dalton))
+        masses = get_masses(np.arange(system.getNumParticles()))
+        forces = context.getState(getForces=True, groups={1}).getForces(asNumpy=True)
+        effective_mass = 1.0/np.einsum('ij,ij,i->', forces, forces, 1.0/masses)
         if self.unit is not None:
             factor = utils.in_md_units(1*self.unit)**2
             effective_mass *= factor*unit.dalton*(unit.nanometers/self.unit)**2
@@ -262,8 +262,19 @@ class ExtendedSpaceVariable:
         <s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50>
 
     """
-    def __init__(self, id, min_value, max_value, periodic, mass, colvars, potential,
-                 sigma=None, grid_size=None, **parameters):
+    def __init__(
+        self,
+        id: str,
+        min_value: utils.Quantity,
+        max_value: utils.Quantity,
+        periodic: bool,
+        mass: utils.Quantity,
+        colvars: Union[CollectiveVariable, List[CollectiveVariable]],
+        potential: Union[str, utils.Quantity],
+        sigma=None,
+        grid_size=None,
+        **parameters,
+    ):
         self.id = id
         self.min_value = utils.in_md_units(min_value)
         self.max_value = utils.in_md_units(max_value)
