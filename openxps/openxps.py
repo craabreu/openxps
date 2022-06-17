@@ -21,8 +21,7 @@ from openxps import utils
 
 
 class CollectiveVariable:
-    """
-    A function of the particle coordinates, evaluated by means of an OpenMM Force_ object.
+    """A function of the particle coordinates, evaluated by means of an OpenMM Force_ object.
 
     Quoting OpenMM's CustomCVForce_ manual entry:
 
@@ -33,17 +32,14 @@ class CollectiveVariable:
 
     Parameters
     ----------
-        id : str
-            A valid identifier string for this collective variable.
-        force : openmm.Force
-            An OpenMM Force_ object whose energy function is used to evaluate this collective
-            variable.
-
-    Keyword Arguments
-    -----------------
-        unit : openmm.unit.Unit or str, default=None
-            The unity of measurement of the collective variable. If this is `None`, then a
-            numerical value is used based on OpenMM's default units.
+    id
+        a valid identifier string for this collective variable.
+    force
+        an OpenMM Force_ object whose energy function is used to evaluate this collective
+        variable.
+    unit
+        the unity of measurement of the collective variable. If this is `None`, then a
+        numerical value is used based on OpenMM's default units.
 
     Example
     -------
@@ -98,26 +94,18 @@ class CollectiveVariable:
         context.setPositions(positions)
         return context
 
-    def evaluate(
-        self,
-        system: openmm.System,
-        positions: List[openmm.Vec3],
-    ) -> utils.Quantity:
+    def evaluate(self, system: openmm.System, positions: List[openmm.Vec3]) -> utils.Quantity:
         """
         Computes the value of the collective variable for a given system and a given set of
         particle coordinates.
 
         Parameters
         ----------
-            system : openmm.System
-                The system for which the collective variable will be evaluated.
-            positions : List[openmm.Vec3]
-                A list whose size equals the number of particles in the system and which contains
-                the coordinates of these particles.
-
-        Returns
-        -------
-            float or unit.Quantity
+        system
+            the system for which the collective variable will be evaluated.
+        positions
+            a list whose size equals the number of particles in the system and which
+            contains the coordinates of these particles.
 
         Example
         -------
@@ -139,10 +127,7 @@ class CollectiveVariable:
             value *= self.unit/utils.in_md_units(1*self.unit)
         return value
 
-    def effective_mass(
-        self, system: openmm.System,
-        positions: List[openmm.Vec3],
-    ) -> utils.Quantity:
+    def effective_mass(self, system: openmm.System, positions: List[openmm.Vec3]) -> utils.Quantity:
         """
         Computes the effective mass of the collective variable for a given system and a given set of
         particle coordinates.
@@ -157,15 +142,11 @@ class CollectiveVariable:
 
         Parameters
         ----------
-            system : openmm.System
-                The system for which the collective variable will be evaluated.
-            positions : List[openmm.Vec3]
-                A list whose size equals the number of particles in the system and which contains
-                the coordinates of these particles.
-
-        Returns
-        -------
-            float or unit.Quantity
+        system
+            the system for which the collective variable will be evaluated.
+        positions
+            a list whose size equals the number of particles in the system and which contains
+            the coordinates of these particles.
 
         Example
         -------
@@ -214,39 +195,39 @@ class ExtendedSpaceVariable:
 
     Parameters
     ----------
-        id : str
-            A valid identifier string for this dynamical variable.
-        min_value : float or unit.Quantity
-            The minimum allowable value for this dynamical variable.
-        max_value : float or unit.Quantity
-            The maximum allowable value for this dynamical variable.
-        periodic : bool
-            Whether the collective variable is periodic with period `L=max_value-min_value`.
-        mass : float or unit.Quantity
-            The mass assigned to this dynamical variable, whose unit of measurement must be
-            compatible with `unit.dalton*(unit.nanometers/X)**2`, where `X` is the unit of
-            measurement of the dynamical variable itself.
-        colvars : :class:`~openxps.openxps.CollectiveVariable` or list thereof
-            Either a single colective variable or a list.
-        potential : float or unit.Quantity or str
-            Either the value of the force constant of a harmonic driving potential or an algebraic
-            expression giving the energy of the system as a function of this dynamical variable and
-            its associated collective variable. Such expression can also contain a set of global
-            parameters, whose values must be passed as keyword arguments (see below).
+    id
+        a valid identifier string for this dynamical variable.
+    min_value
+        the minimum allowable value for this dynamical variable.
+    max_value
+        the maximum allowable value for this dynamical variable.
+    periodic
+        whether the collective variable is periodic with period `L=max_value-min_value`.
+    mass
+        the mass assigned to this dynamical variable, whose unit of measurement must be
+        compatible with `unit.dalton*(unit.nanometers/X)**2`, where `X` is the unit of
+        measurement of the dynamical variable itself.
+    colvars
+        either a single colective variable or a list.
+    potential
+        either the value of the force constant of a harmonic driving potential or an algebraic
+        expression giving the energy of the system as a function of this dynamical variable and
+        its associated collective variable. Such expression can also contain a set of global
+        parameters, whose values must be passed as keyword arguments (see below).
+    unit
+        the unity of measurement of the collective variable. If this is `None`, then a
+        numerical value is used based on OpenMM's default units.
+    sigma
+        the standard deviation. If this is `None`, then no bias will be considered.
+    grid_size
+        the grid size. If this is `None` and `sigma` is finite, then a convenient value will
+        be automatically chosen.
 
     Keyword Args
     ------------
-        unit : unit.Unit, default=None
-            The unity of measurement of the collective variable. If this is `None`, then a
-            numerical value is used based on OpenMM's default units.
-        sigma : float or unit.Quantity, default=None
-            The standard deviation. If this is `None`, then no bias will be considered.
-        grid_size : int, default=None
-            The grid size. If this is `None` and `sigma` is finite, then a convenient value will
-            be automatically chosen.
-        **parameters
-            Names and values of global parameters present in the algebraic expression defined as
-            `potential` (see above).
+    **parameters
+        Names and values of global parameters present in the algebraic expression defined as
+        `potential` (see above).
 
     Example
     -------
@@ -271,10 +252,11 @@ class ExtendedSpaceVariable:
         mass: utils.Quantity,
         colvars: Union[CollectiveVariable, List[CollectiveVariable]],
         potential: Union[str, utils.Quantity],
-        sigma=None,
-        grid_size=None,
+        unit: Optional[Union[unit.Unit, str]] = None,
+        sigma: Optional[utils.Quantity] = None,
+        grid_size: Optional[int] = None,
         **parameters,
-    ):
+    ) -> None:
         self.id = id
         self.min_value = utils.in_md_units(min_value)
         self.max_value = utils.in_md_units(max_value)
@@ -297,6 +279,8 @@ class ExtendedSpaceVariable:
 
         self.periodic = periodic
 
+        self.unit = utils.str2unit(unit) if isinstance(unit, str) else unit
+
         if sigma is None or sigma == 0.0:
             self.sigma = self.grid_size = None
         else:
@@ -307,11 +291,11 @@ class ExtendedSpaceVariable:
             else:
                 self.grid_size = grid_size
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         status = 'periodic' if self.periodic else 'non-periodic'
         return f'<{self.id} in [{self.min_value}, {self.max_value}], {status}, m={self.mass}>'
 
-    def __getstate__(self):
+    def __getstate__(self) -> Dict[str, Any]:
         return dict(
             id=self.id,
             min_value=self.min_value,
@@ -320,10 +304,11 @@ class ExtendedSpaceVariable:
             colvars=self.colvars,
             potential=self.potential,
             periodic=self.periodic,
+            unit=self.unit,
             sigma=self.sigma,
             grid_size=self.grid_size,
             **self.parameters,
         )
 
-    def __setstate__(self, kw):
+    def __setstate__(self, kw) -> None:
         self.__init__(**kw)

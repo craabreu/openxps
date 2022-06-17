@@ -56,11 +56,12 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.mathjax',
     'sphinxcontrib.bibtex',
+    'sphinx_autodoc_typehints',
 ]
 
 autosummary_generate = True
 napoleon_google_docstring = False
-napoleon_use_param = False
+napoleon_use_param = True
 napoleon_use_ivar = True
 
 # Add any paths that contain templates here, relative to this directory.
@@ -80,7 +81,7 @@ master_doc = 'index'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -179,3 +180,6 @@ texinfo_documents = [
 
 # -- Extension configuration -------------------------------------------------
 bibtex_bibfiles = ['references.bib']
+
+typehints_defaults = 'comma'
+typehints_document_rtype = True
