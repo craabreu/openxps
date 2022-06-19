@@ -1,9 +1,9 @@
 """
-.. module:: utils
+. module:: utils
    :platform: Unix, Windows, macOS
    :synopsis: Extended Phase-Space Methods with OpenMM
 
-.. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
+. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
 """
 
@@ -39,6 +39,10 @@ def stdval(quantity: QuantityOrFloat) -> QuantityOrFloat:
         return quantity.value_in_unit_system(unit.md_unit_system)
     else:
         return quantity
+
+
+def compatible_value(quantity: QuantityOrFloat, measured_in: unit.Unit) -> float:
+    return quantity.value_in_unit(measured_in) if unit.is_quantity(quantity) else quantity
 
 
 def str2unit(string: str) -> unit.Unit:

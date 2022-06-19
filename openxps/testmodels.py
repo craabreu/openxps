@@ -50,7 +50,7 @@ class AlanineDipeptideModel:
         >>> import openxps as xps
         >>> model = xps.AlanineDipeptideModel()
         >>> model.phi
-        phi: CustomTorsionForce (period=6.283185307179586 radian)
+        phi: CustomTorsionForce (period=6.283185307179586 rad)
 
         >>> import openxps as xps
         >>> model = xps.AlanineDipeptideModel(water_model='tip3p')
@@ -80,4 +80,4 @@ class AlanineDipeptideModel:
         for name, atoms in dihedrals.items():
             angle = mm.CustomTorsionForce('theta')
             angle.addTorsion(*[all_atoms.index(i) for i in atoms], [])
-            setattr(self, name, xps.CollectiveVariable(name, angle, 2*np.pi, 'radians'))
+            setattr(self, name, xps.CollectiveVariable(name, angle, 'radians', 2*np.pi))

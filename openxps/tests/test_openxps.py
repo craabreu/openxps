@@ -25,7 +25,7 @@ def test_openxps_imported():
 def test_collective_variable_serialization():
     torsion = mm.CustomTorsionForce('theta')
     torsion.addTorsion(4, 6, 8, 14, [])
-    phi = xps.CollectiveVariable('phi', torsion, 360*unit.degrees, unit='unit.radians')
+    phi = xps.CollectiveVariable('phi', torsion, 'unit.radians', 360*unit.degrees)
     pipe = io.StringIO()
     xps.serialize(phi, pipe)
     pipe.seek(0)
@@ -33,28 +33,32 @@ def test_collective_variable_serialization():
     assert new.__repr__() == phi.__repr__()
 
 
-def test_collective_variable_exception():
+def test_collective_variable_exceptions():
     torsion = mm.CustomTorsionForce('theta')
     with pytest.raises(TypeError):
-        xps.CollectiveVariable('phi', torsion, 1*unit.angstrom, unit='radians')
+        xps.CollectiveVariable('phi', torsion, 'radians', 1*unit.angstrom)
+    with pytest.raises(ValueError):
+        xps.CollectiveVariable('1phi', torsion, 'radians', 1*unit.angstrom)
 
 
-def test_extended_space_variable_serialization():
-    # Extended-space variable
-    model = xps.AlanineDipeptideModel()
-    old = xps.AuxiliaryVariable('s_phi', -np.pi, np.pi, True, 1.0, model.phi, 1.0)
+def test_auxiliary_variable_serialization():
+    old = xps.AuxiliaryVariable('s_phi', 'radians', 'periodic', -np.pi, np.pi, 1.0)
     pipe = io.StringIO()
     xps.serialize(old, pipe)
     pipe.seek(0)
-    print(pipe.getvalue())
     new = xps.deserialize(pipe)
     assert new.__repr__() == old.__repr__()
+
+
+def test_auxiliary_variable_exceptions():
+    with pytest.raises(TypeError):
+        xps.AuxiliaryVariable('s_phi', 'radians', 'periodic', -np.pi, np.pi, 1.0*unit.angstrom)
 
 
 def test_serialization_to_file():
     torsion = mm.CustomTorsionForce('theta')
     torsion.addTorsion(4, 6, 8, 14, [])
-    phi = xps.CollectiveVariable('phi', torsion, 360*unit.degrees, unit='unit.radians')
+    phi = xps.CollectiveVariable('phi', torsion, 'unit.radians', 360*unit.degrees)
     file = tempfile.NamedTemporaryFile(delete=False)
     file.close()
     xps.serialize(phi, file.name)

@@ -13,17 +13,20 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 import numpy as np
 import openmm as mm
 from openmm import unit
 
-from openxps.utils import QuantityOrFloat, UnitOrStr, stdval, str2unit
+from openxps import utils
+from openxps.utils import QuantityOrFloat, UnitOrStr
 
 
 class CollectiveVariable:
-    """A function of the particle coordinates, evaluated by means of an OpenMM Force_ object.
+    """
+    A scalar-valued function of the particle coordinates, evaluated by means of an OpenMM
+    Force_ object.
 
     Quoting OpenMM's CustomCVForce_ manual entry:
 
@@ -37,17 +40,20 @@ class CollectiveVariable:
     id
         a valid identifier string.
     force
-        an OpenMM Force_ object whose energy function is used to evaluate this CV.
-    period
-        the period of the CV, if it is periodic. If `period=None`, it will be considered as
-        non-periodic.
+        an OpenMM Force_ object whose energy function is used to evaluate this collective variable.
     unit
-        the unity of measurement of the CV.
+        the unity of measurement of this collective variable.
+    period
+        the period of this collective variable, if it is periodic. If `period=None`, it will be
+        considered as non-periodic.
 
     Raises
     ------
     TypeError
         if `period` has a unit of measurement that is incompatible with `unit`.
+
+    ValueError
+        if `id` is not a valid identifier string (like a Python variable name)
 
     Example
     -------
@@ -55,37 +61,36 @@ class CollectiveVariable:
         >>> import openxps as xps
         >>> dihedral_angle = mm.CustomTorsionForce('theta')
         >>> index = dihedral_angle.addTorsion(0, 1, 2, 3, [])
-        >>> xps.CollectiveVariable('psi', dihedral_angle, 360*mm.unit.degrees, 'radians')
-        psi: CustomTorsionForce (period=6.283185307179586 radian)
+        >>> xps.CollectiveVariable('psi', dihedral_angle, 'radians', 360*mm.unit.degrees)
+        psi: CustomTorsionForce (period=6.283185307179586 rad)
         >>> distance = mm.CustomBondForce('10*r')
         >>> index = distance.addBond(1, 18, [])
-        >>> xps.CollectiveVariable('distance', distance, None, 'angstroms')
-        distance: CustomBondForce (non-periodic, unit=angstrom)
+        >>> xps.CollectiveVariable('distance', distance, 'angstroms', None)
+        distance: CustomBondForce (non-periodic, unit=A)
 
     """
     def __init__(
         self,
         id: str,
         force: mm.Force,
-        period: QuantityOrFloat,
         unit: UnitOrStr,
+        period: Union[QuantityOrFloat, None],
     ) -> None:
 
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid Python variable name')
         self.id = id
         self.force = force
-        self.period = stdval(period)
-        self.unit = str2unit(unit) if isinstance(unit, str) else unit
-        self.period = period.value_in_unit(self.unit) if mm.unit.is_quantity(period) else period
+        self.unit = utils.str2unit(unit) if isinstance(unit, str) else unit
+        self.period = utils.compatible_value(period, self.unit)
 
     def __repr__(self) -> str:
 
         description = f'{self.id}: {self.force.getName()}'
         if self.period is None:
-            description += f' (non-periodic, unit={self.unit})'
+            description += f' (non-periodic, unit={self.unit.get_symbol()})'
         else:
-            description += f' (period={self.period} {self.unit})'
+            description += f' (period={self.period} {self.unit.get_symbol()})'
         return description
 
     def __getstate__(self) -> Dict[str, Any]:
@@ -93,8 +98,8 @@ class CollectiveVariable:
         return dict(
             id=self.id,
             force=self.force,
-            period=self.period,
             unit=self.unit.get_name(),
+            period=self.period,
         )
 
     def __setstate__(self, kw: Dict[str, Any]) -> None:
@@ -149,7 +154,7 @@ class CollectiveVariable:
         energy = context.getState(getEnergy=True, groups={1}).getPotentialEnergy()
         value = energy.value_in_unit(unit.kilojoules_per_mole)
         if self.unit is not None:
-            value *= self.unit/stdval(1*self.unit)
+            value *= self.unit/utils.stdval(1*self.unit)
         return value
 
     def effective_mass(self, system: mm.System, positions: List[mm.Vec3]) -> QuantityOrFloat:
@@ -188,12 +193,12 @@ class CollectiveVariable:
         """
 
         context = self._create_context(system, positions)
-        get_masses = np.vectorize(lambda i: stdval(system.getParticleMass(i)))
+        get_masses = np.vectorize(lambda i: utils.stdval(system.getParticleMass(i)))
         masses = get_masses(np.arange(system.getNumParticles()))
         forces = context.getState(getForces=True, groups={1}).getForces(asNumpy=True)
         effective_mass = 1.0/np.einsum('ij,ij,i->', forces, forces, 1.0/masses)
         if self.unit is not None:
-            factor = stdval(1*self.unit)**2
+            factor = utils.stdval(1*self.unit)**2
             effective_mass *= factor*unit.dalton*(unit.nanometers/self.unit)**2
         return effective_mass
 
@@ -201,52 +206,30 @@ class CollectiveVariable:
 class AuxiliaryVariable:
     """
     An extended phase-space variable whose dynamics is coupled to that of one of more collective
-    variables of a system.
-
-    The coupling occurs in the form of a potential energy term that involves this extended
-    phase-space variable and its associated collective variables.
-
-    For a non-periodic variable, the default potential is a harmonic driving of the type:
-
-    .. math::
-        V(s, \\mathbf r) = \\frac{\\kappa}{2} [s - q(\\mathbf r)]^2
-
-    where :math:`s` is the new dynamical variable, :math:`q(\\mathbf r)` is its associated
-    collective variable, and :math:`kappa` is a force constant.
-
-    For a periodic variable with period `L`, the default potential is:
-
-    .. math::
-        V(s, \\mathbf r) = \\frac{\\kappa}{2} \\min(|s-q(\\mathbf r)|, L-|s-q(\\mathbf r)|)^2
+    variables through a potential energy term.
 
     Parameters
     ----------
     id
         a valid identifier string.
-    min_value
+    unit
+        the unity of measurement of this auxiliary variable.
+    boundary
+        boundary conditions to be applied to this auxiliary variable. Valid options are "periodic"
+        and "reflective".
+    minval
         the minimum allowable value for this auxiliary variable.
-    max_value
+    maxval
         the maximum allowable value for this auxiliary variable.
-    periodic
-        whether to apply periodic boundary conditions for the auxiliary variable. Otherwise,
-        reflective boundary conditions will apply.
     mass
         the mass assigned to this auxiliary variable, whose unit of measurement must be
-        compatible with `Da*(nm/Unit)**2`, where `Unit` is the auxiliary variable's unit.
-    unit
-        the unity of measurement of the collective variable. If this is `None`, then a
-        numerical value is used based on OpenMM's default units.
-    sigma
-        the standard deviation. If this is `None`, then no bias will be considered.
-    grid_size
-        the grid size. If this is `None` and `sigma` is finite, then a convenient value will
-        be automatically chosen.
+        compatible with `dalton*(nanometer/unit)**2`, where `unit` is the auxiliary variable's
+        own unit (see above).
 
     Keyword Args
     ------------
     **parameters
-        Names and values of global parameters present in the algebraic expression defined as
-        `potential` (see above).
+        Names and values of additional parameters for this auxiliary variable.
 
     Example
     -------
@@ -255,82 +238,50 @@ class AuxiliaryVariable:
         >>> import openmm as mm
         >>> from openmm import unit
         >>> cv = xps.CollectiveVariable('psi', mm.CustomTorsionForce('theta'), 2*math.pi, 'radians')
-        >>> cv.force.addTorsion(0, 1, 2, 3, [])
-        0
+        >>> index = cv.force.addTorsion(0, 1, 2, 3, [])
         >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
-        >>> K = 1000*unit.kilojoules_per_mole/unit.radians**2
         >>> limit = 180*unit.degrees
-        >>> xps.AuxiliaryVariable('s_psi', -limit, limit, True, mass, cv, K)
-        <s_psi in [-3.141592653589793, 3.141592653589793], periodic, m=50>
+        >>> xps.AuxiliaryVariable('s_psi', 'radian', 'periodic', -limit, limit, mass)
+        <s_psi in [-3.141592653589793 rad, 3.141592653589793 rad], periodic, m=50 nm**2 Da/(rad**2)>
 
     """
     def __init__(
         self,
         id: str,
-        min_value: QuantityOrFloat,
-        max_value: QuantityOrFloat,
-        periodic: bool,
+        unit: UnitOrStr,
+        boundary: str,
+        minval: QuantityOrFloat,
+        maxval: QuantityOrFloat,
         mass: QuantityOrFloat,
-        colvars: Union[CollectiveVariable, List[CollectiveVariable]],
-        potential: Union[str, QuantityOrFloat],
-        unit: Optional[UnitOrStr] = None,
-        sigma: Optional[QuantityOrFloat] = None,
-        grid_size: Optional[int] = None,
         **parameters,
     ) -> None:
 
         self.id = id
-        self.min_value = stdval(min_value)
-        self.max_value = stdval(max_value)
-        self.mass = stdval(mass)
-        self._range = self.max_value - self.min_value
-
-        self.colvars = colvars if isinstance(colvars, (list, tuple)) else [colvars]
-
-        if isinstance(potential, str):
-            self.potential = potential
-            self.parameters = {key: stdval(value) for key, value in parameters.items()}
-        else:
-            cv = self.colvars[0].id
-            if periodic:
-                self.potential = f'0.5*K_{cv}*min(d{cv},{self._range}-d{cv})^2'
-                self.potential += f'; d{cv}=abs({cv}-{self.id})'
-            else:
-                self.potential = f'0.5*K_{cv}*({cv}-{self.id})^2'
-            self.parameters = {f'K_{cv}': stdval(potential)}
-
-        self.periodic = periodic
-
-        self.unit = str2unit(unit) if isinstance(unit, str) else unit
-
-        if sigma is None or sigma == 0.0:
-            self.sigma = self.grid_size = None
-        else:
-            self.sigma = stdval(sigma)
-            self._scaled_variance = (self.sigma/self._range)**2
-            if grid_size is None:
-                self.grid_size = int(np.ceil(5*self._range/self.sigma)) + 1
-            else:
-                self.grid_size = grid_size
+        self.unit = utils.str2unit(unit) if isinstance(unit, str) else unit
+        self.boundary = boundary
+        self.minval = utils.compatible_value(minval, self.unit)
+        self.maxval = utils.compatible_value(maxval, self.unit)
+        self._mass_unit = mm.unit.dalton*(mm.unit.nanometer/self.unit)**2
+        self.mass = utils.compatible_value(mass, self._mass_unit)
+        self._range = self.maxval - self.minval
+        self.parameters = parameters
 
     def __repr__(self) -> str:
 
-        status = 'periodic' if self.periodic else 'non-periodic'
-        return f'<{self.id} in [{self.min_value}, {self.max_value}], {status}, m={self.mass}>'
+        minval = f'{self.minval} {self.unit.get_symbol()}'
+        maxval = f'{self.maxval} {self.unit.get_symbol()}'
+        mass = f'{self.mass} {self._mass_unit.get_symbol()}'
+        return f'<{self.id} in [{minval}, {maxval}], {self.boundary}, m={mass}>'
 
     def __getstate__(self) -> Dict[str, Any]:
 
         return dict(
             id=self.id,
-            min_value=self.min_value,
-            max_value=self.max_value,
+            minval=self.minval,
+            maxval=self.maxval,
             mass=self.mass,
-            colvars=self.colvars,
-            potential=self.potential,
-            periodic=self.periodic,
-            unit=self.unit,
-            sigma=self.sigma,
-            grid_size=self.grid_size,
+            boundary=self.boundary,
+            unit=self.unit.get_name(),
             **self.parameters,
         )
 
