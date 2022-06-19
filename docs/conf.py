@@ -44,6 +44,7 @@ release = ''
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autodoc.typehints',
     'sphinx.ext.autosummary',
     'sphinx.ext.coverage',
     'sphinx.ext.doctest',
@@ -56,7 +57,6 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.mathjax',
     'sphinxcontrib.bibtex',
-    'sphinx_autodoc_typehints',
 ]
 
 autosummary_generate = True
@@ -181,5 +181,5 @@ texinfo_documents = [
 # -- Extension configuration -------------------------------------------------
 bibtex_bibfiles = ['references.bib']
 
-typehints_defaults = 'comma'
-typehints_document_rtype = True
+autodoc_typehints = 'description'
+autodoc_typehints_format = 'fully-qualified'

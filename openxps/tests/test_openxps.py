@@ -1,5 +1,6 @@
 """
 Unit and regression test for the openxps package.
+
 """
 
 # Import package, test suite, and other packages as needed
@@ -9,10 +10,10 @@ import sys
 import tempfile
 
 import numpy as np
-import openmm
+import openmm as mm
 
 # import pytest
-import openxps
+import openxps as xps
 
 
 def test_openxps_imported():
@@ -21,35 +22,35 @@ def test_openxps_imported():
 
 
 def test_collective_variable_serialization():
-    torsion = openmm.CustomTorsionForce('theta')
+    torsion = mm.CustomTorsionForce('theta')
     torsion.addTorsion(4, 6, 8, 14, [])
-    phi = openxps.CollectiveVariable('phi', torsion, 'unit.radians')
+    phi = xps.CollectiveVariable('phi', torsion, 'unit.radians')
     pipe = io.StringIO()
-    openxps.serialize(phi, pipe)
+    xps.serialize(phi, pipe)
     pipe.seek(0)
-    new = openxps.deserialize(pipe)
+    new = xps.deserialize(pipe)
     assert new.__repr__() == phi.__repr__()
 
 
 def test_extended_space_variable_serialization():
     # Extended-space variable
-    model = openxps.AlanineDipeptideModel()
-    old = openxps.ExtendedSpaceVariable('s_phi', -np.pi, np.pi, True, 1.0, model.phi, 1.0)
+    model = xps.AlanineDipeptideModel()
+    old = xps.AuxiliaryVariable('s_phi', -np.pi, np.pi, True, 1.0, model.phi, 1.0)
     pipe = io.StringIO()
-    openxps.serialize(old, pipe)
+    xps.serialize(old, pipe)
     pipe.seek(0)
     print(pipe.getvalue())
-    new = openxps.deserialize(pipe)
+    new = xps.deserialize(pipe)
     assert new.__repr__() == old.__repr__()
 
 
 def test_serialization_to_file():
-    torsion = openmm.CustomTorsionForce('theta')
+    torsion = mm.CustomTorsionForce('theta')
     torsion.addTorsion(4, 6, 8, 14, [])
-    phi = openxps.CollectiveVariable('phi', torsion, 'unit.radians')
+    phi = xps.CollectiveVariable('phi', torsion, 'unit.radians')
     file = tempfile.NamedTemporaryFile(delete=False)
     file.close()
-    openxps.serialize(phi, file.name)
-    new = openxps.deserialize(file.name)
+    xps.serialize(phi, file.name)
+    new = xps.deserialize(file.name)
     os.remove(file.name)
     assert new.__repr__() == phi.__repr__()
