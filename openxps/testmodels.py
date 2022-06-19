@@ -9,9 +9,12 @@
 
 """
 
+from __future__ import annotations
+
 import os
 from typing import Optional
 
+import numpy as np
 import openmm as mm
 from openmm import app
 
@@ -47,7 +50,7 @@ class AlanineDipeptideModel:
         >>> import openxps as xps
         >>> model = xps.AlanineDipeptideModel()
         >>> model.phi
-        phi: CustomTorsionForce in radian
+        phi: CustomTorsionForce (period=6.283185307179586 radian)
 
         >>> import openxps as xps
         >>> model = xps.AlanineDipeptideModel(water_model='tip3p')
@@ -62,20 +65,19 @@ class AlanineDipeptideModel:
         number: Optional[int] = 500,
     ) -> None:
 
-        pdb = app.PDBFile(os.path.join(xps.__path__[0], 'data', 'alanine-dipeptide.pdb'))
-        if water_model is None:
-            self.topology = pdb.topology
-            self.positions = pdb.positions
-        else:
+        source = app.PDBFile(os.path.join(xps.__path__[0], 'data', 'alanine-dipeptide.pdb'))
+        if water_model is not None:
             force_field = app.ForceField('amber03.xml', f'{water_model}.xml')
-            modeller = app.Modeller(pdb.topology, pdb.positions)
-            modeller.addSolvent(force_field, model=water_model, numAdded=number)
-            self.topology = modeller.topology
-            self.positions = modeller.positions
-        atoms = [(a.name, a.residue.name) for a in self.topology.atoms()]
-        phi_atoms = [('C', 'ACE'), ('N', 'ALA'), ('CA', 'ALA'), ('C', 'ALA')]
-        self.phi = xps.CollectiveVariable('phi', mm.CustomTorsionForce('theta'), 'radians')
-        self.phi.force.addTorsion(*[atoms.index(i) for i in phi_atoms], [])
-        psi_atoms = [('N', 'ALA'), ('CA', 'ALA'), ('C', 'ALA'), ('N', 'NME')]
-        self.psi = xps.CollectiveVariable('psi', mm.CustomTorsionForce('theta'), 'radians')
-        self.psi.force.addTorsion(*[atoms.index(i) for i in psi_atoms], [])
+            source = app.Modeller(source.topology, source.positions)
+            source.addSolvent(force_field, model=water_model, numAdded=number)
+        self.topology = source.topology
+        self.positions = source.positions
+        all_atoms = [(a.name, a.residue.name) for a in self.topology.atoms()]
+        dihedrals = dict(
+            phi=[('C', 'ACE'), ('N', 'ALA'), ('CA', 'ALA'), ('C', 'ALA')],
+            psi=[('N', 'ALA'), ('CA', 'ALA'), ('C', 'ALA'), ('N', 'NME')]
+        )
+        for name, atoms in dihedrals.items():
+            angle = mm.CustomTorsionForce('theta')
+            angle.addTorsion(*[all_atoms.index(i) for i in atoms], [])
+            setattr(self, name, xps.CollectiveVariable(name, angle, 2*np.pi, 'radians'))

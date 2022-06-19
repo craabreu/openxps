@@ -11,8 +11,9 @@ import tempfile
 
 import numpy as np
 import openmm as mm
+import pytest
+from openmm import unit
 
-# import pytest
 import openxps as xps
 
 
@@ -24,12 +25,18 @@ def test_openxps_imported():
 def test_collective_variable_serialization():
     torsion = mm.CustomTorsionForce('theta')
     torsion.addTorsion(4, 6, 8, 14, [])
-    phi = xps.CollectiveVariable('phi', torsion, 'unit.radians')
+    phi = xps.CollectiveVariable('phi', torsion, 360*unit.degrees, unit='unit.radians')
     pipe = io.StringIO()
     xps.serialize(phi, pipe)
     pipe.seek(0)
     new = xps.deserialize(pipe)
     assert new.__repr__() == phi.__repr__()
+
+
+def test_collective_variable_exception():
+    torsion = mm.CustomTorsionForce('theta')
+    with pytest.raises(TypeError):
+        xps.CollectiveVariable('phi', torsion, 1*unit.angstrom, unit='radians')
 
 
 def test_extended_space_variable_serialization():
@@ -47,7 +54,7 @@ def test_extended_space_variable_serialization():
 def test_serialization_to_file():
     torsion = mm.CustomTorsionForce('theta')
     torsion.addTorsion(4, 6, 8, 14, [])
-    phi = xps.CollectiveVariable('phi', torsion, 'unit.radians')
+    phi = xps.CollectiveVariable('phi', torsion, 360*unit.degrees, unit='unit.radians')
     file = tempfile.NamedTemporaryFile(delete=False)
     file.close()
     xps.serialize(phi, file.name)

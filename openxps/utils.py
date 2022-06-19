@@ -6,6 +6,9 @@
 .. moduleauthor:: Charlles Abreu <abreu@eq.ufrj.br>
 
 """
+
+from __future__ import annotations
+
 import ast
 from typing import Union
 

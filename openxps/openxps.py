@@ -10,6 +10,8 @@
 
 """
 
+from __future__ import annotations
+
 from copy import deepcopy
 from typing import Any, Dict, List, Optional, Union
 
@@ -35,47 +37,63 @@ class CollectiveVariable:
     id
         a valid identifier string.
     force
-        an OpenMM Force_ object whose energy function is used to evaluate this collective
-        variable.
+        an OpenMM Force_ object whose energy function is used to evaluate this CV.
+    period
+        the period of the CV, if it is periodic. If `period=None`, it will be considered as
+        non-periodic.
     unit
-        the unity of measurement of the collective variable. If this is `None` (default), a
-        numerical value is used based on OpenMM's default units.
+        the unity of measurement of the CV.
+
+    Raises
+    ------
+    TypeError
+        if `period` has a unit of measurement that is incompatible with `unit`.
 
     Example
     -------
         >>> import openmm as mm
         >>> import openxps as xps
         >>> dihedral_angle = mm.CustomTorsionForce('theta')
-        >>> dihedral_angle.addTorsion(0, 1, 2, 3, [])
-        0
-        >>> xps.CollectiveVariable('psi', dihedral_angle, 'radians')
-        psi: CustomTorsionForce in radian
+        >>> index = dihedral_angle.addTorsion(0, 1, 2, 3, [])
+        >>> xps.CollectiveVariable('psi', dihedral_angle, 360*mm.unit.degrees, 'radians')
+        psi: CustomTorsionForce (period=6.283185307179586 radian)
+        >>> distance = mm.CustomBondForce('10*r')
+        >>> index = distance.addBond(1, 18, [])
+        >>> xps.CollectiveVariable('distance', distance, None, 'angstroms')
+        distance: CustomBondForce (non-periodic, unit=angstrom)
 
     """
     def __init__(
         self,
         id: str,
         force: mm.Force,
-        unit: Optional[UnitOrStr] = None,
+        period: QuantityOrFloat,
+        unit: UnitOrStr,
     ) -> None:
 
         if not id.isidentifier():
             raise ValueError('Parameter id must be a valid Python variable name')
         self.id = id
         self.force = force
+        self.period = stdval(period)
         self.unit = str2unit(unit) if isinstance(unit, str) else unit
+        self.period = period.value_in_unit(self.unit) if mm.unit.is_quantity(period) else period
 
     def __repr__(self) -> str:
 
         description = f'{self.id}: {self.force.getName()}'
-        unit = '' if self.unit is None else f' in {self.unit}'
-        return description + unit
+        if self.period is None:
+            description += f' (non-periodic, unit={self.unit})'
+        else:
+            description += f' (period={self.period} {self.unit})'
+        return description
 
     def __getstate__(self) -> Dict[str, Any]:
 
         return dict(
             id=self.id,
             force=self.force,
+            period=self.period,
             unit=self.unit.get_name(),
         )
 
@@ -232,10 +250,11 @@ class AuxiliaryVariable:
 
     Example
     -------
+        >>> import math
         >>> import openxps as xps
         >>> import openmm as mm
         >>> from openmm import unit
-        >>> cv = xps.CollectiveVariable('psi', mm.CustomTorsionForce('theta'))
+        >>> cv = xps.CollectiveVariable('psi', mm.CustomTorsionForce('theta'), 2*math.pi, 'radians')
         >>> cv.force.addTorsion(0, 1, 2, 3, [])
         0
         >>> mass = 50*unit.dalton*(unit.nanometer/unit.radians)**2
