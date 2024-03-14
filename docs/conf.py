@@ -20,14 +20,13 @@ import sys
 
 # Incase the project was not installed
 import openxps
-from openxps.openxps import BaseCollectiveVariable
 
 sys.path.insert(0, os.path.abspath(".."))
 
 
 def create_rst_file(cls):
     name = cls.__name__
-    methods = list(BaseCollectiveVariable.__dict__.keys()) + list(cls.__dict__.keys())
+    methods = list(cls.__dict__.keys())
     excluded = ["yaml_tag"]
     with open(f"api/{name}.rst", "w") as f:
         f.writelines(
