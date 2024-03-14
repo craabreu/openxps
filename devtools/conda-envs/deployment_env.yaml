@@ -1,0 +1,21 @@
+name: build
+channels:
+  - conda-forge
+dependencies:
+  # Base dependencies
+  - python
+  - pip
+  - numpy
+  - openmm
+  - pyyaml
+  - xmltodict
+
+  # Conda build
+  - anaconda-client
+  - conda-build
+  - boa
+
+  # PyPI build
+  - pip:
+    - build
+    - twine

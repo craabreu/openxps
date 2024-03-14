@@ -1,0 +1,43 @@
+{% set version = environ['OPENXPS_VERSION'][1:] %}
+
+package:
+  name: openxps
+  version: {{ version }}
+
+source:
+  git_url: ../../../
+
+build:
+  noarch: python
+  number: 0
+  script: python -m pip install --no-deps --ignore-installed .
+
+requirements:
+  host:
+    - python
+    - setuptools
+    - versioningit
+    - pip
+  run:
+    - python
+    - numpy
+    - openmm
+    - pyyaml
+    - xmltodict
+
+test:
+  imports:
+    - openxps
+
+about:
+  home: https://github.com/craabreu/openxps
+  summary: Useful Collective Variables for OpenMM
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  doc_url: https://openxps.readthedocs.io/en/stable
+  dev_url: https://github.com/craabreu/openxps
+
+extra:
+  recipe-maintainers:
+    - craabreu

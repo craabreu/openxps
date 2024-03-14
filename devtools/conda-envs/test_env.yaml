@@ -1,0 +1,19 @@
+name: test
+channels:
+  - conda-forge
+dependencies:
+    # Base depends
+  - python
+  - pip
+  - openmm
+  - numpy
+  - pyyaml
+  - xmltodict
+
+    # Testing
+  - scipy
+  - openmmtools
+  - mdtraj
+  - pytest
+  - pytest-cov
+  - codecov

@@ -1,0 +1,24 @@
+name: docs
+channels:
+  - conda-forge
+dependencies:
+    # Base dependencies
+  - python
+  - pip
+  - openmm
+  - numpy
+  - pyyaml
+  - xmltodict
+
+    # Testing
+  - scipy
+  - openmmtools
+  - mdtraj
+  - pytest
+  - pytest-cov
+  - codecov
+
+  # Docs building
+  - sphinx
+  - sphinxcontrib-bibtex
+  - sphinx-copybutton
