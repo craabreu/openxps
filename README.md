@@ -13,6 +13,10 @@ Extended Phase-Space Simulations with OpenMM
 [![Conda platforms](https://img.shields.io/conda/pn/mdtools/openxps.svg)](https://anaconda.org/mdtools/openxps)
 [![Conda downloads](https://img.shields.io/conda/dn/mdtools/openxps.svg)](https://anaconda.org/mdtools/openxps)
 
+[![PyPI version](https://img.shields.io/pypi/v/openxps.svg)](https://pypi.org/project/openxps)
+[![PyPI version](https://img.shields.io/pypi/pyversions/openxps.svg)](https://pypi.org/project/openxps)
+[![PyPI version](https://img.shields.io/pypi/dm/openxps.svg)](https://pypi.org/project/openxps)
+
 [![License](https://img.shields.io/badge/License-MIT-yellowgreen.svg?style=flat)](https://github.com/craabreu/openxps/blob/main/LICENSE.md)
 
 ### Overview
