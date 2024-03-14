@@ -7,13 +7,8 @@ dependencies:
   - pip
   - openmm
   - numpy
-  - pyyaml
-  - xmltodict
 
     # Testing
-  - scipy
   - openmmtools
-  - mdtraj
   - pytest
   - pytest-cov
-  - codecov

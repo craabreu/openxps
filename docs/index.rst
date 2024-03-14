@@ -21,7 +21,6 @@ Contents
 
    getting_started
    api/index
-   serialization
    references
 
 
