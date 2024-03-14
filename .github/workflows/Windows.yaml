@@ -27,7 +27,7 @@ jobs:
             openmm-version: "8.1"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Additional info about the build
         shell: bash
