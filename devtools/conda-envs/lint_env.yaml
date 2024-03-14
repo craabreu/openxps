@@ -6,6 +6,8 @@ dependencies:
   - python
   - openmm
   - numpy
+  - cvpack
+  - pyyaml
 
     # Linting
   - flake8
