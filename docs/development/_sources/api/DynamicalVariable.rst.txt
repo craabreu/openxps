@@ -1,0 +1,13 @@
+DynamicalVariable
+=================
+
+.. currentmodule:: openxps
+.. autoclass:: DynamicalVariable
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: bounds
+    .. automethod:: mass
+    .. automethod:: name
+    .. automethod:: unit
