@@ -1,6 +1,7 @@
 name: linter
 channels:
   - conda-forge
+  - mdtools
 dependencies:
     # Base depends
   - python

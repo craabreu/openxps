@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 # https://packaging.python.org/en/latest/specifications/declaring-project-metadata/
 [project]
 name = "openxps"
-description = "Useful Collective Variables for OpenMM"
+description = "Extended Phase-Space Simulations with OpenMM"
 dynamic = ["version"]
 readme = "README.md"
 authors = [

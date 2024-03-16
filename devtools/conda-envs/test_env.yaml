@@ -1,6 +1,7 @@
 name: test
 channels:
   - conda-forge
+  - mdtools
 dependencies:
     # Base depends
   - python
