@@ -7,8 +7,9 @@
 
 """
 
-import yaml
+import typing as t
 
+import yaml
 from cvpack import unit as mmunit
 
 
@@ -39,10 +40,22 @@ class Bounds(yaml.YAMLObject):
 
     def __eq__(self, other: object) -> bool:
         return (
-            type(self) == type(other)
+            isinstance(other, type(self))
             and self._lower_bound == other._lower_bound
             and self._upper_bound == other._upper_bound
         )
+
+    def __getstate__(self) -> t.Dict[str, t.Any]:
+        return {
+            "version": 1,
+            "lower_bound": self.lower_bound,
+            "upper_bound": self.upper_bound,
+        }
+
+    def __setstate__(self, kw: t.Dict[str, t.Any]) -> None:
+        if kw.pop("version", 0) != 1:
+            raise ValueError(f"Invalid version for {self.__class__.__name__}.")
+        self.__init__(**kw)
 
     @property
     def lower_bound(self) -> mmunit.ScalarQuantity:
@@ -78,7 +91,7 @@ class Periodic(Bounds):
     >>> from cvpack import unit
     >>> bounds = xps.bounds.Periodic(-180 * unit.degree, 180 * unit.degree)
     >>> print(bounds)
-    Periodic(-3.14159..., 3.14159...)
+    Periodic(-3.14..., 3.14...)
     >>> bounds.range
     6.28318...
     """
