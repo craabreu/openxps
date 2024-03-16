@@ -1,12 +1,15 @@
 name: build
 channels:
   - conda-forge
+  - mdtools
 dependencies:
   # Base dependencies
   - python
   - pip
   - numpy
   - openmm
+  - cvpack
+  - pyyaml
 
   # Conda build
   - anaconda-client

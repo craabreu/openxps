@@ -1,12 +1,15 @@
 name: test
 channels:
   - conda-forge
+  - mdtools
 dependencies:
     # Base depends
   - python
   - pip
   - openmm
   - numpy
+  - cvpack
+  - pyyaml
 
     # Testing
   - openmmtools

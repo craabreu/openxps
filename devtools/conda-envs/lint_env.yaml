@@ -1,11 +1,14 @@
 name: linter
 channels:
   - conda-forge
+  - mdtools
 dependencies:
     # Base depends
   - python
   - openmm
   - numpy
+  - cvpack
+  - pyyaml
 
     # Linting
   - flake8

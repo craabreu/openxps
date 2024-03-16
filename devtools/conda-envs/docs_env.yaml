@@ -1,12 +1,15 @@
 name: docs
 channels:
   - conda-forge
+  - mdtools
 dependencies:
     # Base dependencies
   - python
   - pip
   - openmm
   - numpy
+  - cvpack
+  - pyyaml
 
     # Testing
   - openmmtools
