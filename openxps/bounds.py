@@ -12,6 +12,8 @@ import typing as t
 import yaml
 from cvpack import unit as mmunit
 
+from .utils import register_serializer
+
 
 class Bounds(yaml.YAMLObject):
     """
@@ -96,11 +98,8 @@ class Periodic(Bounds):
     6.28318...
     """
 
-    yaml_tag = "!openxps.bounds.Periodic"
 
-
-yaml.SafeDumper.add_representer(Periodic, Periodic.to_yaml)
-yaml.SafeLoader.add_constructor(Periodic.yaml_tag, Periodic.from_yaml)
+register_serializer(Periodic, "!openxps.bounds.Periodic")
 
 
 class Reflective(Bounds):
@@ -126,8 +125,5 @@ class Reflective(Bounds):
     Reflective(0.0, 1.0)
     """
 
-    yaml_tag = "!openxps.bounds.Reflective"
 
-
-yaml.SafeDumper.add_representer(Reflective, Reflective.to_yaml)
-yaml.SafeLoader.add_constructor(Reflective.yaml_tag, Reflective.from_yaml)
+register_serializer(Reflective, "!openxps.bounds.Reflective")

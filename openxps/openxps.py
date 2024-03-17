@@ -14,6 +14,7 @@ import yaml
 from cvpack import unit as mmunit
 
 from .bounds import Bounds
+from .utils import register_serializer
 
 
 class DynamicalVariable(yaml.YAMLObject):
@@ -70,8 +71,6 @@ class DynamicalVariable(yaml.YAMLObject):
         >>> yaml.safe_load(serialized_dv)
         <psi in Periodic(-3.14..., 3.14...), unit is rad, mass is 3 nm**2 Da/(rad**2)>
     """
-
-    yaml_tag = "!openxps.DynamicalVariable"
 
     @mmunit.convert_quantities
     def __init__(
@@ -141,5 +140,4 @@ class DynamicalVariable(yaml.YAMLObject):
         return self._mass
 
 
-yaml.SafeDumper.add_representer(DynamicalVariable, DynamicalVariable.to_yaml)
-yaml.SafeLoader.add_constructor(DynamicalVariable.yaml_tag, DynamicalVariable.from_yaml)
+register_serializer(DynamicalVariable, "!openxps.DynamicalVariable")
