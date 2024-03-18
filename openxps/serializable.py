@@ -14,6 +14,7 @@ class Serializable(yaml.YAMLObject):
     """
     A mixin class that allows serialization and deserialization of objects with PyYAML.
     """
+
     @classmethod
     def register_tag(cls, tag: str) -> None:
         """

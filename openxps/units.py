@@ -8,14 +8,13 @@
 """
 
 import ast
-import typing as t
 import functools
 import inspect
+import typing as t
 
 from openmm import unit as mmunit
 
 from .serializable import Serializable
-
 
 
 class Unit(mmunit.Unit, Serializable, ast.NodeTransformer):
@@ -27,6 +26,7 @@ class Unit(mmunit.Unit, Serializable, ast.NodeTransformer):
     data
         The data to be used to create the unit.
     """
+
     def __init__(self, data: t.Union[str, mmunit.Unit, dict]) -> None:
         if isinstance(data, str):
             expression = self.visit(ast.parse(data, mode="eval"))
@@ -68,6 +68,7 @@ class Quantity(mmunit.Quantity, Serializable):
     """
     Extension of the OpenMM Quantity class to allow serialization and deserialization.
     """
+
     def __init__(self, *args: t.Any) -> None:
         if len(args) == 1 and mmunit.is_quantity(args[0]):
             super().__init__(args[0].value_in_unit(args[0].unit), Unit(args[0].unit))
