@@ -44,17 +44,20 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span> <span class="nn">typing</span> <span class="k">as</span> <span class="nn">t</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span> <span class="nn">numbers</span> <span class="kn">import</span> <span class="n">Real</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">yaml</span>
-<span class="kn">from</span> <span class="nn">cvpack</span> <span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
+<span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
 <span class="kn">from</span> <span class="nn">.bounds</span> <span class="kn">import</span> <span class="n">Bounds</span>
+<span class="kn">from</span> <span class="nn">.serializable</span> <span class="kn">import</span> <span class="n">Serializable</span>
+<span class="kn">from</span> <span class="nn">.units</span> <span class="kn">import</span> <span class="n">preprocess_units</span>
 
 
 <div class="viewcode-block" id="DynamicalVariable">
 <a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable">[docs]</a>
-<span class="k">class</span> <span class="nc">DynamicalVariable</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">YAMLObject</span><span class="p">):</span>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">DynamicalVariable</span><span class="p">(</span><span class="n">Serializable</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    An OpenMM context parameter turned into a dynamical variable.</span>
 
@@ -64,10 +67,10 @@
 <span class="sd">        The name of the context parameter to be turned into a dynamical variable.</span>
 <span class="sd">    unit</span>
 <span class="sd">        The unity of measurement of this dynamical variable. It must be compatible with</span>
-<span class="sd">        the MD unit system (mass in ``dalton``, distance in ``nanometer``, time in</span>
-<span class="sd">        ``picosecond``, temperature in ``kelvin``, energy in ``kilojoules_per_mol``,</span>
-<span class="sd">        angle in ``radian``). If the collective variables does not have a unit, pass</span>
-<span class="sd">        ``dimensionless``.</span>
+<span class="sd">        the OpenMM&#39;s MD unit system (mass in ``dalton``, distance in ``nanometer``, time</span>
+<span class="sd">        in ``picosecond``, temperature in ``kelvin``, energy in ``kilojoules_per_mol``,</span>
+<span class="sd">        angle in ``radian``). If the collective variables does not have a unit, it must</span>
+<span class="sd">        be set to ``dimensionless``.</span>
 <span class="sd">    mass</span>
 <span class="sd">        The mass assigned to this dynamical variable, whose unit of measurement must be</span>
 <span class="sd">        compatible with ``dalton*(nanometer/unit)**2``, where `unit` is the dynamical</span>
@@ -79,7 +82,6 @@
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
-<span class="sd">        &gt;&gt;&gt; import math</span>
 <span class="sd">        &gt;&gt;&gt; import openxps as xps</span>
 <span class="sd">        &gt;&gt;&gt; import yaml</span>
 <span class="sd">        &gt;&gt;&gt; from openmm import unit</span>
@@ -87,101 +89,44 @@
 <span class="sd">        ...     &quot;psi&quot;,</span>
 <span class="sd">        ...     unit.radian,</span>
 <span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
-<span class="sd">        ...     xps.bounds.Periodic(-math.pi, math.pi),</span>
+<span class="sd">        ...     xps.bounds.Periodic(-180*unit.degree, 180*unit.degree)</span>
 <span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; dv</span>
-<span class="sd">        &lt;psi in Periodic(-3.14..., 3.14...), unit is rad, mass is 3 nm**2 Da/(rad**2)&gt;</span>
-<span class="sd">        &gt;&gt;&gt; serialized_dv = yaml.safe_dump(dv)</span>
-<span class="sd">        &gt;&gt;&gt; print(serialized_dv)</span>
-<span class="sd">        !openxps.DynamicalVariable</span>
-<span class="sd">        bounds: !openxps.bounds.Periodic</span>
-<span class="sd">          lower_bound: -3.14...</span>
-<span class="sd">          upper_bound: 3.14...</span>
-<span class="sd">          version: 1</span>
-<span class="sd">        mass: 3</span>
-<span class="sd">        name: psi</span>
-<span class="sd">        unit: !cvpack.Unit</span>
-<span class="sd">          description: radian</span>
-<span class="sd">          version: 1</span>
-<span class="sd">        version: 1</span>
-<span class="sd">        &lt;BLANKLINE&gt;</span>
-<span class="sd">        &gt;&gt;&gt; yaml.safe_load(serialized_dv)</span>
-<span class="sd">        &lt;psi in Periodic(-3.14..., 3.14...), unit is rad, mass is 3 nm**2 Da/(rad**2)&gt;</span>
+<span class="sd">        DynamicalVariable(name=&#39;psi&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
+<span class="sd">        &gt;&gt;&gt; assert yaml.safe_load(yaml.safe_dump(dv)) == dv</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="n">yaml_tag</span> <span class="o">=</span> <span class="s2">&quot;!openxps.DynamicalVariable&quot;</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">unit</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Unit</span>
+    <span class="n">mass</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="n">Real</span><span class="p">]</span>
+    <span class="n">bounds</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">Bounds</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
 
-    <span class="nd">@mmunit</span><span class="o">.</span><span class="n">convert_quantities</span>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-        <span class="n">unit</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Unit</span><span class="p">,</span>
-        <span class="n">mass</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">ScalarQuantity</span><span class="p">,</span>
-        <span class="n">bounds</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">Bounds</span><span class="p">,</span> <span class="kc">None</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span>
-            <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span><span class="o">.</span><span class="n">value_in_unit_system</span><span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">md_unit_system</span><span class="p">),</span>
-            <span class="mf">1.0</span><span class="p">,</span>
+    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span> <span class="o">!=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">md_unit_system</span><span class="o">.</span><span class="n">express_unit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unit </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="si">}</span><span class="s2"> must be compatible with the MD unit system.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span>
+            <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">**</span><span class="mi">2</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="o">**</span><span class="mi">2</span>
         <span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unit </span><span class="si">{</span><span class="n">unit</span><span class="si">}</span><span class="s2"> is not compatible with the MD unit system.&quot;</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_name</span> <span class="o">=</span> <span class="n">name</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">SerializableUnit</span><span class="p">(</span><span class="n">unit</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mass</span> <span class="o">=</span> <span class="n">mass</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_bounds</span> <span class="o">=</span> <span class="n">bounds</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_mass_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">SerializableUnit</span><span class="p">(</span>
-            <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">unit</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
-        <span class="p">)</span>
-
-    <span class="k">def</span> <span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="p">[</span>
-                <span class="sa">f</span><span class="s2">&quot;&lt;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_name</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="sa">f</span><span class="s2">&quot; in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_bounds</span><span class="si">}</span><span class="s2">&quot;</span> <span class="o">*</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bounds</span><span class="p">),</span>
-                <span class="sa">f</span><span class="s2">&quot;unit is </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
-                <span class="sa">f</span><span class="s2">&quot;mass is </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_mass</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_mass_unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">&gt;&quot;</span><span class="p">,</span>
-            <span class="p">]</span>
-        <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Provided mass has incompatible units.&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">]:</span>
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;version&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
             <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
             <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
             <span class="s2">&quot;mass&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">,</span>
             <span class="s2">&quot;bounds&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span>
         <span class="p">}</span>
 
-    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">kw</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">kw</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid version for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kw</span><span class="p">)</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The name of this dynamical variable.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_name</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">unit</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Unit</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The unity of measurement of this dynamical variable.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_unit</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">bounds</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Bounds</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The boundary condition to be applied to this dynamical variable.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bounds</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span> <span class="nf">mass</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">SerializableQuantity</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;The mass assigned to this auxiliary variable.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mass</span></div>
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keywords</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">keywords</span><span class="p">)</span></div>
 
 
 
-<span class="n">yaml</span><span class="o">.</span><span class="n">SafeDumper</span><span class="o">.</span><span class="n">add_representer</span><span class="p">(</span><span class="n">DynamicalVariable</span><span class="p">,</span> <span class="n">DynamicalVariable</span><span class="o">.</span><span class="n">to_yaml</span><span class="p">)</span>
-<span class="n">yaml</span><span class="o">.</span><span class="n">SafeLoader</span><span class="o">.</span><span class="n">add_constructor</span><span class="p">(</span><span class="n">DynamicalVariable</span><span class="o">.</span><span class="n">yaml_tag</span><span class="p">,</span> <span class="n">DynamicalVariable</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">)</span>
+<span class="n">DynamicalVariable</span><span class="o">.</span><span class="fm">__init__</span> <span class="o">=</span> <span class="n">preprocess_units</span><span class="p">(</span><span class="n">DynamicalVariable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">)</span>
+
+<span class="n">DynamicalVariable</span><span class="o">.</span><span class="n">register_tag</span><span class="p">(</span><span class="s2">&quot;!openxps.DynamicalVariable&quot;</span><span class="p">)</span>
 </pre></div>
 
           </div>

@@ -7,7 +7,3 @@ DynamicalVariable
 
     .. rubric:: Methods
 
-    .. automethod:: bounds
-    .. automethod:: mass
-    .. automethod:: name
-    .. automethod:: unit
