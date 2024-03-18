@@ -32,6 +32,13 @@ class Bounds(Serializable):
     lower: t.Union[mmunit.Quantity, float]
     upper: t.Union[mmunit.Quantity, float]
 
+    def __post_init__(self) -> None:
+        for kind in ("lower", "upper"):
+            if not isinstance(getattr(self, kind), (mmunit.Quantity, float)):
+                raise TypeError(f"The {kind} bound must be a Quantity or a float.")
+        if self.lower >= self.upper:
+            raise ValueError("The upper bound must be greater than the lower bound.")
+
     def __getstate__(self) -> t.Dict[str, t.Any]:
         return {"lower": self.lower, "upper": self.upper}
 
@@ -57,10 +64,12 @@ class Periodic(Bounds):
     Example
     -------
     >>> import openxps as xps
-    >>> from cvpack import unit
+    >>> import yaml
+    >>> from openmm import unit
     >>> bounds = xps.bounds.Periodic(-180 * unit.degree, 180 * unit.degree)
     >>> print(bounds)
     Periodic(lower=-180 deg, upper=180 deg)
+    >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
     """
 
 
@@ -83,11 +92,11 @@ class Reflective(Bounds):
     -------
     >>> import openxps as xps
     >>> from cvpack import unit
-    >>> bounds = xps.bounds.Reflective(0.0 * unit.angstrom, 10 * unit.angstrom)
-    >>> bounds == xps.bounds.Reflective(0.0 * unit.nanometer, 1.0 * unit.nanometer)
+    >>> bounds = xps.bounds.Reflective(1 * unit.angstrom, 10 * unit.angstrom)
+    >>> bounds == xps.bounds.Reflective(0.1 * unit.nanometer, 1 * unit.nanometer)
     True
     >>> print(bounds)
-    Reflective(lower=0.0 A, upper=10 A)
+    Reflective(lower=1 A, upper=10 A)
     """
 
 

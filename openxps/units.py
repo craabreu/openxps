@@ -39,11 +39,11 @@ class Unit(mmunit.Unit, Serializable, ast.NodeTransformer):
     def __repr__(self) -> str:
         return self.get_symbol()
 
-    def __getstate__(self) -> str:
-        return str(self)
+    def __getstate__(self) -> t.Dict[str, str]:
+        return {"data": str(self)}
 
-    def __setstate__(self, state: str) -> None:
-        self.__init__(state)
+    def __setstate__(self, keywords: t.Dict[str, str]) -> None:
+        self.__init__(keywords["data"])
 
     def visit_Name(  # pylint: disable=invalid-name
         self, node: ast.Name
@@ -89,7 +89,12 @@ class Quantity(mmunit.Quantity, Serializable):
 
     @property
     def value(self) -> t.Any:
+        """The value of the quantity."""
         return self._value
+
+    def value_in_md_units(self) -> t.Any:
+        """The value of the quantity in MD units."""
+        return self.value_in_unit_system(mmunit.md_unit_system)
 
 
 Quantity.register_tag("!openxps.units.Quantity")
@@ -132,6 +137,8 @@ def preprocess_units(func: t.Callable) -> t.Callable:
             return Quantity(data)
         if isinstance(data, mmunit.Unit):
             return Unit(data)
+        if isinstance(data, str):
+            return data
         if isinstance(data, t.Sequence):
             return type(data)(map(convert, data))
         if isinstance(data, t.Dict):
