@@ -19,14 +19,14 @@ from .utils import preprocess_args
 @dataclass(frozen=True)
 class Bounds(Serializable):
     """
-    A boundary condition for a dynamical variable.
+    A boundary condition for a extra degree of freedom.
 
     Parameters
     ----------
     lower
-        The lower bound for the dynamical variable.
+        The lower bound for the extra degree of freedom.
     upper
-        The upper bound for the dynamical variable.
+        The upper bound for the extra degree of freedom.
     """
 
     lower: t.Union[mmunit.Quantity, float]
@@ -51,15 +51,15 @@ Bounds.__init__ = preprocess_args(Bounds.__init__)
 
 class Periodic(Bounds):
     """
-    A periodic boundary condition. The dynamical variable is allowed to wrap around the
-    upper and lower bounds.
+    A periodic boundary condition. The extra degree of freedom is allowed to wrap around
+    the upper and lower bounds.
 
     Parameters
     ----------
     lower
-        The lower bound for the dynamical variable.
+        The lower bound for the extra degree of freedom.
     upper
-        The upper bound for the dynamical variable.
+        The upper bound for the extra degree of freedom.
 
     Example
     -------
@@ -78,15 +78,15 @@ Periodic.register_tag("!openxps.bounds.Periodic")
 
 class Reflective(Bounds):
     """
-    A reflective boundary condition. The dynamical variable collides elastically with
-    the upper and lower bounds and is reflected back into the range.
+    A reflective boundary condition. The extra degree of freedom collides elastically
+    with the upper and lower bounds and is reflected back into the range.
 
     Parameters
     ----------
     lower
-        The lower bound for the dynamical variable.
+        The lower bound for the extra degree of freedom.
     upper
-        The upper bound for the dynamical variable.
+        The upper bound for the extra degree of freedom.
 
     Example
     -------
