@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from openmm import unit as mmunit
 
 from .serializable import Serializable
-from .units import preprocess_units
+from .utils import preprocess_args
 
 
 @dataclass(frozen=True)
@@ -46,7 +46,7 @@ class Bounds(Serializable):
         self.__init__(**keywords)
 
 
-Bounds.__init__ = preprocess_units(Bounds.__init__)
+Bounds.__init__ = preprocess_args(Bounds.__init__)
 
 
 class Periodic(Bounds):
@@ -91,7 +91,7 @@ class Reflective(Bounds):
     Example
     -------
     >>> import openxps as xps
-    >>> from cvpack import unit
+    >>> from openmm import unit
     >>> bounds = xps.bounds.Reflective(1 * unit.angstrom, 10 * unit.angstrom)
     >>> bounds == xps.bounds.Reflective(0.1 * unit.nanometer, 1 * unit.nanometer)
     True

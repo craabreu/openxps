@@ -15,7 +15,7 @@ from openmm import unit as mmunit
 
 from .bounds import Bounds
 from .serializable import Serializable
-from .units import preprocess_units
+from .utils import preprocess_args
 
 
 @dataclass(frozen=True)
@@ -85,6 +85,6 @@ class DynamicalVariable(Serializable):
         self.__init__(**keywords)
 
 
-DynamicalVariable.__init__ = preprocess_units(DynamicalVariable.__init__)
+DynamicalVariable.__init__ = preprocess_args(DynamicalVariable.__init__)
 
 DynamicalVariable.register_tag("!openxps.DynamicalVariable")
