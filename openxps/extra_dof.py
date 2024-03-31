@@ -18,27 +18,27 @@ from .utils import preprocess_args
 
 
 @dataclass(frozen=True)
-class ExtendedDOF(Serializable):
+class ExtraDOF(Serializable):
     """
-    An extended degree of freedom for XPS simulations.
+    Extra degree of freedom for extended phase-space simulations with OpenMM.
 
     Parameters
     ----------
     name
-        The name of the context parameter to be turned into an extended degree of
+        The name of the context parameter to be turned into an extra degree of
         freedom.
     unit
-        The unity of measurement of this extended degree of freedom. It must be
+        The unity of measurement of this extra degree of freedom. It must be
         compatible with OpenMM's MD unit system (mass in ``dalton``, distance in
         ``nanometer``, angle in ``radian``, time in ``picosecond``, temperature in
-        ``kelvin``, energy in ``kilojoules_per_mol``). If the extended degree of
+        ``kelvin``, energy in ``kilojoules_per_mol``). If the extra degree of
         freedom does not have a unit, use ``dimensionless``.
     mass
-        The mass assigned to this extended degree of freedom, whose unit of measurement
+        The mass assigned to this extra degree of freedom, whose unit of measurement
         must be compatible with ``dalton*(nanometer/unit)**2``, where `unit` is the
-        extended degree of freedom's own unit (see above).
+        extra degree of freedom's own unit (see above).
     bounds
-        The boundary condition to be applied to this extended degree of freedom. It
+        The boundary condition to be applied to this extra degree of freedom. It
         must be an instance of `openxps.bounds.Periodic`, `openxps.bounds.Reflective`,
         or `None` (for unbounded variables).
 
@@ -47,14 +47,14 @@ class ExtendedDOF(Serializable):
     >>> import openxps as xps
     >>> import yaml
     >>> from openmm import unit
-    >>> dv = xps.ExtendedDOF(
+    >>> dv = xps.ExtraDOF(
     ...     "psi",
     ...     unit.radian,
     ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
     ...     xps.bounds.Periodic(-180, 180, unit.degree)
     ... )
     >>> dv
-    ExtendedDOF(name='psi', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)
+    ExtraDOF(name='psi', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)
     >>> assert yaml.safe_load(yaml.safe_dump(dv)) == dv
     """
 
@@ -91,6 +91,6 @@ class ExtendedDOF(Serializable):
         self.__init__(**keywords)
 
 
-ExtendedDOF.__init__ = preprocess_args(ExtendedDOF.__init__)
+ExtraDOF.__init__ = preprocess_args(ExtraDOF.__init__)
 
-ExtendedDOF.register_tag("!openxps.ExtendedDOF")
+ExtraDOF.register_tag("!openxps.ExtraDOF")

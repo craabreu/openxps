@@ -20,14 +20,14 @@ from .utils import preprocess_args
 @dataclass(frozen=True, eq=False)
 class Bounds(Serializable):
     """
-    A boundary condition for an extended degree of freedom.
+    A boundary condition for an extra degree of freedom.
 
     Parameters
     ----------
     lower
-        The lower bound for the extended degree of freedom.
+        The lower bound for the extra degree of freedom.
     upper
-        The upper bound for the extended degree of freedom.
+        The upper bound for the extra degree of freedom.
     unit
         The unity of measurement of the bounds. If the bounds do not have a unit, use
         ``dimensionless``.
@@ -64,15 +64,15 @@ Bounds.__init__ = preprocess_args(Bounds.__init__)
 
 class Periodic(Bounds):
     """
-    A periodic boundary condition. The extended degree of freedom is allowed to wrap
+    A periodic boundary condition. The extra degree of freedom is allowed to wrap
     around the upper and lower bounds.
 
     Parameters
     ----------
     lower
-        The lower bound for the extended degree of freedom.
+        The lower bound for the extra degree of freedom.
     upper
-        The upper bound for the extended degree of freedom.
+        The upper bound for the extra degree of freedom.
     unit
         The unity of measurement of the bounds. If the bounds do not have a unit, use
         ``dimensionless``.
@@ -94,15 +94,15 @@ Periodic.register_tag("!openxps.bounds.Periodic")
 
 class Reflective(Bounds):
     """
-    A reflective boundary condition. The extended degree of freedom collides elastically
+    A reflective boundary condition. The extra degree of freedom collides elastically
     with the upper and lower bounds and is reflected back into the range.
 
     Parameters
     ----------
     lower
-        The lower bound for the extended degree of freedom.
+        The lower bound for the extra degree of freedom.
     upper
-        The upper bound for the extended degree of freedom.
+        The upper bound for the extra degree of freedom.
     unit
         The unity of measurement of the bounds. If the bounds do not have a unit, use
         ``dimensionless``.
