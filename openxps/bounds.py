@@ -9,8 +9,8 @@
 
 import typing as t
 from dataclasses import dataclass
-from numbers import Real
 
+import numpy as np
 from openmm import unit as mmunit
 
 from .serializable import Serializable
@@ -33,13 +33,13 @@ class Bounds(Serializable):
         ``dimensionless``.
     """
 
-    lower: Real
-    upper: Real
+    lower: float
+    upper: float
     unit: mmunit.Unit
 
     def __post_init__(self) -> None:
         for kind in ("lower", "upper"):
-            if not isinstance(getattr(self, kind), Real):
+            if not isinstance(getattr(self, kind), (int, float)):
                 raise TypeError(f"The {kind} bound must be a real number.")
         if self.lower >= self.upper:
             raise ValueError("The upper bound must be greater than the lower bound.")
@@ -57,6 +57,45 @@ class Bounds(Serializable):
             self.lower * self.unit == other.lower * other.unit
             and self.upper * self.unit == other.upper * other.unit
         )
+
+    def _wrap_float(self, value: float) -> float:
+        raise NotImplementedError(
+            "The method _wrap_float must be implemented in subclasses."
+        )
+
+    def wrap(
+        self, value: t.Union[mmunit.Quantity, float]
+    ) -> t.Union[mmunit.Quantity, float]:
+        """
+        Wrap a value around the bounds.
+
+        Parameters
+        ----------
+        value
+            The value to be wrapped.
+
+        Returns
+        -------
+        float
+            The wrapped value.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> from math import pi
+        >>> from openmm import unit
+        >>> bounds = xps.bounds.Periodic(-180, 180, unit.degree)
+        >>> bounds.wrap(200)
+        -160
+        >>> bounds.wrap(-200 * unit.degree)
+        Quantity(value=160, unit=degree)
+        >>> bounds.wrap(2 * pi * unit.radian)
+        Quantity(value=0.0, unit=radian)
+        """
+        if mmunit.is_quantity(value):
+            wrapped = self._wrap_float(value.value_in_unit(self.unit))
+            return (wrapped * self.unit).in_units_of(value.unit)
+        return self._wrap_float(value)
 
 
 Bounds.__init__ = preprocess_args(Bounds.__init__)
@@ -88,6 +127,13 @@ class Periodic(Bounds):
     >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
     """
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.period = self.upper - self.lower
+
+    def _wrap_float(self, value: float) -> float:
+        return (value - self.lower) % self.period + self.lower
+
 
 Periodic.register_tag("!openxps.bounds.Periodic")
 
@@ -118,5 +164,16 @@ class Reflective(Bounds):
     Reflective(lower=1, upper=10, unit=A)
     """
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.period = 2 * (self.upper - self.lower)
+
+    def _wrap_float(self, value: float) -> float:
+        x = (value - self.lower) % self.period
+        return np.minimum(x, self.period - x) + self.lower
+
 
 Reflective.register_tag("!openxps.bounds.Reflective")
+
+
+CIRCULAR = Periodic(-np.pi, np.pi, mmunit.radians)
