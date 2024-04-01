@@ -63,6 +63,32 @@ class Bounds(Serializable):
             "The method _wrap_float must be implemented in subclasses."
         )
 
+    def convert_to(self, unit: mmunit.Unit) -> "Bounds":
+        """
+        Convert the bounds to a different unit of measurement.
+
+        Parameters
+        ----------
+        unit
+            The new unit of measurement for the bounds.
+
+        Returns
+        -------
+        Bounds
+            The bounds in the new unit of measurement.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> from openmm import unit
+        >>> bounds = xps.bounds.Periodic(-180, 180, unit.degree)
+        >>> bounds.convert_to(unit.radian)
+        Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)
+        """
+        return type(self)(
+            self.lower * self.unit / unit, self.upper * self.unit / unit, unit
+        )
+
     def wrap(
         self, value: t.Union[mmunit.Quantity, float]
     ) -> t.Union[mmunit.Quantity, float]:
@@ -93,8 +119,8 @@ class Bounds(Serializable):
         Quantity(value=0.0, unit=radian)
         """
         if mmunit.is_quantity(value):
-            wrapped = self._wrap_float(value.value_in_unit(self.unit))
-            return (wrapped * self.unit).in_units_of(value.unit)
+            wrapped = self._wrap_float(value / self.unit) * self.unit
+            return wrapped.in_units_of(value.unit)
         return self._wrap_float(value)
 
 
