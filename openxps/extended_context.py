@@ -220,8 +220,8 @@ class ExtendedSpaceContext(mm.Context):
             index = extension_system.addParticle(
                 xdof.mass.value_in_unit_system(mm.unit.md_unit_system)
             )
-            force = mm.CustomExternalForce(f"-{xdof.name}_derivative*x")
-            force.addGlobalParameter(f"{xdof.name}_derivative", 0)
+            force = mm.CustomExternalForce(f"{xdof.name}_force*x")
+            force.addGlobalParameter(f"{xdof.name}_force", 0)
             force.addParticle(index, [])
             extension_system.addForce(force)
 
@@ -231,6 +231,12 @@ class ExtendedSpaceContext(mm.Context):
             mm.Platform.getPlatformByName("Reference"),
         )
         self._integrator.initialize(self, self._extension)
+        self._has_set_positions = False
+        self._has_set_extra_dof_values = False
+
+    def setPositions(self, positions):
+        self._has_set_positions = True
+        return super().setPositions(positions)
 
     def set_extra_dof_values(self, values: t.Iterable[mmunit.Quantity]) -> None:
         """
@@ -240,10 +246,9 @@ class ExtendedSpaceContext(mm.Context):
         ----------
         values
             A dictionary containing the values of the extra degrees of freedom.
-        wrap
-            If ``True``, the values are wrapped around the bounds of the extra degrees
-            of freedom.
         """
+        if not self._has_set_positions:
+            raise RuntimeError("The positions have not been set.")
         values = list(values)
         for i, xdof in enumerate(self._extra_dofs):
             value = values[i]
@@ -252,6 +257,11 @@ class ExtendedSpaceContext(mm.Context):
             values[i] = mm.Vec3(value, 0, 0)
             self.setParameter(xdof.name, value)
         self._extension.setPositions(values)
+        state = self.getState(mm.State.ParameterDerivatives)
+        derivatives = state.getEnergyParameterDerivatives()
+        for xdof in self._extra_dofs:
+            self._extension.setParameter(f"{xdof.name}_force", -derivatives[xdof.name])
+        self._has_set_extra_dof_values = True
 
     def get_extra_dof_values(self) -> t.Tuple[mmunit.Quantity]:
         """
@@ -262,6 +272,8 @@ class ExtendedSpaceContext(mm.Context):
         t.Tuple[mmunit.Quantity]
             A tuple containing the values of the extra degrees of freedom.
         """
+        if not self._has_set_extra_dof_values:
+            raise RuntimeError("The extra degrees of freedom have never been set.")
         values = []
         for xdof in self._extra_dofs:
             value = self.getParameter(xdof.name)
@@ -269,3 +281,58 @@ class ExtendedSpaceContext(mm.Context):
                 value = xdof.bounds.wrap(value)
             values.append(value * xdof.unit)
         return tuple(values)
+
+    def set_extra_dof_velocities(self, velocities: t.Iterable[mmunit.Quantity]) -> None:
+        """
+        Set the velocities of the extra degrees of freedom.
+
+        Parameters
+        ----------
+        velocities
+            A dictionary containing the velocities of the extra degrees of freedom.
+        """
+        if not self._has_set_extra_dof_values:
+            raise RuntimeError("The extra degrees of freedom have never been set.")
+        velocities = list(velocities)
+        for i, xdof in enumerate(self._extra_dofs):
+            value = velocities[i]
+            if mmunit.is_quantity(value):
+                value = value.value_in_unit(xdof.unit / mmunit.picosecond)
+            velocities[i] = mm.Vec3(value, 0, 0)
+        self._extension.setVelocities(velocities)
+
+    def set_extra_dof_velocities_to_temperature(
+        self, temperature: mmunit.Quantity, seed: t.Optional[int] = None
+    ) -> None:
+        """
+        Set the velocities of the extra degrees of freedom to a temperature.
+
+        Parameters
+        ----------
+        temperature
+            The temperature to set the velocities to.
+        """
+        if not self._has_set_extra_dof_values:
+            raise RuntimeError("The extra degrees of freedom have never been set.")
+        if seed is None:
+            return self._extension.setVelocitiesToTemperature(temperature)
+        return self._extension.setVelocitiesToTemperature(temperature, seed)
+
+    def get_extra_dof_velocities(self) -> t.Tuple[mmunit.Quantity]:
+        """
+        Get the velocities of the extra degrees of freedom.
+
+        Returns
+        -------
+        t.Tuple[mmunit.Quantity]
+            A tuple containing the velocities of the extra degrees of freedom.
+        """
+        if not self._has_set_extra_dof_values:
+            raise RuntimeError("The extra degrees of freedom have never been set.")
+        state = self._extension.getState(mm.State.Velocities)
+        velocities = state.getVelocities().value_in_unit(
+            mmunit.nanometer / mmunit.picosecond
+        )
+        for i, xdof in enumerate(self._extra_dofs):
+            velocities[i] = velocities[i].x * xdof.unit / mmunit.picosecond
+        return tuple(velocities)
