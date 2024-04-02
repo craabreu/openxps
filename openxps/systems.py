@@ -18,7 +18,7 @@ from .extra_dof import ExtraDOF
 from .serializable import Serializable
 
 
-class PhysicalSystem(Serializable):
+class PhysicalSystem(Serializable, mm.System):
     """
     A physical system for extended phase-space simulations with OpenMM.
 
@@ -45,19 +45,12 @@ class PhysicalSystem(Serializable):
     ...     xps.bounds.Periodic(-180, 180, unit.degree)
     ... )
     >>> xps_system = xps.PhysicalSystem(model.system, [phi_dv])
-    >>> for dv in xps_system.extra_dofs:
-    ...     print(dv)
+    >>> for xdof in xps_system.extra_dofs:
+    ...     print(xdof)
     ExtraDOF(name='phi_dv', unit=rad, mass=3 nm**2 Da/(rad**2), ...)
     """
 
-    thisown = property(
-        lambda x: x.this.own(),
-        lambda x, v: x.this.own(v),
-        doc="The membership flag",
-    )
-    __swig_destroy__ = mmswig.delete_System
-
-    def __init__(
+    def __init__(  # pylint: disable=super-init-not-called
         self,
         openmm_system: mm.System,
         extra_dofs: t.Iterable[ExtraDOF],
@@ -67,15 +60,14 @@ class PhysicalSystem(Serializable):
 
         # List all forces that depend on each extra degree of freedom
         parameter_forces = defaultdict(list)
-        for k in range(openmm_system.getNumForces()):
-            force = mmswig.System_getForce(self, k)
+        for force in self.getForces():
             if hasattr(force, "getNumGlobalParameters"):
                 for index in range(force.getNumGlobalParameters()):
                     parameter_forces[force.getGlobalParameterName(index)].append(force)
 
         # Check if all extra degrees of freedom are present in the system's forces
         absent_variables = [
-            dv.name for dv in extra_dofs if dv.name not in parameter_forces
+            xdof.name for xdof in extra_dofs if xdof.name not in parameter_forces
         ]
         if absent_variables:
             raise ValueError(
@@ -84,13 +76,13 @@ class PhysicalSystem(Serializable):
             )
 
         # Add missing derivatives with respect to the extra degrees of freedom
-        for dv in extra_dofs:
-            for force in parameter_forces[dv.name]:
+        for xdof in extra_dofs:
+            for force in parameter_forces[xdof.name]:
                 if not any(
-                    force.getEnergyParameterDerivativeName(index) == dv.name
+                    force.getEnergyParameterDerivativeName(index) == xdof.name
                     for index in range(force.getNumEnergyParameterDerivatives())
                 ):
-                    force.addEnergyParameterDerivative(dv.name)
+                    force.addEnergyParameterDerivative(xdof.name)
 
     def __getstate__(self):
         return {
@@ -105,5 +97,4 @@ class PhysicalSystem(Serializable):
         )
 
 
-mmswig.System_swigregister(PhysicalSystem)
 PhysicalSystem.register_tag("!openxps.PhysicalSystem")
