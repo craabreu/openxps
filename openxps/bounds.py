@@ -12,13 +12,10 @@ from dataclasses import dataclass
 
 import cvpack
 import numpy as np
-from cvpack.units import ScalarQuantity
 from openmm import unit as mmunit
 
 from .serializable import Serializable
 from .utils import preprocess_args
-
-Scalar: t.TypeAlias = t.Union[float, ScalarQuantity]
 
 
 @dataclass(frozen=True, eq=False)
