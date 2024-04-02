@@ -1,0 +1,13 @@
+ExtendedSpaceIntegrator
+=======================
+
+.. currentmodule:: openxps
+.. autoclass:: ExtendedSpaceIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: get_extension
+    .. automethod:: initialize
+    .. automethod:: setStepSize
+    .. automethod:: step

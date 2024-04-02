@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>openxps.extended_context &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=572d9513" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for openxps.extended_context</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.. module:: openxps.extended_context</span>
+<span class="sd">   :platform: Linux, MacOS, Windows</span>
+<span class="sd">   :synopsis: Context for extended phase-space simulations with OpenMM.</span>
+
+<span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">typing</span> <span class="k">as</span> <span class="nn">t</span>
+<span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
+
+<span class="kn">import</span> <span class="nn">cvpack</span>
+<span class="kn">import</span> <span class="nn">openmm</span> <span class="k">as</span> <span class="nn">mm</span>
+<span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">XmlSerializer</span> <span class="k">as</span> <span class="n">mmxml</span>
+<span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
+<span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
+
+<span class="kn">from</span> <span class="nn">.extra_dof</span> <span class="kn">import</span> <span class="n">ExtraDOF</span>
+<span class="kn">from</span> <span class="nn">.serializable</span> <span class="kn">import</span> <span class="n">Serializable</span>
+<span class="kn">from</span> <span class="nn">.systems</span> <span class="kn">import</span> <span class="n">PhysicalSystem</span>
+
+
+<div class="viewcode-block" id="ExtendedSpaceIntegrator">
+<a class="viewcode-back" href="../../api/ExtendedSpaceIntegrator.html#openxps.ExtendedSpaceIntegrator">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtendedSpaceIntegrator</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">,</span> <span class="n">Serializable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    An integrator for extended phase-space simulations with OpenMM.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    step_size</span>
+<span class="sd">        The size of each time step. If a float is provided, it is interpreted as</span>
+<span class="sd">        a time in picoseconds.</span>
+<span class="sd">    extra_dofs</span>
+<span class="sd">        The extra degrees of freedom to extend the phase space with.</span>
+<span class="sd">    system_integrator</span>
+<span class="sd">        A blueprint for how to integrate the physical degrees of freedom. The extended</span>
+<span class="sd">        space integrator will inherit all the methods and attributes of this integrator.</span>
+<span class="sd">    extension_integrator</span>
+<span class="sd">        A blueprint for how to integrate the extra degrees of freedom. It defaults to</span>
+<span class="sd">        the same integrator used for the physical degrees of freedom.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; phi_dv = xps.ExtraDOF(</span>
+<span class="sd">    ...     &quot;phi_dv&quot;,</span>
+<span class="sd">    ...     unit.radian,</span>
+<span class="sd">    ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
+<span class="sd">    ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; integrator = xps.ExtendedSpaceIntegrator(</span>
+<span class="sd">    ...     4 * unit.femtosecond,</span>
+<span class="sd">    ...     [phi_dv],</span>
+<span class="sd">    ...     mm.LangevinMiddleIntegrator(</span>
+<span class="sd">    ...         300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond</span>
+<span class="sd">    ...     ),</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># pylint: disable=super-init-not-called</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">step_size</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="nb">float</span><span class="p">],</span>
+        <span class="n">extra_dofs</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">ExtraDOF</span><span class="p">],</span>
+        <span class="n">system_integrator</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">,</span>
+        <span class="n">extension_integrator</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">extra_dofs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">extension_integrator</span> <span class="ow">or</span> <span class="n">system_integrator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_this_integrator</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">system_integrator</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_this_integrator</span><span class="o">.</span><span class="n">this</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setStepSize</span><span class="p">(</span><span class="n">step_size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_context</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">__getatrr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_this_integrator</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s2">&quot;step_size&quot;</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">units</span><span class="o">.</span><span class="n">Quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">()),</span>
+            <span class="s2">&quot;extra_dofs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">,</span>
+            <span class="s2">&quot;system_integrator&quot;</span><span class="p">:</span> <span class="n">mmxml</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="bp">self</span><span class="p">),</span>
+            <span class="s2">&quot;extension_integrator&quot;</span><span class="p">:</span> <span class="n">mmxml</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="p">),</span>
+        <span class="p">}</span>
+
+    <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">state</span><span class="p">[</span><span class="s2">&quot;step_size&quot;</span><span class="p">],</span>
+            <span class="n">state</span><span class="p">[</span><span class="s2">&quot;extra_dofs&quot;</span><span class="p">],</span>
+            <span class="n">mmxml</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s2">&quot;system_integrator&quot;</span><span class="p">]),</span>
+            <span class="n">mmxml</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">state</span><span class="p">[</span><span class="s2">&quot;extension_integrator&quot;</span><span class="p">]),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="ExtendedSpaceIntegrator.get_extension">
+<a class="viewcode-back" href="../../api/ExtendedSpaceIntegrator.html#openxps.ExtendedSpaceIntegrator.get_extension">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_extension</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the integrator for the extra degrees of freedom.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        mm.Integrator</span>
+<span class="sd">            The integrator for the extra degrees of freedom.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceIntegrator.initialize">
+<a class="viewcode-back" href="../../api/ExtendedSpaceIntegrator.html#openxps.ExtendedSpaceIntegrator.initialize">[docs]</a>
+    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="s2">&quot;ExtendedSpaceContext&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the extended phase-space context attached to the integrator.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        context</span>
+<span class="sd">            The extended phase-space context attached to the integrator.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_context</span> <span class="o">=</span> <span class="n">context</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceIntegrator.setStepSize">
+<a class="viewcode-back" href="../../api/ExtendedSpaceIntegrator.html#openxps.ExtendedSpaceIntegrator.setStepSize">[docs]</a>
+    <span class="k">def</span> <span class="nf">setStepSize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="nb">float</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the size of each time step.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        size</span>
+<span class="sd">            The size of each time step. If a float is provided, it is interpreted as</span>
+<span class="sd">            a time in picoseconds.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">setStepSize</span><span class="p">(</span><span class="n">size</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setStepSize</span><span class="p">(</span><span class="n">size</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceIntegrator.step">
+<a class="viewcode-back" href="../../api/ExtendedSpaceIntegrator.html#openxps.ExtendedSpaceIntegrator.step">[docs]</a>
+    <span class="k">def</span> <span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">):</span>
+<span class="w">        </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        step(self, steps)</span>
+<span class="sd">        Advance a simulation through time by taking a series of time steps.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        steps : int</span>
+<span class="sd">            the number of time steps to take</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The integrator has not been initialized.&quot;</span><span class="p">)</span>
+        <span class="c1"># pylint: disable=protected-access</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">_update_parameters</span><span class="p">()</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">_update_extension_parameters</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">_update_parameters</span><span class="p">()</span></div>
+</div>
+
+        <span class="c1"># pylint: enable=protected-access</span>
+
+
+<span class="n">ExtendedSpaceIntegrator</span><span class="o">.</span><span class="n">register_tag</span><span class="p">(</span><span class="s2">&quot;!openxps.ExtendedSpaceIntegrator&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ExtendedSpaceContext">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext">[docs]</a>
+<span class="k">class</span> <span class="nc">ExtendedSpaceContext</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A context for extended phase-space simulations with OpenMM.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    context</span>
+<span class="sd">        An OpenMM context containing the physical system to be extended.</span>
+<span class="sd">    extra_dofs</span>
+<span class="sd">        The extra degrees of freedom to extend the phase space with.</span>
+<span class="sd">    extension_integrator</span>
+<span class="sd">        A blueprint for how to integrate the extra degrees of freedom. It defaults to</span>
+<span class="sd">        the same integrator present in the context.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from math import pi</span>
+<span class="sd">    &gt;&gt;&gt; import cvpack</span>
+<span class="sd">    &gt;&gt;&gt; import openmm</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
+<span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
+<span class="sd">    &gt;&gt;&gt; umbrella_potential = cvpack.MetaCollectiveVariable(</span>
+<span class="sd">    ...     f&quot;0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi_cv-phi_dv)&quot;,</span>
+<span class="sd">    ...     [cvpack.Torsion(6, 8, 14, 16, name=&quot;phi_cv&quot;)],</span>
+<span class="sd">    ...     unit.kilojoule_per_mole,</span>
+<span class="sd">    ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,</span>
+<span class="sd">    ...     phi_dv=0*unit.radian,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; umbrella_potential.addToSystem(model.system)</span>
+<span class="sd">    &gt;&gt;&gt; integrator = openmm.LangevinMiddleIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; platform = openmm.Platform.getPlatformByName(&quot;Reference&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; context = openmm.Context(model.system, integrator, platform)</span>
+<span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
+<span class="sd">    &gt;&gt;&gt; phi_dv = xps.ExtraDOF(&quot;phi_dv&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
+<span class="sd">    &gt;&gt;&gt; xps_context = xps.ExtendedSpaceContext(context, [phi_dv])</span>
+<span class="sd">    &gt;&gt;&gt; xps_context.setPositions(model.positions)</span>
+<span class="sd">    &gt;&gt;&gt; xps_context.setVelocitiesToTemperature(300 * unit.kelvin)</span>
+<span class="sd">    &gt;&gt;&gt; xps_context.set_extra_dof_values([180 * unit.degree])</span>
+<span class="sd">    &gt;&gt;&gt; xps_context.set_extra_dof_velocities_to_temperature(300 * unit.kelvin)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+        <span class="n">extra_dofs</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">ExtraDOF</span><span class="p">],</span>
+        <span class="n">extension_integrator</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">extra_dofs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_system</span> <span class="o">=</span> <span class="n">PhysicalSystem</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span> <span class="o">=</span> <span class="n">ExtendedSpaceIntegrator</span><span class="p">(</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">(),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">,</span>
+            <span class="n">context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">(),</span>
+            <span class="n">extension_integrator</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">platform</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getPlatform</span><span class="p">()</span>
+        <span class="n">properties</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="n">platform</span><span class="o">.</span><span class="n">getPropertyValue</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">platform</span><span class="o">.</span><span class="n">getPropertyNames</span><span class="p">()</span>
+        <span class="p">}</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_system</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span><span class="p">,</span> <span class="n">platform</span><span class="p">,</span> <span class="n">properties</span><span class="p">)</span>
+
+        <span class="n">extension_system</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">extension_system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span>
+                <span class="n">xdof</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">value_in_unit_system</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">md_unit_system</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_force*x&quot;</span><span class="p">)</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_force&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="n">extension_system</span><span class="o">.</span><span class="n">addForce</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span>
+            <span class="n">extension_system</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span><span class="o">.</span><span class="n">get_extension</span><span class="p">(),</span>
+            <span class="n">mm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">&quot;Reference&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_set_positions</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_set_extra_dof_values</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">_update_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_getState</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">positions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">x</span>
+            <span class="k">if</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_update_extension_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_getState</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">ParameterDerivatives</span><span class="p">)</span>
+        <span class="n">derivatives</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State_getEnergyParameterDerivatives</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_force&quot;</span><span class="p">,</span> <span class="o">-</span><span class="n">derivatives</span><span class="p">[</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+
+<div class="viewcode-block" id="ExtendedSpaceContext.setPositions">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.setPositions">[docs]</a>
+    <span class="k">def</span> <span class="nf">setPositions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">positions</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">units</span><span class="o">.</span><span class="n">MatrixQuantity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_extension_parameters</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_set_positions</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceContext.set_extra_dof_values">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.set_extra_dof_values">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_extra_dof_values</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">values</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the values of the extra degrees of freedom.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        values</span>
+<span class="sd">            A dictionary containing the values of the extra degrees of freedom.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_set_positions</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The positions have not been set.&quot;</span><span class="p">)</span>
+        <span class="n">positions</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">xdof</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">xdof</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
+            <span class="n">positions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_extension_parameters</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_has_set_extra_dof_values</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceContext.get_extra_dof_values">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.get_extra_dof_values">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_extra_dof_values</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the values of the extra degrees of freedom.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        t.Tuple[mmunit.Quantity]</span>
+<span class="sd">            A tuple containing the values of the extra degrees of freedom.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_set_extra_dof_values</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The extra degrees of freedom have never been set.&quot;</span><span class="p">)</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">:</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span> <span class="o">*</span> <span class="n">xdof</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">values</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceContext.set_extra_dof_velocities">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.set_extra_dof_velocities">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_extra_dof_velocities</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">velocities</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the velocities of the extra degrees of freedom.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        velocities</span>
+<span class="sd">            A dictionary containing the velocities of the extra degrees of freedom.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_set_extra_dof_values</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The extra degrees of freedom have never been set.&quot;</span><span class="p">)</span>
+        <span class="n">velocities</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">velocities</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">):</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">velocities</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">xdof</span><span class="o">.</span><span class="n">unit</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">)</span>
+            <span class="n">velocities</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">setVelocities</span><span class="p">(</span><span class="n">velocities</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceContext.set_extra_dof_velocities_to_temperature">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.set_extra_dof_velocities_to_temperature">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_extra_dof_velocities_to_temperature</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set the velocities of the extra degrees of freedom to a temperature.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        temperature</span>
+<span class="sd">            The temperature to set the velocities to.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_set_extra_dof_values</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The extra degrees of freedom have never been set.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">setVelocitiesToTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">setVelocitiesToTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">seed</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_getState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Velocities</span><span class="p">)</span>
+        <span class="n">velocities</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Velocities</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">setVelocities</span><span class="p">([</span><span class="n">mm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">velocities</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceContext.get_extra_dof_velocities">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.get_extra_dof_velocities">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_extra_dof_velocities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the velocities of the extra degrees of freedom.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        t.Tuple[mmunit.Quantity]</span>
+<span class="sd">            A tuple containing the velocities of the extra degrees of freedom.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_has_set_extra_dof_values</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;The extra degrees of freedom have never been set.&quot;</span><span class="p">)</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Velocities</span><span class="p">)</span>
+        <span class="n">velocities</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">getVelocities</span><span class="p">()</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span>
+            <span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">picosecond</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">):</span>
+            <span class="n">velocities</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">velocities</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">x</span> <span class="o">*</span> <span class="n">xdof</span><span class="o">.</span><span class="n">unit</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">picosecond</span>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">velocities</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">Python API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">Bibliography</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

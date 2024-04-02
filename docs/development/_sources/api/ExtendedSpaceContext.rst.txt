@@ -1,0 +1,15 @@
+ExtendedSpaceContext
+====================
+
+.. currentmodule:: openxps
+.. autoclass:: ExtendedSpaceContext
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: get_extra_dof_values
+    .. automethod:: get_extra_dof_velocities
+    .. automethod:: setPositions
+    .. automethod:: set_extra_dof_values
+    .. automethod:: set_extra_dof_velocities
+    .. automethod:: set_extra_dof_velocities_to_temperature

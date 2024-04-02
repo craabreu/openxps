@@ -1,8 +1,8 @@
-ExtendedDOF
-===========
+PhysicalSystem
+==============
 
 .. currentmodule:: openxps
-.. autoclass:: ExtendedDOF
+.. autoclass:: PhysicalSystem
     :member-order: alphabetical
 
     .. rubric:: Methods

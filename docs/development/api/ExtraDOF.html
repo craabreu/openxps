@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>ExtendedDOF &#8212; OpenXPS dev  documentation</title>
+    <title>ExtraDOF &#8212; OpenXPS dev  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=12dfc556" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -17,8 +17,8 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Bibliography" href="../references.html" />
-    <link rel="prev" title="Python API" href="index.html" />
+    <link rel="next" title="PhysicalSystem" href="PhysicalSystem.html" />
+    <link rel="prev" title="ExtendedSpaceIntegrator" href="ExtendedSpaceIntegrator.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -36,28 +36,29 @@
 
           <div class="body" role="main">
             
-  <section id="extendeddof">
-<h1>ExtendedDOF<a class="headerlink" href="#extendeddof" title="Link to this heading">¶</a></h1>
+  <section id="extradof">
+<h1>ExtraDOF<a class="headerlink" href="#extradof" title="Link to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="openxps.ExtendedDOF">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedDOF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extra_dof.html#ExtendedDOF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedDOF" title="Link to this definition">¶</a></dt>
-<dd><p>An extended degree of freedom for XPS simulations.</p>
+<dt class="sig sig-object py" id="openxps.ExtraDOF">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtraDOF</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extra_dof.html#ExtraDOF"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtraDOF" title="Link to this definition">¶</a></dt>
+<dd><p>Extra degree of freedom for extended phase-space simulations with OpenMM.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>name</strong> (<em>str</em>) – The name of the context parameter to be turned into an extended degree of
+<li><p><strong>name</strong> (<em>str</em>) – The name of the context parameter to be turned into an extra degree of
 freedom.</p></li>
-<li><p><strong>unit</strong> (<em>openmm.unit.unit.Unit</em>) – The unity of measurement of this extended degree of freedom. It must be
+<li><p><strong>unit</strong> (<em>openmm.unit.unit.Unit</em>) – The unity of measurement of this extra degree of freedom. It must be
 compatible with OpenMM’s MD unit system (mass in <code class="docutils literal notranslate"><span class="pre">dalton</span></code>, distance in
 <code class="docutils literal notranslate"><span class="pre">nanometer</span></code>, angle in <code class="docutils literal notranslate"><span class="pre">radian</span></code>, time in <code class="docutils literal notranslate"><span class="pre">picosecond</span></code>, temperature in
-<code class="docutils literal notranslate"><span class="pre">kelvin</span></code>, energy in <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mol</span></code>). If the extended degree of
+<code class="docutils literal notranslate"><span class="pre">kelvin</span></code>, energy in <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mol</span></code>). If the extra degree of
 freedom does not have a unit, use <code class="docutils literal notranslate"><span class="pre">dimensionless</span></code>.</p></li>
-<li><p><strong>mass</strong> (<em>openmm.unit.quantity.Quantity</em>) – The mass assigned to this extended degree of freedom, whose unit of measurement
-must be compatible with <code class="docutils literal notranslate"><span class="pre">dalton*(nanometer/unit)**2</span></code>, where <cite>unit</cite> is the
-extended degree of freedom’s own unit (see above).</p></li>
-<li><p><strong>bounds</strong> (<em>openxps.bounds.Bounds</em><em> | </em><em>None</em>) – The boundary condition to be applied to this extended degree of freedom. It
-must be an instance of <cite>openxps.bounds.Periodic</cite>, <cite>openxps.bounds.Reflective</cite>,
-or <cite>None</cite> (for unbounded variables).</p></li>
+<li><p><strong>mass</strong> (<em>openmm.unit.quantity.Quantity</em>) – The mass assigned to this extra degree of freedom, whose unit of measurement
+must be compatible with <code class="docutils literal notranslate"><span class="pre">dalton*(nanometer/unit)**2</span></code>, where <code class="docutils literal notranslate"><span class="pre">unit</span></code> is the
+extra degree of freedom’s own unit (see above).</p></li>
+<li><p><strong>bounds</strong> (<em>openxps.bounds.Bounds</em><em> | </em><em>None</em>) – The boundary condition to be applied to this extra degree of freedom. It must
+be an instance of <code class="docutils literal notranslate"><span class="pre">openxps.bounds.Periodic</span></code>, <code class="docutils literal notranslate"><span class="pre">openxps.bounds.Reflective</span></code>,
+or <code class="docutils literal notranslate"><span class="pre">None</span></code> (for unbounded variables). If it is not <code class="docutils literal notranslate"><span class="pre">None</span></code>, its unit of
+measurement must be compatible with the extra degree of freedom’s own unit.</p></li>
 </ul>
 </dd>
 </dl>
@@ -65,14 +66,16 @@ or <cite>None</cite> (for unbounded variables).</p></li>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">openxps</span> <span class="k">as</span> <span class="nn">xps</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">yaml</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedDOF</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtraDOF</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="s2">&quot;psi&quot;</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span>
-<span class="go">ExtendedDOF(name=&#39;psi&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
+<span class="go">ExtraDOF(name=&#39;psi&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span>
+<span class="go">Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">dv</span><span class="p">))</span> <span class="o">==</span> <span class="n">dv</span>
 </pre></div>
 </div>
@@ -104,7 +107,10 @@ or <cite>None</cite> (for unbounded variables).</p></li>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Python API</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">ExtendedDOF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ExtendedSpaceIntegrator.html">ExtendedSpaceIntegrator</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">ExtraDOF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="PhysicalSystem.html">PhysicalSystem</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
@@ -132,7 +138,7 @@ or <cite>None</cite> (for unbounded variables).</p></li>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
       |
-      <a href="../_sources/api/ExtendedDOF.rst.txt"
+      <a href="../_sources/api/ExtraDOF.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

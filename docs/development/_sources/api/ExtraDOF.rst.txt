@@ -1,0 +1,9 @@
+ExtraDOF
+========
+
+.. currentmodule:: openxps
+.. autoclass:: ExtraDOF
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+

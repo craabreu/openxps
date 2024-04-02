@@ -4,7 +4,10 @@ Python API
 .. toctree::
     :titlesonly:
 
-    ExtendedDOF
+    ExtendedSpaceContext
+    ExtendedSpaceIntegrator
+    ExtraDOF
+    PhysicalSystem
 
 .. testsetup::
 
