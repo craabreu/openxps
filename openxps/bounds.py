@@ -12,9 +12,9 @@ from dataclasses import dataclass
 
 import cvpack
 import numpy as np
+from cvpack.serialization import Serializable
 from openmm import unit as mmunit
 
-from .serializable import Serializable
 from .utils import preprocess_args
 
 
@@ -62,7 +62,7 @@ class Bounds(Serializable):
             and self.upper * self.unit == other.upper * other.unit
         )
 
-    def convert_to(self, unit: mmunit.Unit) -> "Bounds":
+    def convert(self, unit: mmunit.Unit) -> "Bounds":
         """
         Convert the bounds to a different unit of measurement.
 
@@ -81,7 +81,7 @@ class Bounds(Serializable):
         >>> import openxps as xps
         >>> from openmm import unit
         >>> bounds = xps.bounds.Periodic(-180, 180, unit.degree)
-        >>> bounds.convert_to(unit.radian)
+        >>> bounds.convert(unit.radian)
         Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)
         """
         factor = 1.0 * self.unit / unit
@@ -89,25 +89,7 @@ class Bounds(Serializable):
             raise ValueError("The unit must be compatible with the bounds unit.")
         return type(self)(factor * self.lower, factor * self.upper, unit)
 
-    def wrap_value(self, value: float) -> float:
-        """
-        Wrap a value around the bounds.
-
-        Parameters
-        ----------
-        value
-            The unwrapped value, in the same unit of measurement as the bounds.
-
-        Returns
-        -------
-        float
-            The wrapped value, in the same unit of measurement as the bounds.
-        """
-        raise NotImplementedError(
-            "The method wrap_value must be implemented in subclasses."
-        )
-
-    def wrap_value_and_rate(self, value: float, rate: float) -> float:
+    def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
         """
         Wrap a value around the bounds and adjust its rate of change.
 
@@ -127,9 +109,7 @@ class Bounds(Serializable):
             The adjusted rate of change of the wrapped value, in the same unit of
             measurement as the original rate.
         """
-        raise NotImplementedError(
-            "The method adjust_rate must be implemented in subclasses."
-        )
+        raise NotImplementedError("The method wrap must be implemented in subclasses.")
 
 
 Bounds.__init__ = preprocess_args(Bounds.__init__)
@@ -165,14 +145,11 @@ class Periodic(Bounds):
         super().__post_init__()
         self.period = self.upper - self.lower
 
-    def wrap_value(self, value: float) -> float:
-        return (value - self.lower) % self.period + self.lower
-
-    def wrap_value_and_rate(self, value: float, rate: float) -> float:
+    def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
         return (value - self.lower) % self.period + self.lower, rate
 
 
-Periodic.register_tag("!openxps.bounds.Periodic")
+Periodic.registerTag("!openxps.bounds.Periodic")
 
 
 class Reflective(Bounds):
@@ -205,18 +182,14 @@ class Reflective(Bounds):
         super().__post_init__()
         self.period = 2 * (self.upper - self.lower)
 
-    def wrap_value(self, value: float) -> float:
-        x = (value - self.lower) % self.period
-        return np.minimum(x, self.period - x) + self.lower
-
-    def wrap_value_and_rate(self, value: float, rate: float) -> float:
+    def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
         x = (value - self.lower) % self.period
         if x < self.period - x:
             return x + self.lower, rate
         return self.period - x + self.lower, -rate
 
 
-Reflective.register_tag("!openxps.bounds.Reflective")
+Reflective.registerTag("!openxps.bounds.Reflective")
 
 
 CIRCULAR = Periodic(-np.pi, np.pi, mmunit.radians)
