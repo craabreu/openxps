@@ -12,10 +12,10 @@ from collections import defaultdict
 from copy import copy
 
 import openmm as mm
+from cvpack.serialization import Serializable
 from openmm import _openmm as mmswig
 
 from .extra_dof import ExtraDOF
-from .serializable import Serializable
 
 
 class PhysicalSystem(Serializable, mm.System):
@@ -97,4 +97,4 @@ class PhysicalSystem(Serializable, mm.System):
         )
 
 
-PhysicalSystem.register_tag("!openxps.PhysicalSystem")
+PhysicalSystem.registerTag("!openxps.PhysicalSystem")
