@@ -12,10 +12,13 @@ from dataclasses import dataclass
 
 import cvpack
 import numpy as np
+from cvpack.units import ScalarQuantity
 from openmm import unit as mmunit
 
 from .serializable import Serializable
 from .utils import preprocess_args
+
+Scalar: t.TypeAlias = t.Union[float, ScalarQuantity]
 
 
 @dataclass(frozen=True, eq=False)
@@ -62,11 +65,6 @@ class Bounds(Serializable):
             and self.upper * self.unit == other.upper * other.unit
         )
 
-    def _wrap_float(self, value: float) -> float:
-        raise NotImplementedError(
-            "The method _wrap_float must be implemented in subclasses."
-        )
-
     def convert_to(self, unit: mmunit.Unit) -> "Bounds":
         """
         Convert the bounds to a different unit of measurement.
@@ -94,39 +92,47 @@ class Bounds(Serializable):
             raise ValueError("The unit must be compatible with the bounds unit.")
         return type(self)(factor * self.lower, factor * self.upper, unit)
 
-    def wrap(
-        self, value: t.Union[mmunit.Quantity, float]
-    ) -> t.Union[mmunit.Quantity, float]:
+    def wrap_value(self, value: float) -> float:
         """
         Wrap a value around the bounds.
 
         Parameters
         ----------
         value
-            The value to be wrapped.
+            The unwrapped value, in the same unit of measurement as the bounds.
 
         Returns
         -------
         float
-            The wrapped value.
-
-        Example
-        -------
-        >>> import openxps as xps
-        >>> from math import pi
-        >>> from openmm import unit
-        >>> bounds = xps.bounds.Periodic(-180, 180, unit.degree)
-        >>> bounds.wrap(200)
-        -160
-        >>> bounds.wrap(-200 * unit.degree)
-        Quantity(value=160, unit=degree)
-        >>> bounds.wrap(2 * pi * unit.radian)
-        Quantity(value=0.0, unit=radian)
+            The wrapped value, in the same unit of measurement as the bounds.
         """
-        if mmunit.is_quantity(value):
-            wrapped = self._wrap_float(value.value_in_unit(self.unit)) * self.unit
-            return wrapped.in_units_of(value.unit)
-        return self._wrap_float(value)
+        raise NotImplementedError(
+            "The method wrap_value must be implemented in subclasses."
+        )
+
+    def wrap_value_and_rate(self, value: float, rate: float) -> float:
+        """
+        Wrap a value around the bounds and adjust its rate of change.
+
+        Parameters
+        ----------
+        value
+            The unwrapped value, in the same unit of measurement as the bounds.
+        rate
+            The rate of change of the unwrapped value, in the same unit of measurement
+            as the bounds divided by a time unit.
+
+        Returns
+        -------
+        float
+            The wrapped value, in the same unit of measurement as the bounds.
+        float
+            The adjusted rate of change of the wrapped value, in the same unit of
+            measurement as the original rate.
+        """
+        raise NotImplementedError(
+            "The method adjust_rate must be implemented in subclasses."
+        )
 
 
 Bounds.__init__ = preprocess_args(Bounds.__init__)
@@ -162,8 +168,11 @@ class Periodic(Bounds):
         super().__post_init__()
         self.period = self.upper - self.lower
 
-    def _wrap_float(self, value: float) -> float:
+    def wrap_value(self, value: float) -> float:
         return (value - self.lower) % self.period + self.lower
+
+    def wrap_value_and_rate(self, value: float, rate: float) -> float:
+        return (value - self.lower) % self.period + self.lower, rate
 
 
 Periodic.register_tag("!openxps.bounds.Periodic")
@@ -199,9 +208,15 @@ class Reflective(Bounds):
         super().__post_init__()
         self.period = 2 * (self.upper - self.lower)
 
-    def _wrap_float(self, value: float) -> float:
+    def wrap_value(self, value: float) -> float:
         x = (value - self.lower) % self.period
         return np.minimum(x, self.period - x) + self.lower
+
+    def wrap_value_and_rate(self, value: float, rate: float) -> float:
+        x = (value - self.lower) % self.period
+        if x < self.period - x:
+            return x + self.lower, rate
+        return self.period - x + self.lower, -rate
 
 
 Reflective.register_tag("!openxps.bounds.Reflective")

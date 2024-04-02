@@ -10,6 +10,7 @@
 import typing as t
 from copy import copy
 
+import cvpack
 import openmm as mm
 from openmm import XmlSerializer as mmxml
 from openmm import _openmm as mmswig
@@ -18,7 +19,6 @@ from openmm import unit as mmunit
 from .extra_dof import ExtraDOF
 from .serializable import Serializable
 from .systems import PhysicalSystem
-from .utils import preprocess_args
 
 
 class ExtendedSpaceIntegrator(mm.Integrator, Serializable):
@@ -58,7 +58,6 @@ class ExtendedSpaceIntegrator(mm.Integrator, Serializable):
     ... )
     """
 
-    @preprocess_args
     def __init__(  # pylint: disable=super-init-not-called
         self,
         step_size: t.Union[mmunit.Quantity, float],
@@ -71,7 +70,7 @@ class ExtendedSpaceIntegrator(mm.Integrator, Serializable):
         self._this_integrator = copy(system_integrator)
         self.this = self._this_integrator.this
         self.setStepSize(step_size)
-        self._system_context = self._extension_context = None
+        self._context = None
         self._initialized = False
 
     def __getatrr__(self, name: str) -> t.Any:
@@ -79,7 +78,7 @@ class ExtendedSpaceIntegrator(mm.Integrator, Serializable):
 
     def __getstate__(self) -> t.Dict[str, t.Any]:
         return {
-            "step_size": self.getStepSize(),
+            "step_size": cvpack.units.Quantity(self.getStepSize()),
             "extra_dofs": self._extra_dofs,
             "system_integrator": mmxml.serialize(self),
             "extension_integrator": mmxml.serialize(self._extension),
@@ -104,21 +103,16 @@ class ExtendedSpaceIntegrator(mm.Integrator, Serializable):
         """
         return self._extension
 
-    def initialize(
-        self, system_context: mm.Context, extension_context: mm.Context
-    ) -> None:
+    def initialize(self, context: "ExtendedSpaceContext") -> None:
         """
-        Set the contexts for the physical and extended systems.
+        Set the extended phase-space context attached to the integrator.
 
         Parameters
         ----------
-        system_context
-            The context for the physical system.
-        extension_context
-            The context for the extra degrees of freedom.
+        context
+            The extended phase-space context attached to the integrator.
         """
-        self._system_context = system_context
-        self._extension_context = extension_context
+        self._context = context
         self._initialized = True
 
     def setStepSize(self, size: t.Union[mmunit.Quantity, float]) -> None:
@@ -146,7 +140,15 @@ class ExtendedSpaceIntegrator(mm.Integrator, Serializable):
         """
         if not self._initialized:
             raise RuntimeError("The integrator has not been initialized.")
-        return mmswig.Integrator_step(self, steps)
+        # pylint: disable=protected-access
+        for _ in range(steps):
+            self._extension.step(1)
+            self._context._update_parameters()
+            super().step(1)
+            self._context._update_extension_parameters()
+            self._extension.step(1)
+        self._context._update_parameters()
+        # pylint: enable=protected-access
 
 
 ExtendedSpaceIntegrator.register_tag("!openxps.ExtendedSpaceIntegrator")
@@ -191,6 +193,10 @@ class ExtendedSpaceContext(mm.Context):
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi_dv = xps.ExtraDOF("phi_dv", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> xps_context = xps.ExtendedSpaceContext(context, [phi_dv])
+    >>> xps_context.setPositions(model.positions)
+    >>> xps_context.setVelocitiesToTemperature(300 * unit.kelvin)
+    >>> xps_context.set_extra_dof_values([180 * unit.degree])
+    >>> xps_context.set_extra_dof_velocities_to_temperature(300 * unit.kelvin)
     """
 
     def __init__(
@@ -230,13 +236,29 @@ class ExtendedSpaceContext(mm.Context):
             self._integrator.get_extension(),
             mm.Platform.getPlatformByName("Reference"),
         )
-        self._integrator.initialize(self, self._extension)
+        self._integrator.initialize(self)
         self._has_set_positions = False
         self._has_set_extra_dof_values = False
 
-    def setPositions(self, positions):
+    def _update_parameters(self) -> None:
+        state = mmswig.Context_getState(self, mm.State.Positions)
+        positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
+        for i, xdof in enumerate(self._extra_dofs):
+            value = positions[i].x
+            if xdof.bounds is not None:
+                value = xdof.bounds.wrap_value(value)
+            self.setParameter(xdof.name, value)
+
+    def _update_extension_parameters(self) -> None:
+        state = mmswig.Context_getState(self, mm.State.ParameterDerivatives)
+        derivatives = mmswig.State_getEnergyParameterDerivatives(state)
+        for xdof in self._extra_dofs:
+            self._extension.setParameter(f"{xdof.name}_force", -derivatives[xdof.name])
+
+    def setPositions(self, positions: cvpack.units.MatrixQuantity) -> None:
+        super().setPositions(positions)
+        self._update_extension_parameters()
         self._has_set_positions = True
-        return super().setPositions(positions)
 
     def set_extra_dof_values(self, values: t.Iterable[mmunit.Quantity]) -> None:
         """
@@ -249,18 +271,16 @@ class ExtendedSpaceContext(mm.Context):
         """
         if not self._has_set_positions:
             raise RuntimeError("The positions have not been set.")
-        values = list(values)
-        for i, xdof in enumerate(self._extra_dofs):
-            value = values[i]
+        positions = []
+        for xdof, value in zip(self._extra_dofs, values):
             if mmunit.is_quantity(value):
                 value = value.value_in_unit(xdof.unit)
-            values[i] = mm.Vec3(value, 0, 0)
+            positions.append(mm.Vec3(value, 0, 0))
+            if xdof.bounds is not None:
+                value = xdof.bounds.wrap_value(value)
             self.setParameter(xdof.name, value)
-        self._extension.setPositions(values)
-        state = self.getState(mm.State.ParameterDerivatives)
-        derivatives = state.getEnergyParameterDerivatives()
-        for xdof in self._extra_dofs:
-            self._extension.setParameter(f"{xdof.name}_force", -derivatives[xdof.name])
+        self._extension.setPositions(positions)
+        self._update_extension_parameters()
         self._has_set_extra_dof_values = True
 
     def get_extra_dof_values(self) -> t.Tuple[mmunit.Quantity]:
@@ -278,7 +298,7 @@ class ExtendedSpaceContext(mm.Context):
         for xdof in self._extra_dofs:
             value = self.getParameter(xdof.name)
             if xdof.bounds is not None:
-                value = xdof.bounds.wrap(value)
+                value = xdof.bounds.wrap_value(value)
             values.append(value * xdof.unit)
         return tuple(values)
 
@@ -315,8 +335,12 @@ class ExtendedSpaceContext(mm.Context):
         if not self._has_set_extra_dof_values:
             raise RuntimeError("The extra degrees of freedom have never been set.")
         if seed is None:
-            return self._extension.setVelocitiesToTemperature(temperature)
-        return self._extension.setVelocitiesToTemperature(temperature, seed)
+            self._extension.setVelocitiesToTemperature(temperature)
+        else:
+            self._extension.setVelocitiesToTemperature(temperature, seed)
+        state = mmswig.Context_getState(self, mm.State.Velocities)
+        velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
+        self._extension.setVelocities([mm.Vec3(v.x, 0, 0) for v in velocities])
 
     def get_extra_dof_velocities(self) -> t.Tuple[mmunit.Quantity]:
         """
