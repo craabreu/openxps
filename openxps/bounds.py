@@ -10,6 +10,7 @@
 import typing as t
 from dataclasses import dataclass
 
+import cvpack
 import numpy as np
 from openmm import unit as mmunit
 
@@ -35,7 +36,7 @@ class Bounds(Serializable):
 
     lower: float
     upper: float
-    unit: mmunit.Unit
+    unit: cvpack.units.Unit
 
     def __post_init__(self) -> None:
         for kind in ("lower", "upper"):
@@ -43,6 +44,9 @@ class Bounds(Serializable):
                 raise TypeError(f"The {kind} bound must be a real number.")
         if self.lower >= self.upper:
             raise ValueError("The upper bound must be greater than the lower bound.")
+        if not mmunit.is_unit(self.unit):
+            raise TypeError("The unit must be a valid OpenMM unit.")
+        object.__setattr__(self, "unit", cvpack.units.Unit(self.unit))
 
     def __getstate__(self) -> t.Dict[str, t.Any]:
         return {"lower": self.lower, "upper": self.upper, "unit": self.unit}
@@ -85,9 +89,10 @@ class Bounds(Serializable):
         >>> bounds.convert_to(unit.radian)
         Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)
         """
-        return type(self)(
-            self.lower * self.unit / unit, self.upper * self.unit / unit, unit
-        )
+        factor = 1.0 * self.unit / unit
+        if not isinstance(factor, float):
+            raise ValueError("The unit must be compatible with the bounds unit.")
+        return type(self)(factor * self.lower, factor * self.upper, unit)
 
     def wrap(
         self, value: t.Union[mmunit.Quantity, float]
@@ -119,7 +124,7 @@ class Bounds(Serializable):
         Quantity(value=0.0, unit=radian)
         """
         if mmunit.is_quantity(value):
-            wrapped = self._wrap_float(value / self.unit) * self.unit
+            wrapped = self._wrap_float(value.value_in_unit(self.unit)) * self.unit
             return wrapped.in_units_of(value.unit)
         return self._wrap_float(value)
 

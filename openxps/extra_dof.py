@@ -10,6 +10,7 @@
 import typing as t
 from dataclasses import dataclass
 
+from cvpack.units import Quantity
 from openmm import unit as mmunit
 
 from .bounds import Bounds
@@ -35,12 +36,13 @@ class ExtraDOF(Serializable):
         freedom does not have a unit, use ``dimensionless``.
     mass
         The mass assigned to this extra degree of freedom, whose unit of measurement
-        must be compatible with ``dalton*(nanometer/unit)**2``, where `unit` is the
+        must be compatible with ``dalton*(nanometer/unit)**2``, where ``unit`` is the
         extra degree of freedom's own unit (see above).
     bounds
-        The boundary condition to be applied to this extra degree of freedom. It
-        must be an instance of `openxps.bounds.Periodic`, `openxps.bounds.Reflective`,
-        or `None` (for unbounded variables).
+        The boundary condition to be applied to this extra degree of freedom. It must
+        be an instance of ``openxps.bounds.Periodic``, ``openxps.bounds.Reflective``,
+        or ``None`` (for unbounded variables). If it is not ``None``, its unit of
+        measurement must be compatible with the extra degree of freedom's own unit.
 
     Example
     -------
@@ -55,6 +57,8 @@ class ExtraDOF(Serializable):
     ... )
     >>> dv
     ExtraDOF(name='psi', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)
+    >>> dv.bounds
+    Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)
     >>> assert yaml.safe_load(yaml.safe_dump(dv)) == dv
     """
 
@@ -64,18 +68,22 @@ class ExtraDOF(Serializable):
     bounds: t.Union[Bounds, None]
 
     def __post_init__(self) -> None:
-        if self.unit != mmunit.md_unit_system.express_unit(self.unit):
+        if 1 * self.unit != 1 * mmunit.md_unit_system.express_unit(self.unit):
             raise ValueError(
                 f"Unit {self.unit} must be compatible with the MD unit system."
             )
-        mass_unit = mmunit.dalton * (mmunit.nanometer / self.unit) ** 2
+
         if not mmunit.is_quantity(self.mass):
             raise TypeError("Mass must be have units of measurement.")
+        mass_unit = mmunit.dalton * (mmunit.nanometer / self.unit) ** 2
         if not self.mass.unit.is_compatible(mass_unit):
             raise TypeError(f"Mass units must be compatible with {mass_unit}.")
+        object.__setattr__(self, "mass", Quantity(self.mass.in_units_of(mass_unit)))
+
         if isinstance(self.bounds, Bounds):
             if not self.bounds.unit.is_compatible(self.unit):
                 raise ValueError("Provided bounds have incompatible units.")
+            object.__setattr__(self, "bounds", self.bounds.convert_to(self.unit))
         elif self.bounds is not None:
             raise TypeError("The bounds must be an instance of Bounds or None.")
 
