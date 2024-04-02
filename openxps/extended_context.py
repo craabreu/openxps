@@ -338,7 +338,7 @@ class ExtendedSpaceContext(mm.Context):
             self._extension.setVelocitiesToTemperature(temperature)
         else:
             self._extension.setVelocitiesToTemperature(temperature, seed)
-        state = mmswig.Context_getState(self, mm.State.Velocities)
+        state = mmswig.Context_getState(self._extension, mm.State.Velocities)
         velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
         self._extension.setVelocities([mm.Vec3(v.x, 0, 0) for v in velocities])
 
