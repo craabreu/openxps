@@ -22,9 +22,9 @@ from .systems import PhysicalSystem
 
 
 def update_physical_parameters(
-    physical_context: mm.Context,
-    extension_context: mm.Context,
-    extra_dofs: t.Tuple[ExtraDOF],
+    physicalContext: mm.Context,
+    extensionContext: mm.Context,
+    extraDOFs: t.Tuple[ExtraDOF],
 ) -> None:
     """
     Update the parameters of the context that contains the physical degrees of freedom,
@@ -32,26 +32,26 @@ def update_physical_parameters(
 
     Parameters
     ----------
-    physical_context
+    physicalContext
         The context containing the physical degrees of freedom.
-    extension_context
+    extensionContext
         The context containing the extra degrees of freedom.
-    extra_dofs
+    extraDOFs
         The extra degrees of freedom to extend the phase space with.
     """
-    state = mmswig.Context_getState(extension_context, mm.State.Positions)
+    state = mmswig.Context_getState(extensionContext, mm.State.Positions)
     positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-    for i, xdof in enumerate(extra_dofs):
+    for i, xdof in enumerate(extraDOFs):
         value = positions[i].x
         if xdof.bounds is not None:
             value, _ = xdof.bounds.wrap(value, 0)
-        mmswig.Context_setParameter(physical_context, xdof.name, value)
+        mmswig.Context_setParameter(physicalContext, xdof.name, value)
 
 
 def update_extension_parameters(
-    physical_context: mm.Context,
-    extension_context: mm.Context,
-    extra_dofs: t.Tuple[ExtraDOF],
+    physicalContext: mm.Context,
+    extensionContext: mm.Context,
+    extraDOFs: t.Tuple[ExtraDOF],
 ) -> None:
     """
     Update the parameters of the context containing the extra degrees of freedom,
@@ -59,54 +59,54 @@ def update_extension_parameters(
 
     Parameters
     ----------
-    physical_context
+    physicalContext
         The context containing the physical degrees of freedom.
-    extension_context
+    extensionContext
         The context containing the extra degrees of freedom.
-    extra_dofs
+    extraDOFs
         The extra degrees of freedom to extend the phase space with.
     """
-    state = mmswig.Context_getState(physical_context, mm.State.ParameterDerivatives)
+    state = mmswig.Context_getState(physicalContext, mm.State.ParameterDerivatives)
     derivatives = mmswig.State_getEnergyParameterDerivatives(state)
-    for xdof in extra_dofs:
+    for xdof in extraDOFs:
         mmswig.Context_setParameter(
-            extension_context,
+            extensionContext,
             f"{xdof.name}_force",
             -derivatives[xdof.name],
         )
 
 
 def integrate_extended_space(
-    physical_integrator: mm.Integrator,
+    physicalIntegrator: mm.Integrator,
     steps: int,
-    extra_dofs: t.Tuple[ExtraDOF],
-    extension_context: mm.Context,
-    physical_context: mm.Context,
+    extraDOFs: t.Tuple[ExtraDOF],
+    extensionContext: mm.Context,
+    physicalContext: mm.Context,
 ) -> None:
     """
     Perform a series of time steps in an extended phase-space simulation.
 
     Parameters
     ----------
-    physical_integrator
+    physicalIntegrator
         The integrator for the physical degrees of freedom.
     steps
         The number of time steps to take.
-    extra_dofs
+    extraDOFs
         The extra degrees of freedom to extend the phase space with.
-    extension_context
+    extensionContext
         The context containing the extra degrees of freedom.
-    physical_context
+    physicalContext
         The context containing the physical degrees of freedom.
     """
-    extension_integrator = extension_context.getIntegrator()
+    extension_integrator = extensionContext.getIntegrator()
     for _ in range(steps):
         mmswig.Integrator_step(extension_integrator, 1)
-        update_physical_parameters(physical_context, extension_context, extra_dofs)
-        mmswig.Integrator_step(physical_integrator, 1)
-        update_extension_parameters(physical_context, extension_context, extra_dofs)
+        update_physical_parameters(physicalContext, extensionContext, extraDOFs)
+        mmswig.Integrator_step(physicalIntegrator, 1)
+        update_extension_parameters(physicalContext, extensionContext, extraDOFs)
         mmswig.Integrator_step(extension_integrator, 1)
-    update_physical_parameters(physical_context, extension_context, extra_dofs)
+    update_physical_parameters(physicalContext, extensionContext, extraDOFs)
 
 
 class ExtendedSpaceContext(mm.Context):
@@ -192,9 +192,9 @@ class ExtendedSpaceContext(mm.Context):
         physical_integrator.step = MethodType(
             partial(
                 integrate_extended_space,
-                extra_dofs=self._extra_dofs,
-                extension_context=self._extension_context,
-                physical_context=self,
+                extraDOFs=self._extra_dofs,
+                extensionContext=self._extension_context,
+                physicalContext=self,
             ),
             physical_integrator,
         )
