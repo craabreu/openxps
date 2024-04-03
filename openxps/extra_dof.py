@@ -10,11 +10,11 @@
 import typing as t
 from dataclasses import dataclass
 
+from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit
 
 from .bounds import Bounds
-from .serializable import Serializable
 from .utils import preprocess_args
 
 
@@ -83,7 +83,7 @@ class ExtraDOF(Serializable):
         if isinstance(self.bounds, Bounds):
             if not self.bounds.unit.is_compatible(self.unit):
                 raise ValueError("Provided bounds have incompatible units.")
-            object.__setattr__(self, "bounds", self.bounds.convert_to(self.unit))
+            object.__setattr__(self, "bounds", self.bounds.convert(self.unit))
         elif self.bounds is not None:
             raise TypeError("The bounds must be an instance of Bounds or None.")
 
@@ -101,4 +101,4 @@ class ExtraDOF(Serializable):
 
 ExtraDOF.__init__ = preprocess_args(ExtraDOF.__init__)
 
-ExtraDOF.register_tag("!openxps.ExtraDOF")
+ExtraDOF.registerTag("!openxps.ExtraDOF")
