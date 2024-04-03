@@ -48,10 +48,10 @@
 <span class="kn">from</span> <span class="nn">copy</span> <span class="kn">import</span> <span class="n">copy</span>
 
 <span class="kn">import</span> <span class="nn">openmm</span> <span class="k">as</span> <span class="nn">mm</span>
+<span class="kn">from</span> <span class="nn">cvpack.serialization</span> <span class="kn">import</span> <span class="n">Serializable</span>
 <span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
 
 <span class="kn">from</span> <span class="nn">.extra_dof</span> <span class="kn">import</span> <span class="n">ExtraDOF</span>
-<span class="kn">from</span> <span class="nn">.serializable</span> <span class="kn">import</span> <span class="n">Serializable</span>
 
 
 <div class="viewcode-block" id="PhysicalSystem">
@@ -136,7 +136,7 @@
 
 
 
-<span class="n">PhysicalSystem</span><span class="o">.</span><span class="n">register_tag</span><span class="p">(</span><span class="s2">&quot;!openxps.PhysicalSystem&quot;</span><span class="p">)</span>
+<span class="n">PhysicalSystem</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.PhysicalSystem&quot;</span><span class="p">)</span>
 </pre></div>
 
           </div>

@@ -7,9 +7,9 @@ ExtendedSpaceContext
 
     .. rubric:: Methods
 
-    .. automethod:: get_extra_dof_values
-    .. automethod:: get_extra_dof_velocities
+    .. automethod:: getExtraValues
+    .. automethod:: getExtraVelocities
+    .. automethod:: setExtraValues
+    .. automethod:: setExtraVelocities
+    .. automethod:: setExtraVelocitiesToTemperature
     .. automethod:: setPositions
-    .. automethod:: set_extra_dof_values
-    .. automethod:: set_extra_dof_velocities
-    .. automethod:: set_extra_dof_velocities_to_temperature

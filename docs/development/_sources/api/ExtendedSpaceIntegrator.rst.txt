@@ -7,7 +7,7 @@ ExtendedSpaceIntegrator
 
     .. rubric:: Methods
 
-    .. automethod:: get_extension
+    .. automethod:: getExtensionIntegrator
     .. automethod:: initialize
     .. automethod:: setStepSize
     .. automethod:: step

@@ -40,17 +40,17 @@
 <h1>ExtendedSpaceIntegrator<a class="headerlink" href="#extendedspaceintegrator" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceIntegrator">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">step_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_dofs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system_integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_integrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceIntegrator" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extraDOFs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">systemIntegrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extensionIntegrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>An integrator for extended phase-space simulations with OpenMM.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>step_size</strong> (<em>Quantity</em><em> | </em><em>float</em>) – The size of each time step. If a float is provided, it is interpreted as
+<li><p><strong>step_size</strong> – The size of each time step. If a float is provided, it is interpreted as
 a time in picoseconds.</p></li>
-<li><p><strong>extra_dofs</strong> (<em>Iterable</em><em>[</em><a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><em>ExtraDOF</em></a><em>]</em>) – The extra degrees of freedom to extend the phase space with.</p></li>
-<li><p><strong>system_integrator</strong> (<em>Integrator</em>) – A blueprint for how to integrate the physical degrees of freedom. The extended
+<li><p><strong>extra_dofs</strong> – The extra degrees of freedom to extend the phase space with.</p></li>
+<li><p><strong>system_integrator</strong> – A blueprint for how to integrate the physical degrees of freedom. The extended
 space integrator will inherit all the methods and attributes of this integrator.</p></li>
-<li><p><strong>extension_integrator</strong> (<em>Integrator</em><em> | </em><em>None</em>) – A blueprint for how to integrate the extra degrees of freedom. It defaults to
+<li><p><strong>extension_integrator</strong> – A blueprint for how to integrate the extra degrees of freedom. It defaults to
 the same integrator used for the physical degrees of freedom.</p></li>
 </ul>
 </dd>
@@ -75,8 +75,8 @@ the same integrator used for the physical degrees of freedom.</p></li>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.ExtendedSpaceIntegrator.get_extension">
-<span class="sig-name descname"><span class="pre">get_extension</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceIntegrator.get_extension"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceIntegrator.get_extension" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceIntegrator.getExtensionIntegrator">
+<span class="sig-name descname"><span class="pre">getExtensionIntegrator</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceIntegrator.getExtensionIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceIntegrator.getExtensionIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>Get the integrator for the extra degrees of freedom.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
