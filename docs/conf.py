@@ -263,7 +263,7 @@ texinfo_documents = [
 ]
 
 # -- Extension configuration -------------------------------------------------
-autodoc_typehints = "both"
+autodoc_typehints = "description"
 autodoc_typehints_description_target = "documented_params"
 autodoc_typehints_format = "short"
 
