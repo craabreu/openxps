@@ -1,8 +1,13 @@
+"""
+Unit tests for the ExtraDOF class.
+"""
+
 import pytest
-from openmm import unit as mmunit
-from openxps.extra_dof import ExtraDOF
-from openxps.bounds import Periodic, Reflective
 import yaml
+from openmm import unit as mmunit
+
+from openxps.bounds import Periodic, Reflective
+from openxps.extra_dof import ExtraDOF
 
 
 def test_extra_dof_initialization():
