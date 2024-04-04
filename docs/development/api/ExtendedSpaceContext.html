@@ -17,7 +17,7 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="ExtendedSpaceIntegrator" href="ExtendedSpaceIntegrator.html" />
+    <link rel="next" title="ExtraDOF" href="ExtraDOF.html" />
     <link rel="prev" title="Python API" href="index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -40,7 +40,7 @@
 <h1>ExtendedSpaceContext<a class="headerlink" href="#extendedspacecontext" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extraDOFs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extensionIntegrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extraDOFs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extensionIntegrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">addMissingDerivatives</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
 <dd><p>A context for extended phase-space simulations with OpenMM.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -65,7 +65,7 @@ the same integrator present in the context.</p></li>
 <span class="gp">... </span>    <span class="p">[</span><span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi_cv&quot;</span><span class="p">)],</span>
 <span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">kappa</span><span class="o">=</span><span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">phi_dv</span><span class="o">=</span><span class="mi">0</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">phi_dv</span><span class="o">=</span><span class="n">pi</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">umbrella_potential</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">LangevinMiddleIntegrator</span><span class="p">(</span>
@@ -75,19 +75,23 @@ the same integrator present in the context.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">phi_dv</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtraDOF</span><span class="p">(</span><span class="s2">&quot;phi_dv&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceContext</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">platform</span><span class="p">),</span> <span class="p">[</span><span class="n">phi_dv</span><span class="p">]</span>
+<span class="gp">... </span>    <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">platform</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="n">phi_dv</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="n">addMissingDerivatives</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setVelocitiesToTemperature</span><span class="p">(</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setExtraValues</span><span class="p">([</span><span class="mi">180</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setExtraVelocitiesToTemperature</span><span class="p">(</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getExtraValues</span><span class="p">()</span>
+<span class="go">(Quantity(value=..., unit=radian),)</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtraValues">
-<span class="sig-name descname"><span class="pre">getExtraValues</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceContext.getExtraValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraValues" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">getExtraValues</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtraValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraValues" title="Link to this definition">¶</a></dt>
 <dd><p>Get the values of the extra degrees of freedom.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -101,7 +105,7 @@ the same integrator present in the context.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtraVelocities">
-<span class="sig-name descname"><span class="pre">getExtraVelocities</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceContext.getExtraVelocities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraVelocities" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">getExtraVelocities</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtraVelocities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraVelocities" title="Link to this definition">¶</a></dt>
 <dd><p>Get the velocities of the extra degrees of freedom.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -115,7 +119,7 @@ the same integrator present in the context.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setExtraValues">
-<span class="sig-name descname"><span class="pre">setExtraValues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceContext.setExtraValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setExtraValues" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">setExtraValues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setExtraValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setExtraValues" title="Link to this definition">¶</a></dt>
 <dd><p>Set the values of the extra degrees of freedom.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -126,7 +130,7 @@ the same integrator present in the context.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setExtraVelocities">
-<span class="sig-name descname"><span class="pre">setExtraVelocities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceContext.setExtraVelocities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setExtraVelocities" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">setExtraVelocities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setExtraVelocities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setExtraVelocities" title="Link to this definition">¶</a></dt>
 <dd><p>Set the velocities of the extra degrees of freedom.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -137,7 +141,7 @@ the same integrator present in the context.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setExtraVelocitiesToTemperature">
-<span class="sig-name descname"><span class="pre">setExtraVelocitiesToTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceContext.setExtraVelocitiesToTemperature"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setExtraVelocitiesToTemperature" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">setExtraVelocitiesToTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setExtraVelocitiesToTemperature"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setExtraVelocitiesToTemperature" title="Link to this definition">¶</a></dt>
 <dd><p>Set the velocities of the extra degrees of freedom to a temperature.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -148,7 +152,7 @@ the same integrator present in the context.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setPositions">
-<span class="sig-name descname"><span class="pre">setPositions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extended_context.html#ExtendedSpaceContext.setPositions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setPositions" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">setPositions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setPositions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setPositions" title="Link to this definition">¶</a></dt>
 <dd><p>Set the positions of all particles in the System (measured in nm). This method simply sets the positions without checking to see whether they satisfy distance constraints. If you want constraints to be enforced, call applyConstraints() after setting the positions.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -185,9 +189,7 @@ the same integrator present in the context.</p></li>
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">Python API</a><ul class="current">
 <li class="toctree-l2 current"><a class="current reference internal" href="#">ExtendedSpaceContext</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ExtendedSpaceIntegrator.html">ExtendedSpaceIntegrator</a></li>
 <li class="toctree-l2"><a class="reference internal" href="ExtraDOF.html">ExtraDOF</a></li>
-<li class="toctree-l2"><a class="reference internal" href="PhysicalSystem.html">PhysicalSystem</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>

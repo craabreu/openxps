@@ -1,9 +1,0 @@
-PhysicalSystem
-==============
-
-.. currentmodule:: openxps
-.. autoclass:: PhysicalSystem
-    :member-order: alphabetical
-
-    .. rubric:: Methods
-

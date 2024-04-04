@@ -5,9 +5,7 @@ Python API
     :titlesonly:
 
     ExtendedSpaceContext
-    ExtendedSpaceIntegrator
     ExtraDOF
-    PhysicalSystem
 
 .. testsetup::
 
