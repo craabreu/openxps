@@ -24,11 +24,16 @@ import openxps
 sys.path.insert(0, os.path.abspath(".."))
 
 
-def create_rst_file(cls):
+def create_class_rst_file(cls):
     name = cls.__name__
     methods = list(cls.__dict__.keys())
     excluded = ["yaml_tag"]
     with open(f"api/{name}.rst", "w") as f:
+        included_methods = [
+            f"    .. automethod:: {method}\n"
+            for method in sorted(methods)
+            if not (method.startswith("_") or method in excluded)
+        ]
         f.writelines(
             [
                 f"{name}\n",
@@ -36,23 +41,53 @@ def create_rst_file(cls):
                 ".. currentmodule:: openxps\n",
                 f".. autoclass:: {name}\n",
                 "    :member-order: alphabetical\n\n",
-                "    .. rubric:: Methods\n\n",
             ]
-            + [
-                f"    .. automethod:: {method}\n"
-                for method in sorted(methods)
-                if not (method.startswith("_") or method in excluded)
+            + ["    .. rubric:: Methods\n\n"] * bool(included_methods)
+            + included_methods
+        )
+
+
+def create_function_rst_file(func):
+    name = func.__name__
+    with open(f"api/{name}.rst", "w") as f:
+        f.writelines(
+            [
+                f"{name}\n",
+                "=" * len(name) + "\n\n",
+                ".. currentmodule:: openxps\n",
+                f".. autofunction:: {name}\n",
             ]
         )
 
 
-with open("api/index.rst", "w") as f:
-    f.write("Python API\n==========\n\n.. toctree::\n    :titlesonly:\n\n")
+with open("api/classes.rst", "w") as f:
+    f.write("Classes\n" "=======\n" "\n" ".. toctree::\n" "    :titlesonly:\n" "\n")
     for item in openxps.__dict__.values():
         if inspect.isclass(item):
             f.write(f"    {item.__name__}\n")
-            create_rst_file(item)
+            create_class_rst_file(item)
     f.write("\n.. testsetup::\n\n    from openxps import *")
+
+with open("api/functions.rst", "w") as f:
+    f.write("Functions\n" "=========\n" "\n" ".. toctree::\n" "    :titlesonly:\n" "\n")
+    for item in openxps.__dict__.values():
+        if inspect.isfunction(item):
+            f.write(f"    {item.__name__}\n")
+            create_function_rst_file(item)
+    f.write("\n.. testsetup::\n\n    from openxps import *")
+
+with open("api/index.rst", "w") as f:
+    f.write(
+        "API Reference\n"
+        "=============\n"
+        "\n"
+        ".. toctree::\n"
+        "    :maxdepth: 2\n"
+        "    :titlesonly:\n"
+        "\n"
+        "    classes\n"
+        "    functions\n"
+    )
 
 # -- Project information -----------------------------------------------------
 
@@ -66,7 +101,7 @@ release = ""
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
-# needs_sphinx = '1.0'
+needs_sphinx = "4.4"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -207,9 +242,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, "openxps", "OpenXPS Documentation", [author], 1)
-]
+man_pages = [(master_doc, "openxps", "OpenXPS Documentation", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
