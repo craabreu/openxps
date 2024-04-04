@@ -1,7 +1,7 @@
 """
-.. module:: openxps.context
+.. module:: openxps.check_system
    :platform: Linux, MacOS, Windows
-   :synopsis: Context for extended phase-space simulations with OpenMM.
+   :synopsis: Function to check/modify a system for extended phase-space simulations.
 
 .. classauthor:: Charlles Abreu <craabreu@gmail.com>
 

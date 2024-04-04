@@ -8,7 +8,6 @@
 """
 
 import typing as t
-from collections import defaultdict
 from copy import copy
 from functools import partial
 from types import MethodType
@@ -18,86 +17,14 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
+from .check_system import check_system
 from .extra_dof import ExtraDOF
 
 
-def get_physical_system(
-    context: mm.Context, extraDOFs: t.Tuple[ExtraDOF], addMissingDerivatives: bool
-) -> mm.System:
-    """
-    Get a reference to the physical system from an extended phase-space context.
-
-    If the system forces do not depend on all extra degrees of freedom, an error is
-    raised. If missing derivative requests are found in the system forces and
-    addMissingDerivatives is True, they are added automatically. Otherwise, an error is
-    raised. The context is reinitialized if missing derivatives are added.
-
-    Parameters
-    ----------
-    context
-        The OpenMM context containing the physical system.
-    extraDOFs
-        The extra degrees of freedom to extend the phase space with.
-    addMissingDerivatives
-        Whether to add missing derivative requests in the system forces.
-
-    Returns
-    -------
-    System
-        The physical system.
-
-    Raises
-    ------
-    ValueError
-        If the system forces do not depend on all extra degrees of freedom.
-    ValueError
-        If missing derivative requests are found in the system forces and
-        addMissingDerivatives is False.
-    """
-    system = context.getSystem()
-    dependent_forces = defaultdict(list)
-    for index, force in enumerate(system.getForces()):
-        if hasattr(force, "getNumGlobalParameters"):
-            for i in range(force.getNumGlobalParameters()):
-                dependent_forces[force.getGlobalParameterName(i)].append(index)
-
-    missing_parameters = [
-        xdof.name for xdof in extraDOFs if xdof.name not in dependent_forces
-    ]
-    if missing_parameters:
-        raise ValueError(
-            f"No forces depend on these global parameters: {missing_parameters}."
-        )
-
-    missing_derivatives = defaultdict(list)
-    for xdof in extraDOFs:
-        for index in dependent_forces[xdof.name]:
-            force = system.getForce(index)
-            if not any(
-                force.getEnergyParameterDerivativeName(i) == xdof.name
-                for i in range(force.getNumEnergyParameterDerivatives())
-            ):
-                missing_derivatives[index].append(xdof.name)
-
-    if missing_derivatives:
-        if not addMissingDerivatives:
-            raise ValueError(
-                "Missing derivative requests in system forces. "
-                "Set addMissingDerivatives=True to add them automatically."
-            )
-        for index, names in missing_derivatives.items():
-            force = system.getForce(index)
-            for name in names:
-                force.addEnergyParameterDerivative(name)
-        context.reinitialize(preserveState=True)
-
-    return system
-
-
 def update_physical_parameters(
-    physicalContext: mm.Context,
-    extensionContext: mm.Context,
-    extraDOFs: t.Tuple[ExtraDOF],
+    physical_context: mm.Context,
+    extension_context: mm.Context,
+    extra_dofs: t.Tuple[ExtraDOF],
 ) -> None:
     """
     Update the parameters of the context that contains the physical degrees of freedom,
@@ -105,26 +32,26 @@ def update_physical_parameters(
 
     Parameters
     ----------
-    physicalContext
+    physical_context
         The context containing the physical degrees of freedom.
-    extensionContext
+    extension_context
         The context containing the extra degrees of freedom.
-    extraDOFs
+    extra_dofs
         The extra degrees of freedom to extend the phase space with.
     """
-    state = mmswig.Context_getState(extensionContext, mm.State.Positions)
+    state = mmswig.Context_getState(extension_context, mm.State.Positions)
     positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-    for i, xdof in enumerate(extraDOFs):
+    for i, xdof in enumerate(extra_dofs):
         value = positions[i].x
         if xdof.bounds is not None:
             value, _ = xdof.bounds.wrap(value, 0)
-        mmswig.Context_setParameter(physicalContext, xdof.name, value)
+        mmswig.Context_setParameter(physical_context, xdof.name, value)
 
 
 def update_extension_parameters(
-    physicalContext: mm.Context,
-    extensionContext: mm.Context,
-    extraDOFs: t.Tuple[ExtraDOF],
+    physical_context: mm.Context,
+    extension_context: mm.Context,
+    extra_dofs: t.Tuple[ExtraDOF],
 ) -> None:
     """
     Update the parameters of the context containing the extra degrees of freedom,
@@ -132,60 +59,60 @@ def update_extension_parameters(
 
     Parameters
     ----------
-    physicalContext
+    physical_context
         The context containing the physical degrees of freedom.
-    extensionContext
+    extension_context
         The context containing the extra degrees of freedom.
-    extraDOFs
+    extra_dofs
         The extra degrees of freedom to extend the phase space with.
     """
-    state = mmswig.Context_getState(physicalContext, mm.State.ParameterDerivatives)
+    state = mmswig.Context_getState(physical_context, mm.State.ParameterDerivatives)
     derivatives = mmswig.State_getEnergyParameterDerivatives(state)
-    for xdof in extraDOFs:
+    for xdof in extra_dofs:
         mmswig.Context_setParameter(
-            extensionContext,
+            extension_context,
             f"{xdof.name}_force",
             -derivatives[xdof.name],
         )
 
 
 def integrate_extended_space(
-    physicalContext: mm.Context,
+    physical_context: mm.Context,
     steps: int,
-    extraDOFs: t.Tuple[ExtraDOF],
-    extensionContext: mm.Context,
+    extra_dofs: t.Tuple[ExtraDOF],
+    extension_context: mm.Context,
 ) -> None:
     """
     Perform a series of time steps in an extended phase-space simulation.
 
     Parameters
     ----------
-    physicalContext
+    physical_context
         The context containing the physical degrees of freedom.
     steps
         The number of time steps to take.
-    extraDOFs
+    extra_dofs
         The extra degrees of freedom to extend the phase space with.
-    extensionContext
+    extension_context
         The context containing the extra degrees of freedom.
     """
-    extension_integrator = extensionContext.getIntegrator()
-    physical_integrator = physicalContext.getIntegrator()
+    extension_integrator = extension_context.getIntegrator()
+    physical_integrator = physical_context.getIntegrator()
 
     try:
         mmswig.Integrator_step(extension_integrator, 1)
-        update_physical_parameters(physicalContext, extensionContext, extraDOFs)
+        update_physical_parameters(physical_context, extension_context, extra_dofs)
     except mm.OpenMMException as error:
         raise RuntimeError("Extra degrees of freedom have not been set.") from error
     for _ in range(steps - 1):
         mmswig.Integrator_step(physical_integrator, 1)
-        update_extension_parameters(physicalContext, extensionContext, extraDOFs)
+        update_extension_parameters(physical_context, extension_context, extra_dofs)
         mmswig.Integrator_step(extension_integrator, 2)
-        update_physical_parameters(physicalContext, extensionContext, extraDOFs)
+        update_physical_parameters(physical_context, extension_context, extra_dofs)
     mmswig.Integrator_step(physical_integrator, 1)
-    update_extension_parameters(physicalContext, extensionContext, extraDOFs)
+    update_extension_parameters(physical_context, extension_context, extra_dofs)
     mmswig.Integrator_step(extension_integrator, 1)
-    update_physical_parameters(physicalContext, extensionContext, extraDOFs)
+    update_physical_parameters(physical_context, extension_context, extra_dofs)
 
 
 class ExtendedSpaceContext(mm.Context):
@@ -228,7 +155,7 @@ class ExtendedSpaceContext(mm.Context):
     >>> context = xps.ExtendedSpaceContext(
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi_dv],
-    ...     addMissingDerivatives=True,
+    ...     add_missing_derivatives=True,
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
@@ -242,18 +169,18 @@ class ExtendedSpaceContext(mm.Context):
     def __init__(  # pylint: disable=super-init-not-called
         self,
         context: mm.Context,
-        extraDOFs: t.Iterable[ExtraDOF],
-        extensionIntegrator: t.Optional[mm.Integrator] = None,
+        extra_dofs: t.Iterable[ExtraDOF],
+        extension_integrator: t.Optional[mm.Integrator] = None,
         *,
-        addMissingDerivatives: bool = False,
+        add_missing_derivatives: bool = False,
     ) -> None:
-        self._extra_dofs = tuple(extraDOFs)
-        self._system = get_physical_system(
-            context, self._extra_dofs, addMissingDerivatives
-        )
-        self._integrator = context.getIntegrator()
+        self._extra_dofs = tuple(extra_dofs)
         self.this = context.this
-        extension_integrator = extensionIntegrator or copy(self._integrator)
+        self._system = context.getSystem()
+        self._integrator = context.getIntegrator()
+        if not check_system(self._system, self._extra_dofs, add_missing_derivatives):
+            self.reinitialize(preserveState=True)
+        extension_integrator = extension_integrator or copy(self._integrator)
         extension_system = mm.System()
         for xdof in self._extra_dofs:
             index = extension_system.addParticle(
@@ -273,8 +200,8 @@ class ExtendedSpaceContext(mm.Context):
         self._integrator.step = MethodType(
             partial(
                 integrate_extended_space,
-                extraDOFs=self._extra_dofs,
-                extensionContext=self._extension_context,
+                extra_dofs=self._extra_dofs,
+                extension_context=self._extension_context,
             ),
             self,
         )
