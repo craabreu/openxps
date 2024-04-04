@@ -18,7 +18,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="ExtraDOF" href="ExtraDOF.html" />
-    <link rel="prev" title="Python API" href="index.html" />
+    <link rel="prev" title="Classes" href="classes.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -40,15 +40,24 @@
 <h1>ExtendedSpaceContext<a class="headerlink" href="#extendedspacecontext" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extraDOFs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extensionIntegrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">addMissingDerivatives</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
-<dd><p>A context for extended phase-space simulations with OpenMM.</p>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_dofs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_integrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
+<dd><p>Wraps an <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> object to include extra degrees of freedom (DOFs) and
+allow for extended phase-space (XPS) simulations.</p>
+<p>The context’s integrator is modified in-place to include integration of the extra
+DOFs. If necessary, the context’s system is also modified in-place to include
+missing requests for derivative computations (see <a class="reference internal" href="check_system.html#openxps.check_system" title="openxps.check_system"><code class="xref py py-func docutils literal notranslate"><span class="pre">check_system()</span></code></a> for details).</p>
+<p>The integrator’s <code class="docutils literal notranslate"><span class="pre">step</span></code> method is replaced with a custom function that advances
+the physical and extra DOFs alternately using the Strang splitting algorithm
+<span id="id1">[<a class="reference internal" href="../references.html#id2" title="Gilbert Strang. On the Construction and Comparison of Difference Schemes. SIAM Journal on Numerical Analysis, 5(3):506–517, 1968. arXiv:2949700.">1</a>]</span>. This is identical to the disparate-mass version of the
+Reversible Reference System Propagator Algorithm (rRESPA) method
+<span id="id2">[<a class="reference internal" href="../references.html#id3" title="M. Tuckerman, B. J. Berne, and G. J. Martyna. Reversible multiple time scale molecular dynamics. The Journal of Chemical Physics, 97(3):1990–2001, August 1992. doi:10.1063/1.463137.">2</a>]</span>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>context</strong> (<em>Context</em>) – An OpenMM context containing the physical system to be extended.</p></li>
-<li><p><strong>extra_dofs</strong> – The extra degrees of freedom to extend the phase space with.</p></li>
-<li><p><strong>extension_integrator</strong> – A blueprint for how to integrate the extra degrees of freedom. It defaults to
-the same integrator present in the context.</p></li>
+<li><p><strong>context</strong> (<em>Context</em>) – The original OpenMM context containing the physical system.</p></li>
+<li><p><strong>extra_dofs</strong> (<em>Iterable</em><em>[</em><a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><em>ExtraDOF</em></a><em>]</em>) – A group of extra degrees of freedom to be included in the XPS simulation.</p></li>
+<li><p><strong>extension_integrator</strong> (<em>Integrator</em><em> | </em><em>None</em>) – An integrator for the extra degrees of freedom. If not provided, the original
+context’s integrator will be used as a template.</p></li>
 </ul>
 </dd>
 </dl>
@@ -77,7 +86,6 @@ the same integrator present in the context.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceContext</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">platform</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="p">[</span><span class="n">phi_dv</span><span class="p">],</span>
-<span class="gp">... </span>    <span class="n">addMissingDerivatives</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setVelocitiesToTemperature</span><span class="p">(</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
@@ -152,11 +160,13 @@ the same integrator present in the context.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setPositions">
-<span class="sig-name descname"><span class="pre">setPositions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">positions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setPositions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setPositions" title="Link to this definition">¶</a></dt>
-<dd><p>Set the positions of all particles in the System (measured in nm). This method simply sets the positions without checking to see whether they satisfy distance constraints. If you want constraints to be enforced, call applyConstraints() after setting the positions.</p>
+<span class="sig-name descname"><span class="pre">setPositions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setPositions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setPositions" title="Link to this definition">¶</a></dt>
+<dd><p>Sets the positions of all particles in the physical system.</p>
+<p>This method extends the base <code class="docutils literal notranslate"><span class="pre">setPositions</span></code> method of OpenMM’s Context class
+to ensure that the extended degrees of freedom are also updated accordingly.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>positions</strong> (<em>vector&lt; Vec3 &gt;</em>) – a vector whose length equals the number of particles in the System. The i’th element contains the position of the i’th particle.</p>
+<dd class="field-odd"><p><strong>positions</strong> (<em>Quantity</em><em> | </em><em>ndarray</em><em> | </em><em>Sequence</em><em>[</em><em>Vec3</em><em>] </em><em>| </em><em>Sequence</em><em>[</em><em>ndarray</em><em>]</em>) – The positions for each particle in the system.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -187,9 +197,13 @@ the same integrator present in the context.</p></li>
 <h3><a href="../index.html">Table of Contents</a></h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="index.html">Python API</a><ul class="current">
-<li class="toctree-l2 current"><a class="current reference internal" href="#">ExtendedSpaceContext</a></li>
-<li class="toctree-l2"><a class="reference internal" href="ExtraDOF.html">ExtraDOF</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">ExtendedSpaceContext</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtraDOF.html">ExtraDOF</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="functions.html">Functions</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>

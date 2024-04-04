@@ -1,12 +1,9 @@
-Python API
-==========
+API Reference
+=============
 
 .. toctree::
+    :maxdepth: 2
     :titlesonly:
 
-    ExtendedSpaceContext
-    ExtraDOF
-
-.. testsetup::
-
-    from openxps import *
+    classes
+    functions

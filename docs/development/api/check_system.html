@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>check_system &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=12dfc556" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Bibliography" href="../references.html" />
+    <link rel="prev" title="Functions" href="functions.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="check-system">
+<h1>check_system<a class="headerlink" href="#check-system" title="Link to this heading">¶</a></h1>
+<dl class="py function">
+<dt class="sig sig-object py" id="openxps.check_system">
+<span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">check_system</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_dofs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">add_missing_derivatives</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/check_system.html#check_system"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.check_system" title="Link to this definition">¶</a></dt>
+<dd><p>Checks and optionally modifies an <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a>, ensuring that it is properly
+configured for an extended phase-space (XPS) simulation with specified extra degrees
+of freedom (DOFs).</p>
+<p>Two main checks are performed:</p>
+<ol class="arabic simple">
+<li><p><strong>Global Parameter Presence</strong>: The system’s potential energy must depend on all
+extra DOFs. This means that, for each extra DOF, a global parameter with the
+same name must have been added to at least one of the system’s forces (via the
+<code class="docutils literal notranslate"><span class="pre">addGlobalParameter</span></code> method, available in many OpenMM force classes). An
+exception is raised if this condition is not met.</p></li>
+<li><p><strong>Parameter Derivative Requests</strong>: Running an XPS simulation requires computing
+the derivative of the system’s potential energy with respect to each extra DOF.
+Therefore, each force that depends on an extra DOF must include a request for
+the corresponding derivative (via the <code class="docutils literal notranslate"><span class="pre">addEnergyParameterDerivative</span></code> method).
+An exception is raised if this check fails and the add_missing_derivatives
+argument is set to False (the default).</p></li>
+</ol>
+<p>If the last check above fails but add_missing_derivatives is set to True, the
+function automatically adds all missing energy parameter derivatives, thus modifying
+the passed <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> object in-place. No exception is raised in this case,
+but the function returns False to indicate that the system was not properly
+configured in the first place.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>If the passed <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> instance belongs to an <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> and
+the function returns False, it will be necessary to <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html#openmm.openmm.Context.reinitialize">reinitialize</a> the context
+before the modifications take effect.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>system</strong> (<em>System</em>) – The <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> object to check and possibly modify.</p></li>
+<li><p><strong>extra_dofs</strong> (<em>Tuple</em><em>[</em><a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><em>ExtraDOF</em></a><em>]</em>) – Extra degrees of freedom to include in the simulation, each represented by an
+<a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtraDOF</span></code></a> instance with a unique name.</p></li>
+<li><p><strong>add_missing_derivatives</strong> (<em>bool</em>) – If True, missing derivative requests are automatically added to the forces that
+depend on global parameters associated with extra DOFs.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if the system was properly configured for an XPS simulation before the
+function was called, or False if missing derivative requests were added.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If there are missing energy parameter derivatives for any extra DOF and
+    <cite>add_missing_derivatives</cite> is False.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="classes.html">Classes</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="functions.html">Functions</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">check_system</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      
+      |
+      <a href="../_sources/api/check_system.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

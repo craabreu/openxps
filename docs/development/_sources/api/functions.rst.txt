@@ -1,0 +1,11 @@
+Functions
+=========
+
+.. toctree::
+    :titlesonly:
+
+    check_system
+
+.. testsetup::
+
+    from openxps import *

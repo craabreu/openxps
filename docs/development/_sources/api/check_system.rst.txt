@@ -1,0 +1,5 @@
+check_system
+============
+
+.. currentmodule:: openxps
+.. autofunction:: check_system

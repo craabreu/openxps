@@ -5,5 +5,3 @@ ExtraDOF
 .. autoclass:: ExtraDOF
     :member-order: alphabetical
 
-    .. rubric:: Methods
-
