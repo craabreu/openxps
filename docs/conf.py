@@ -275,7 +275,11 @@ extlinks = {
     "OpenMM": (
         "http://docs.openmm.org/latest/api-python/generated/openmm.openmm.%s.html",
         "openmm.%s",
-    )
+    ),
+    "CVPack": (
+        "https://redesignscience.github.io/cvpack/latest/api/%s.html",
+        "cvpack.%s",
+    ),
 }
 
 # Copy button configuration

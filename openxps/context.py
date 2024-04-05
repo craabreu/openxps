@@ -17,7 +17,7 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .check_system import check_system
+from .bounds import Periodic
 from .extra_dof import ExtraDOF
 
 
@@ -26,14 +26,13 @@ class ExtendedSpaceContext(mm.Context):
     Wraps an :OpenMM:`Context` object to include extra degrees of freedom (DOFs) and
     allow for extended phase-space (XPS) simulations.
 
-    The context's integrator is modified in-place to include integration of the extra
-    DOFs. If necessary, the context's system is also modified in-place to include
-    missing requests for derivative computations (see :func:`check_system` for details).
+    The system and integrator attached to the context are modified in-place.
 
-    The integrator's ``step`` method is replaced with a custom function that advances
-    the physical and extra DOFs alternately using the Strang splitting algorithm
-    :cite:`Strang_1968`. This is identical to the disparate-mass version of the
-    Reversible Reference System Propagator Algorithm (rRESPA) method
+    A provided :CVPack:`MetaCollectiveVariable` is added to the system to couple the
+    physical and extra DOFs. The integrator's ``step`` method is replaced with a custom
+    function that advances the physical and extra DOFs alternately using the Strang
+    splitting algorithm :cite:`Strang_1968`. This is identical to the disparate-mass
+    version of the Reversible Reference System Propagator Algorithm (rRESPA) method
     :cite:`Tuckerman_1992`.
 
     Parameters
@@ -42,9 +41,13 @@ class ExtendedSpaceContext(mm.Context):
         The original OpenMM context containing the physical system.
     extra_dofs
         A group of extra degrees of freedom to be included in the XPS simulation.
+    coupling_potential
+        A meta-collective variable, with units of ``kilojoule_per_mole`` or equivalent,
+        which defines the potential energy term that couples the physical system to the
+        extra DOFs.
     extension_integrator
         An integrator for the extra degrees of freedom. If not provided, the original
-        context's integrator will be used as a template.
+        context's integrator is used as a template.
 
     Example
     -------
@@ -62,7 +65,6 @@ class ExtendedSpaceContext(mm.Context):
     ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
     ...     phi_dv=pi*unit.radian,
     ... )
-    >>> umbrella_potential.addToSystem(model.system)
     >>> integrator = openmm.LangevinMiddleIntegrator(
     ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
@@ -72,6 +74,7 @@ class ExtendedSpaceContext(mm.Context):
     >>> context = xps.ExtendedSpaceContext(
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi_dv],
+    ...     umbrella_potential,
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
@@ -86,26 +89,27 @@ class ExtendedSpaceContext(mm.Context):
         self,
         context: mm.Context,
         extra_dofs: t.Iterable[ExtraDOF],
+        coupling_potential: cvpack.MetaCollectiveVariable,
         extension_integrator: t.Optional[mm.Integrator] = None,
     ) -> None:
         self._extra_dofs = tuple(extra_dofs)
         self.this = context.this
         self._system = context.getSystem()
         self._integrator = context.getIntegrator()
-        if not check_system(
-            self._system, self._extra_dofs, add_missing_derivatives=True
-        ):
-            self.reinitialize(preserveState=True)
+
+        self._coupling_potential = coupling_potential
+        self._validateCouplingPotential()
+        coupling_potential.addToSystem(self._system)
+        self.reinitialize(preserveState=True)
+
         extension_integrator = extension_integrator or copy(self._integrator)
         extension_system = mm.System()
         for xdof in self._extra_dofs:
-            index = extension_system.addParticle(
+            extension_system.addParticle(
                 xdof.mass.value_in_unit_system(mm.unit.md_unit_system)
             )
-            force = mm.CustomExternalForce(f"{xdof.name}_force*x")
-            force.addGlobalParameter(f"{xdof.name}_force", 0)
-            force.addParticle(index, [])
-            extension_system.addForce(force)
+        flipped_potential = self._flipMetaCV(coupling_potential, self._extra_dofs)
+        flipped_potential.addToSystem(extension_system)
 
         self._extension_context = mm.Context(
             extension_system,
@@ -118,8 +122,96 @@ class ExtendedSpaceContext(mm.Context):
                 integrate_extended_space,
                 extra_dofs=self._extra_dofs,
                 extension_context=self._extension_context,
+                coupling_potential=coupling_potential,
             ),
             self,
+        )
+
+    def _validateCouplingPotential(self) -> None:
+        """
+        Validate the system and coupling potential.
+
+        Parameters
+        ----------
+        coupling_potential
+            The coupling potential that couples the physical and extra degrees of
+            freedom.
+        """
+        if not all(isinstance(xdof, ExtraDOF) for xdof in self._extra_dofs):
+            raise TypeError(
+                "All extra degrees of freedom must be instances of ExtraDOF."
+            )
+        if not isinstance(self._coupling_potential, cvpack.MetaCollectiveVariable):
+            raise TypeError(
+                "The coupling potential must be an instance of MetaCollectiveVariable."
+            )
+        if not self._coupling_potential.getUnit().is_compatible(
+            mmunit.kilojoule_per_mole
+        ):
+            raise ValueError(
+                "The coupling potential must have units of kilojoules/mole."
+            )
+        context_parameters = set(self.getParameters())
+        force_parameters = self._coupling_potential.getParameterDefaultValues()
+        parameter_units = {
+            name: quantity.unit for name, quantity in force_parameters.items()
+        }
+        if parameters := set(parameter_units) & context_parameters:
+            raise ValueError(f"Parameters {parameters} are already in the context.")
+        xdof_units = {xdof.name: xdof.unit for xdof in self._extra_dofs}
+        if parameters := set(xdof_units) - set(parameter_units):
+            raise ValueError(
+                f"The coupling potential is missing parameters {parameters}."
+            )
+        for name, unit in xdof_units.items():
+            if not unit.is_compatible(parameter_units[name]):
+                raise ValueError(f"Unit mismatch for parameter '{name}'.")
+
+    def _flipMetaCV(
+        self,
+        meta_cv: cvpack.MetaCollectiveVariable,
+        extra_dofs: t.Tuple[ExtraDOF],
+    ) -> cvpack.MetaCollectiveVariable:
+        """
+        Flip a meta-collective variable, turning all inner collective variables into
+        named parameters and all extra-dof-related parameters into inner collective
+        variables.
+
+        Parameters
+        ----------
+        meta_cv
+            The meta-collective variable to be flipped.
+        extra_dofs
+            The extra degrees of freedom to be included in the extended phase space.
+
+        Returns
+        -------
+        cvpack.MetaCollectiveVariable
+            The flipped meta-collective variable.
+        """
+        extra_dof_cvs = []
+        for index, xdof in enumerate(extra_dofs):
+            if isinstance(xdof.bounds, Periodic):
+                bounds = [xdof.bounds.lower, xdof.bounds.upper] * xdof.unit
+            else:
+                bounds = None
+            force = mm.CustomExternalForce("x")
+            force.addParticle(index, [])
+            cv = cvpack.OpenMMForceWrapper(force, xdof.unit, bounds, xdof.name)
+            extra_dof_cvs.append(cv)
+
+        parameters = meta_cv.getParameterDefaultValues()
+        for xdof in extra_dofs:
+            parameters.pop(xdof.name)
+        parameters.update(meta_cv.getInnerValues(self))
+
+        return cvpack.MetaCollectiveVariable(
+            function=meta_cv.getEnergyFunction(),
+            variables=extra_dof_cvs,
+            unit=meta_cv.getUnit(),
+            periodicBounds=meta_cv.getPeriodicBounds(),
+            name=meta_cv.getName(),
+            **parameters,
         )
 
     def setPositions(self, positions: cvpack.units.MatrixQuantity) -> None:
@@ -135,7 +227,9 @@ class ExtendedSpaceContext(mm.Context):
             The positions for each particle in the system.
         """
         super().setPositions(positions)
-        update_extension_parameters(self, self._extension_context, self._extra_dofs)
+        update_extension_context(
+            self, self._extension_context, self._coupling_potential
+        )
 
     def setExtraValues(self, values: t.Iterable[mmunit.Quantity]) -> None:
         """
@@ -155,7 +249,9 @@ class ExtendedSpaceContext(mm.Context):
                 value, _ = xdof.bounds.wrap(value, 0)
             self.setParameter(xdof.name, value)
         mmswig.Context_setPositions(self._extension_context, positions)
-        update_extension_parameters(self, self._extension_context, self._extra_dofs)
+        update_extension_context(
+            self, self._extension_context, self._coupling_potential
+        )
 
     def getExtraValues(self) -> t.Tuple[mmunit.Quantity]:
         """
@@ -237,7 +333,7 @@ class ExtendedSpaceContext(mm.Context):
         return tuple(velocities)
 
 
-def update_physical_parameters(
+def update_physical_context(
     physical_context: mm.Context,
     extension_context: mm.Context,
     extra_dofs: t.Tuple[ExtraDOF],
@@ -264,14 +360,14 @@ def update_physical_parameters(
         mmswig.Context_setParameter(physical_context, xdof.name, value)
 
 
-def update_extension_parameters(
+def update_extension_context(
     physical_context: mm.Context,
     extension_context: mm.Context,
-    extra_dofs: t.Tuple[ExtraDOF],
+    coupling_potential: cvpack.MetaCollectiveVariable,
 ) -> None:
     """
     Update the parameters of the context containing the extra degrees of freedom,
-    making them consistent with the values of the physical degrees of freedom.
+    making them consistent with the current state of the physical system.
 
     Parameters
     ----------
@@ -279,17 +375,11 @@ def update_extension_parameters(
         The context containing the physical degrees of freedom.
     extension_context
         The context containing the extra degrees of freedom.
-    extra_dofs
-        The extra degrees of freedom to extend the phase space with.
+    coupling_potential
+        The potential that couples the physical and extra degrees of freedom.
     """
-    state = mmswig.Context_getState(physical_context, mm.State.ParameterDerivatives)
-    derivatives = mmswig.State_getEnergyParameterDerivatives(state)
-    for xdof in extra_dofs:
-        mmswig.Context_setParameter(
-            extension_context,
-            f"{xdof.name}_force",
-            -derivatives[xdof.name],
-        )
+    for name, value in coupling_potential.getInnerValues(physical_context).items():
+        mmswig.Context_setParameter(extension_context, name, value / value.unit)
 
 
 def integrate_extended_space(
@@ -297,6 +387,7 @@ def integrate_extended_space(
     steps: int,
     extra_dofs: t.Tuple[ExtraDOF],
     extension_context: mm.Context,
+    coupling_potential: cvpack.MetaCollectiveVariable,
 ) -> None:
     """
     Advances the extended phase-space simulation by integrating both the physical
@@ -325,6 +416,10 @@ def integrate_extended_space(
         The OpenMM context for the extra DOFs. This context is advanced separately from
         the physical context but is synchronized with it to reflect the mutual influence
         between the physical system and the extra DOFs.
+    coupling_potential
+        The potential that couples the physical and extra degrees of freedom.
+    flipped_potential
+        The flipped version of the coupling potential.
 
     Raises
     ------
@@ -338,15 +433,17 @@ def integrate_extended_space(
 
     try:
         mmswig.Integrator_step(extension_integrator, 1)
-        update_physical_parameters(physical_context, extension_context, extra_dofs)
+        update_physical_context(physical_context, extension_context, extra_dofs)
     except mm.OpenMMException as error:
         raise RuntimeError("Extra degrees of freedom have not been set.") from error
     for _ in range(steps - 1):
         mmswig.Integrator_step(physical_integrator, 1)
-        update_extension_parameters(physical_context, extension_context, extra_dofs)
+        update_extension_context(
+            physical_context, extension_context, coupling_potential
+        )
         mmswig.Integrator_step(extension_integrator, 2)
-        update_physical_parameters(physical_context, extension_context, extra_dofs)
+        update_physical_context(physical_context, extension_context, extra_dofs)
     mmswig.Integrator_step(physical_integrator, 1)
-    update_extension_parameters(physical_context, extension_context, extra_dofs)
+    update_extension_context(physical_context, extension_context, coupling_potential)
     mmswig.Integrator_step(extension_integrator, 1)
-    update_physical_parameters(physical_context, extension_context, extra_dofs)
+    update_physical_context(physical_context, extension_context, extra_dofs)
