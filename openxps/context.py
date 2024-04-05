@@ -96,13 +96,13 @@ class ExtendedSpaceContext(mm.Context):
         self.this = context.this
         self._system = context.getSystem()
         self._integrator = context.getIntegrator()
-
         self._coupling_potential = coupling_potential
-        self._validateCouplingPotential()
-        coupling_potential.addToSystem(self._system)
+        extension_integrator = extension_integrator or copy(self._integrator)
+
+        self._validate()
+        self._coupling_potential.addToSystem(self._system)
         self.reinitialize(preserveState=True)
 
-        extension_integrator = extension_integrator or copy(self._integrator)
         extension_system = mm.System()
         for xdof in self._extra_dofs:
             extension_system.addParticle(
@@ -127,16 +127,7 @@ class ExtendedSpaceContext(mm.Context):
             self,
         )
 
-    def _validateCouplingPotential(self) -> None:
-        """
-        Validate the system and coupling potential.
-
-        Parameters
-        ----------
-        coupling_potential
-            The coupling potential that couples the physical and extra degrees of
-            freedom.
-        """
+    def _validate(self) -> None:
         if not all(isinstance(xdof, ExtraDOF) for xdof in self._extra_dofs):
             raise TypeError(
                 "All extra degrees of freedom must be instances of ExtraDOF."
@@ -148,20 +139,20 @@ class ExtendedSpaceContext(mm.Context):
         if not self._coupling_potential.getUnit().is_compatible(
             mmunit.kilojoule_per_mole
         ):
-            raise ValueError(
-                "The coupling potential must have units of kilojoules/mole."
-            )
+            raise ValueError("The coupling potential must have units of energy/mole.")
         context_parameters = set(self.getParameters())
         force_parameters = self._coupling_potential.getParameterDefaultValues()
         parameter_units = {
             name: quantity.unit for name, quantity in force_parameters.items()
         }
         if parameters := set(parameter_units) & context_parameters:
-            raise ValueError(f"Parameters {parameters} are already in the context.")
+            raise ValueError(
+                f"The context already contains {parameters} among its parameters."
+            )
         xdof_units = {xdof.name: xdof.unit for xdof in self._extra_dofs}
         if parameters := set(xdof_units) - set(parameter_units):
             raise ValueError(
-                f"The coupling potential is missing parameters {parameters}."
+                f"The coupling potential parameters do not include {parameters}."
             )
         for name, unit in xdof_units.items():
             if not unit.is_compatible(parameter_units[name]):
