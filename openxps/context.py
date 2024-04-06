@@ -57,21 +57,21 @@ class ExtendedSpaceContext(mm.Context):
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> umbrella_potential = cvpack.MetaCollectiveVariable(
-    ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi_cv-phi_dv)",
-    ...     [cvpack.Torsion(6, 8, 14, 16, name="phi_cv")],
+    ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
+    ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
     ...     unit.kilojoule_per_mole,
     ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
-    ...     phi_dv=pi*unit.radian,
+    ...     phi0=pi*unit.radian,
     ... )
     >>> integrator = openmm.LangevinMiddleIntegrator(
     ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
     >>> platform = openmm.Platform.getPlatformByName("Reference")
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
-    >>> phi_dv = xps.ExtraDOF("phi_dv", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> phi0 = xps.ExtraDOF("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> context = xps.ExtendedSpaceContext(
     ...     openmm.Context(model.system, integrator, platform),
-    ...     [phi_dv],
+    ...     [phi0],
     ...     umbrella_potential,
     ... )
     >>> context.setPositions(model.positions)
