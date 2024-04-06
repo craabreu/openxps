@@ -60,21 +60,26 @@ def create_function_rst_file(func):
         )
 
 
-with open("api/classes.rst", "w") as f:
-    f.write("Classes\n" "=======\n" "\n" ".. toctree::\n" "    :titlesonly:\n" "\n")
-    for item in openxps.__dict__.values():
-        if inspect.isclass(item):
+classes = [item for item in openxps.__dict__.values() if inspect.isclass(item)]
+functions = [item for item in openxps.__dict__.values() if inspect.isfunction(item)]
+
+if classes:
+    with open("api/classes.rst", "w") as f:
+        f.write("Classes\n" "=======\n" "\n" ".. toctree::\n" "    :titlesonly:\n" "\n")
+        for item in classes:
             f.write(f"    {item.__name__}\n")
             create_class_rst_file(item)
-    f.write("\n.. testsetup::\n\n    from openxps import *")
+        f.write("\n.. testsetup::\n\n    from openxps import *")
 
-with open("api/functions.rst", "w") as f:
-    f.write("Functions\n" "=========\n" "\n" ".. toctree::\n" "    :titlesonly:\n" "\n")
-    for item in openxps.__dict__.values():
-        if inspect.isfunction(item):
+if functions:
+    with open("api/functions.rst", "w") as f:
+        f.write(
+            "Functions\n" "=========\n" "\n" ".. toctree::\n" "    :titlesonly:\n" "\n"
+        )
+        for item in functions:
             f.write(f"    {item.__name__}\n")
             create_function_rst_file(item)
-    f.write("\n.. testsetup::\n\n    from openxps import *")
+        f.write("\n.. testsetup::\n\n    from openxps import *")
 
 with open("api/index.rst", "w") as f:
     f.write(
@@ -84,9 +89,7 @@ with open("api/index.rst", "w") as f:
         ".. toctree::\n"
         "    :maxdepth: 2\n"
         "    :titlesonly:\n"
-        "\n"
-        "    classes\n"
-        "    functions\n"
+        "\n" + "    classes\n" * bool(classes) + "    functions\n" * bool(functions)
     )
 
 # -- Project information -----------------------------------------------------
@@ -275,7 +278,11 @@ extlinks = {
     "OpenMM": (
         "http://docs.openmm.org/latest/api-python/generated/openmm.openmm.%s.html",
         "openmm.%s",
-    )
+    ),
+    "CVPack": (
+        "https://redesignscience.github.io/cvpack/latest/api/%s.html",
+        "cvpack.%s",
+    ),
 }
 
 # Copy button configuration

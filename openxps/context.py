@@ -17,7 +17,7 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .check_system import check_system
+from .bounds import Periodic
 from .extra_dof import ExtraDOF
 
 
@@ -26,15 +26,11 @@ class ExtendedSpaceContext(mm.Context):
     Wraps an :OpenMM:`Context` object to include extra degrees of freedom (DOFs) and
     allow for extended phase-space (XPS) simulations.
 
-    The context's integrator is modified in-place to include integration of the extra
-    DOFs. If necessary, the context's system is also modified in-place to include
-    missing requests for derivative computations (see :func:`check_system` for details).
+    **Note**: The system and integrator attached to the context are modified in-place.
 
-    The integrator's ``step`` method is replaced with a custom function that advances
-    the physical and extra DOFs alternately using the Strang splitting algorithm
-    :cite:`Strang_1968`. This is identical to the disparate-mass version of the
-    Reversible Reference System Propagator Algorithm (rRESPA) method
-    :cite:`Tuckerman_1992`.
+    A provided :CVPack:`MetaCollectiveVariable` is added to the system to couple the
+    physical DOFs and the extra ones. The integrator's ``step`` method is replaced with
+    a custom function that advances the physical and extension systems in tandem.
 
     Parameters
     ----------
@@ -42,9 +38,14 @@ class ExtendedSpaceContext(mm.Context):
         The original OpenMM context containing the physical system.
     extra_dofs
         A group of extra degrees of freedom to be included in the XPS simulation.
-    extension_integrator
-        An integrator for the extra degrees of freedom. If not provided, the original
-        context's integrator will be used as a template.
+    coupling_potential
+        A meta-collective variable defining the potential energy term that couples the
+        physical system to the extra DOFs. It must have units of ``kilojoules_per_mole``
+        or equivalent.
+    integrator_template
+        An :OpenMM:`Integrator` object to be used as a template for the algorithm that
+        advances the extra DOFs. If not provided, the physical system's integrator is
+        used as a template.
 
     Example
     -------
@@ -56,22 +57,22 @@ class ExtendedSpaceContext(mm.Context):
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> umbrella_potential = cvpack.MetaCollectiveVariable(
-    ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi_cv-phi_dv)",
-    ...     [cvpack.Torsion(6, 8, 14, 16, name="phi_cv")],
+    ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
+    ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
     ...     unit.kilojoule_per_mole,
     ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
-    ...     phi_dv=pi*unit.radian,
+    ...     phi0=pi*unit.radian,
     ... )
-    >>> umbrella_potential.addToSystem(model.system)
     >>> integrator = openmm.LangevinMiddleIntegrator(
     ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
     >>> platform = openmm.Platform.getPlatformByName("Reference")
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
-    >>> phi_dv = xps.ExtraDOF("phi_dv", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> phi0 = xps.ExtraDOF("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> context = xps.ExtendedSpaceContext(
     ...     openmm.Context(model.system, integrator, platform),
-    ...     [phi_dv],
+    ...     [phi0],
+    ...     umbrella_potential,
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
@@ -80,46 +81,111 @@ class ExtendedSpaceContext(mm.Context):
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
     (Quantity(value=..., unit=radian),)
+    >>> state = context.getExtensionState(getEnergy=True)
+    >>> state.getPotentialEnergy()
+    Quantity(value=..., unit=kilojoule/mole)
     """
 
     def __init__(  # pylint: disable=super-init-not-called
         self,
         context: mm.Context,
         extra_dofs: t.Iterable[ExtraDOF],
-        extension_integrator: t.Optional[mm.Integrator] = None,
+        coupling_potential: cvpack.MetaCollectiveVariable,
+        integrator_template: t.Optional[mm.Integrator] = None,
     ) -> None:
-        self._extra_dofs = tuple(extra_dofs)
         self.this = context.this
         self._system = context.getSystem()
         self._integrator = context.getIntegrator()
-        if not check_system(
-            self._system, self._extra_dofs, add_missing_derivatives=True
-        ):
-            self.reinitialize(preserveState=True)
-        extension_integrator = extension_integrator or copy(self._integrator)
-        extension_system = mm.System()
-        for xdof in self._extra_dofs:
-            index = extension_system.addParticle(
-                xdof.mass.value_in_unit_system(mm.unit.md_unit_system)
-            )
-            force = mm.CustomExternalForce(f"{xdof.name}_force*x")
-            force.addGlobalParameter(f"{xdof.name}_force", 0)
-            force.addParticle(index, [])
-            extension_system.addForce(force)
-
-        self._extension_context = mm.Context(
-            extension_system,
-            extension_integrator,
-            mm.Platform.getPlatformByName("Reference"),
-        )
-
+        self._extra_dofs = tuple(extra_dofs)
+        self._coupling_potential = coupling_potential
+        self._validate()
+        self._coupling_potential.addToSystem(self._system)
+        self.reinitialize(preserveState=True)
+        self._extension_context = self._createExtensionContext(integrator_template)
         self._integrator.step = MethodType(
             partial(
                 integrate_extended_space,
                 extra_dofs=self._extra_dofs,
                 extension_context=self._extension_context,
+                coupling_potential=coupling_potential,
             ),
             self,
+        )
+
+    def _validate(self) -> None:
+        if not all(isinstance(xdof, ExtraDOF) for xdof in self._extra_dofs):
+            raise TypeError(
+                "All extra degrees of freedom must be instances of ExtraDOF."
+            )
+        if not isinstance(self._coupling_potential, cvpack.MetaCollectiveVariable):
+            raise TypeError(
+                "The coupling potential must be an instance of MetaCollectiveVariable."
+            )
+        if not self._coupling_potential.getUnit().is_compatible(
+            mmunit.kilojoule_per_mole
+        ):
+            raise ValueError("The coupling potential must have units of molar energy.")
+        context_parameters = set(self.getParameters())
+        force_parameters = self._coupling_potential.getParameterDefaultValues()
+        parameter_units = {
+            name: quantity.unit for name, quantity in force_parameters.items()
+        }
+        if parameters := set(parameter_units) & context_parameters:
+            raise ValueError(
+                f"The context already contains {parameters} among its parameters."
+            )
+        xdof_units = {xdof.name: xdof.unit for xdof in self._extra_dofs}
+        if parameters := set(xdof_units) - set(parameter_units):
+            raise ValueError(
+                f"The coupling potential parameters do not include {parameters}."
+            )
+        for name, unit in xdof_units.items():
+            if not unit.is_compatible(parameter_units[name]):
+                raise ValueError(f"Unit mismatch for parameter '{name}'.")
+
+    def _createExtensionContext(
+        self, integrator_template: t.Union[mm.Integrator, None]
+    ) -> mm.Context:
+        extension_integrator = copy(integrator_template or self._integrator)
+        extension_integrator.setStepSize(self._integrator.getStepSize())
+
+        extension_system = mm.System()
+        for xdof in self._extra_dofs:
+            extension_system.addParticle(
+                xdof.mass.value_in_unit_system(mm.unit.md_unit_system)
+            )
+
+        extra_dof_cvs = []
+        for index, xdof in enumerate(self._extra_dofs):
+            bounds = None
+            if isinstance(xdof.bounds, Periodic):
+                bounds = [xdof.bounds.lower, xdof.bounds.upper] * xdof.unit
+            force = mm.CustomExternalForce("x")
+            force.addParticle(index, [])
+            extra_dof_cvs.append(
+                cvpack.OpenMMForceWrapper(force, xdof.unit, bounds, xdof.name)
+            )
+
+        meta_cv = self._coupling_potential
+        parameters = meta_cv.getParameterDefaultValues()
+        for xdof in self._extra_dofs:
+            parameters.pop(xdof.name)
+        parameters.update(meta_cv.getInnerValues(self))
+
+        flipped_potential = cvpack.MetaCollectiveVariable(
+            function=meta_cv.getEnergyFunction(),
+            variables=extra_dof_cvs,
+            unit=meta_cv.getUnit(),
+            periodicBounds=meta_cv.getPeriodicBounds(),
+            name=meta_cv.getName(),
+            **parameters,
+        )
+        flipped_potential.addToSystem(extension_system)
+
+        return mm.Context(
+            extension_system,
+            extension_integrator,
+            mm.Platform.getPlatformByName("Reference"),
         )
 
     def setPositions(self, positions: cvpack.units.MatrixQuantity) -> None:
@@ -135,7 +201,8 @@ class ExtendedSpaceContext(mm.Context):
             The positions for each particle in the system.
         """
         super().setPositions(positions)
-        update_extension_parameters(self, self._extension_context, self._extra_dofs)
+        for name, value in self._coupling_potential.getInnerValues(self).items():
+            self._extension_context.setParameter(name, value / value.unit)
 
     def setExtraValues(self, values: t.Iterable[mmunit.Quantity]) -> None:
         """
@@ -154,8 +221,9 @@ class ExtendedSpaceContext(mm.Context):
             if xdof.bounds is not None:
                 value, _ = xdof.bounds.wrap(value, 0)
             self.setParameter(xdof.name, value)
-        mmswig.Context_setPositions(self._extension_context, positions)
-        update_extension_parameters(self, self._extension_context, self._extra_dofs)
+        self._extension_context.setPositions(positions)
+        for name, value in self._coupling_potential.getInnerValues(self).items():
+            self._extension_context.setParameter(name, value / value.unit)
 
     def getExtraValues(self) -> t.Tuple[mmunit.Quantity]:
         """
@@ -190,7 +258,7 @@ class ExtendedSpaceContext(mm.Context):
             if mmunit.is_quantity(value):
                 value = value.value_in_unit(xdof.unit / mmunit.picosecond)
             velocities[i] = mm.Vec3(value, 0, 0)
-        mmswig.Context_setVelocities(self._extension_context, velocities)
+        self._extension_context.setVelocities(velocities)
 
     def setExtraVelocitiesToTemperature(
         self, temperature: mmunit.Quantity, seed: t.Optional[int] = None
@@ -204,15 +272,10 @@ class ExtendedSpaceContext(mm.Context):
             The temperature to set the velocities to.
         """
         args = (temperature,) if seed is None else (temperature, seed)
-        try:
-            self._extension_context.setVelocitiesToTemperature(*args)
-        except mm.OpenMMException as error:
-            raise RuntimeError("Extra degrees of freedom have not been set.") from error
+        self._extension_context.setVelocitiesToTemperature(*args)
         state = mmswig.Context_getState(self._extension_context, mm.State.Velocities)
         velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
-        mmswig.Context_setVelocities(
-            self._extension_context, [mm.Vec3(v.x, 0, 0) for v in velocities]
-        )
+        self._extension_context.setVelocities([mm.Vec3(v.x, 0, 0) for v in velocities])
 
     def getExtraVelocities(self) -> t.Tuple[mmunit.Quantity]:
         """
@@ -236,60 +299,21 @@ class ExtendedSpaceContext(mm.Context):
             velocities[i] = rate * xdof.unit / mmunit.picosecond
         return tuple(velocities)
 
+    def getExtensionState(self, **kwargs: t.Any) -> mm.State:
+        """
+        Get an :OpenMM:`State` object containing the state of the extension system.
 
-def update_physical_parameters(
-    physical_context: mm.Context,
-    extension_context: mm.Context,
-    extra_dofs: t.Tuple[ExtraDOF],
-) -> None:
-    """
-    Update the parameters of the context that contains the physical degrees of freedom,
-    making them consistent with the values of the extra degrees of freedom.
+        Parameters
+        ----------
+        kwargs
+            The same arguments accepted by the :OpenMM:`Context.getState` method.
 
-    Parameters
-    ----------
-    physical_context
-        The context containing the physical degrees of freedom.
-    extension_context
-        The context containing the extra degrees of freedom.
-    extra_dofs
-        The extra degrees of freedom to extend the phase space with.
-    """
-    state = mmswig.Context_getState(extension_context, mm.State.Positions)
-    positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-    for i, xdof in enumerate(extra_dofs):
-        value = positions[i].x
-        if xdof.bounds is not None:
-            value, _ = xdof.bounds.wrap(value, 0)
-        mmswig.Context_setParameter(physical_context, xdof.name, value)
-
-
-def update_extension_parameters(
-    physical_context: mm.Context,
-    extension_context: mm.Context,
-    extra_dofs: t.Tuple[ExtraDOF],
-) -> None:
-    """
-    Update the parameters of the context containing the extra degrees of freedom,
-    making them consistent with the values of the physical degrees of freedom.
-
-    Parameters
-    ----------
-    physical_context
-        The context containing the physical degrees of freedom.
-    extension_context
-        The context containing the extra degrees of freedom.
-    extra_dofs
-        The extra degrees of freedom to extend the phase space with.
-    """
-    state = mmswig.Context_getState(physical_context, mm.State.ParameterDerivatives)
-    derivatives = mmswig.State_getEnergyParameterDerivatives(state)
-    for xdof in extra_dofs:
-        mmswig.Context_setParameter(
-            extension_context,
-            f"{xdof.name}_force",
-            -derivatives[xdof.name],
-        )
+        Returns
+        -------
+        mm.State
+            The state of the extension system.
+        """
+        return self._extension_context.getState(**kwargs)
 
 
 def integrate_extended_space(
@@ -297,38 +321,28 @@ def integrate_extended_space(
     steps: int,
     extra_dofs: t.Tuple[ExtraDOF],
     extension_context: mm.Context,
+    coupling_potential: cvpack.MetaCollectiveVariable,
 ) -> None:
     """
-    Advances the extended phase-space simulation by integrating both the physical
-    system and the extra degrees of freedom (DOFs) over a specified number of time
-    steps.
-
-    This function orchestrates the simulation process by alternating between advancing
-    the physical system and updating the extra DOFs in accordance with the Reversible
-    Reference System Propagator Algorithm (rRESPA) method :cite:`Tuckerman_1992`.
-    This ensures that changes in the extra DOFs are reflected in the physical system
-    and vice versa, maintaining consistency across the extended phase-space.
+    Advances the extended phase-space simulation by integrating the physical and
+    extension systems, in tandem, over a specified number of time steps.
 
     Parameters
     ----------
     physical_context
-        The OpenMM context representing the physical system. This context is advanced
-        according to its associated integrator.
+        The OpenMM context containing the physical system.
     steps
-        The number of time steps to advance the simulation. Each step involves updating
-        both the physical system and the extra DOFs.
+        The number of time steps to advance the simulation.
     extra_dofs
-        A tuple containing the extra degrees of freedom to be included in the
-        simulation. These DOFs are integrated separately from the physical system
-        but are synchronized at each step to ensure consistent simulation conditions.
+        The extra degrees of freedom included in the extended phase-space system.
     extension_context : mm.Context
-        The OpenMM context for the extra DOFs. This context is advanced separately from
-        the physical context but is synchronized with it to reflect the mutual influence
-        between the physical system and the extra DOFs.
+        The OpenMM context containing the extension system.
+    coupling_potential
+        The potential that couples the physical and extra degrees of freedom.
 
     Raises
     ------
-    RuntimeError
+    mm.OpenMMException
         If the particle positions or extra degrees of freedom have not been properly
         initialized in the context.
     """
@@ -336,17 +350,19 @@ def integrate_extended_space(
     extension_integrator = extension_context.getIntegrator()
     physical_integrator = physical_context.getIntegrator()
 
-    try:
-        mmswig.Integrator_step(extension_integrator, 1)
-        update_physical_parameters(physical_context, extension_context, extra_dofs)
-    except mm.OpenMMException as error:
-        raise RuntimeError("Extra degrees of freedom have not been set.") from error
-    for _ in range(steps - 1):
+    for _ in range(steps):
         mmswig.Integrator_step(physical_integrator, 1)
-        update_extension_parameters(physical_context, extension_context, extra_dofs)
-        mmswig.Integrator_step(extension_integrator, 2)
-        update_physical_parameters(physical_context, extension_context, extra_dofs)
-    mmswig.Integrator_step(physical_integrator, 1)
-    update_extension_parameters(physical_context, extension_context, extra_dofs)
-    mmswig.Integrator_step(extension_integrator, 1)
-    update_physical_parameters(physical_context, extension_context, extra_dofs)
+        mmswig.Integrator_step(extension_integrator, 1)
+
+        state = mmswig.Context_getState(extension_context, mm.State.Positions)
+        positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
+        collective_variables = coupling_potential.getInnerValues(physical_context)
+
+        for i, xdof in enumerate(extra_dofs):
+            value = positions[i].x
+            if xdof.bounds is not None:
+                value, _ = xdof.bounds.wrap(value, 0)
+            mmswig.Context_setParameter(physical_context, xdof.name, value)
+
+        for name, value in collective_variables.items():
+            mmswig.Context_setParameter(extension_context, name, value / value.unit)
