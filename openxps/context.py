@@ -81,6 +81,9 @@ class ExtendedSpaceContext(mm.Context):
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
     (Quantity(value=..., unit=radian),)
+    >>> state = context.getExtensionState(getEnergy=True)
+    >>> state.getPotentialEnergy()
+    Quantity(value=..., unit=kilojoule/mole)
     """
 
     def __init__(  # pylint: disable=super-init-not-called
