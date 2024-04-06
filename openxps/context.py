@@ -296,6 +296,22 @@ class ExtendedSpaceContext(mm.Context):
             velocities[i] = rate * xdof.unit / mmunit.picosecond
         return tuple(velocities)
 
+    def getExtensionState(self, **kwargs: t.Any) -> mm.State:
+        """
+        Get an :OpenMM:`State` object containing the state of the extension system.
+
+        Parameters
+        ----------
+        kwargs
+            The same arguments accepted by the :OpenMM:`Context.getState` method.
+
+        Returns
+        -------
+        mm.State
+            The state of the extension system.
+        """
+        return self._extension_context.getState(**kwargs)
+
 
 def integrate_extended_space(
     physical_context: mm.Context,
