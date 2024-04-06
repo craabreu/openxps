@@ -97,13 +97,13 @@ def test_raise_exceptions():
     context.setPositions(model.positions)
     context.setVelocitiesToTemperature(300 * mmunit.kelvin)
 
-    with pytest.raises(RuntimeError) as e:
+    with pytest.raises(mm.OpenMMException) as e:
         context.setExtraVelocitiesToTemperature(300 * mmunit.kelvin)
-    assert "Extra degrees of freedom have not been set" in str(e.value)
+    assert "Particle positions have not been set" in str(e.value)
 
-    with pytest.raises(RuntimeError) as e:
+    with pytest.raises(mm.OpenMMException) as e:
         context.getIntegrator().step(1)
-    assert "Extra degrees of freedom have not been set" in str(e.value)
+    assert "Particle positions have not been set" in str(e.value)
 
     context.setExtraValues([1 * mmunit.radian])
     context.setExtraVelocitiesToTemperature(300 * mmunit.kelvin)
@@ -146,7 +146,7 @@ def test_validation():
         ExtendedSpaceContext(
             context, extra_dofs, create_coupling_potential(unit=mmunit.radian)
         )
-    assert "The coupling potential must have units of energy/mole." in str(e.value)
+    assert "The coupling potential must have units of molar energy." in str(e.value)
 
     with pytest.raises(ValueError) as e:
         force = mm.CustomExternalForce("phi0*x")
