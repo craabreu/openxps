@@ -6,4 +6,3 @@ API Reference
     :titlesonly:
 
     classes
-    functions

@@ -40,24 +40,24 @@
 <h1>ExtendedSpaceContext<a class="headerlink" href="#extendedspacecontext" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_dofs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_integrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_dofs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling_potential</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
 <dd><p>Wraps an <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> object to include extra degrees of freedom (DOFs) and
 allow for extended phase-space (XPS) simulations.</p>
-<p>The context’s integrator is modified in-place to include integration of the extra
-DOFs. If necessary, the context’s system is also modified in-place to include
-missing requests for derivative computations (see <a class="reference internal" href="check_system.html#openxps.check_system" title="openxps.check_system"><code class="xref py py-func docutils literal notranslate"><span class="pre">check_system()</span></code></a> for details).</p>
-<p>The integrator’s <code class="docutils literal notranslate"><span class="pre">step</span></code> method is replaced with a custom function that advances
-the physical and extra DOFs alternately using the Strang splitting algorithm
-<span id="id1">[<a class="reference internal" href="../references.html#id2" title="Gilbert Strang. On the Construction and Comparison of Difference Schemes. SIAM Journal on Numerical Analysis, 5(3):506–517, 1968. arXiv:2949700.">1</a>]</span>. This is identical to the disparate-mass version of the
-Reversible Reference System Propagator Algorithm (rRESPA) method
-<span id="id2">[<a class="reference internal" href="../references.html#id3" title="M. Tuckerman, B. J. Berne, and G. J. Martyna. Reversible multiple time scale molecular dynamics. The Journal of Chemical Physics, 97(3):1990–2001, August 1992. doi:10.1063/1.463137.">2</a>]</span>.</p>
+<p><strong>Note</strong>: The system and integrator attached to the context are modified in-place.</p>
+<p>A provided <a class="reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> is added to the system to couple the
+physical DOFs and the extra ones. The integrator’s <code class="docutils literal notranslate"><span class="pre">step</span></code> method is replaced with
+a custom function that advances the physical and extension systems in tandem.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>context</strong> (<em>Context</em>) – The original OpenMM context containing the physical system.</p></li>
 <li><p><strong>extra_dofs</strong> (<em>Iterable</em><em>[</em><a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><em>ExtraDOF</em></a><em>]</em>) – A group of extra degrees of freedom to be included in the XPS simulation.</p></li>
-<li><p><strong>extension_integrator</strong> (<em>Integrator</em><em> | </em><em>None</em>) – An integrator for the extra degrees of freedom. If not provided, the original
-context’s integrator will be used as a template.</p></li>
+<li><p><strong>coupling_potential</strong> (<em>MetaCollectiveVariable</em>) – A meta-collective variable defining the potential energy term that couples the
+physical system to the extra DOFs. It must have units of <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mole</span></code>
+or equivalent.</p></li>
+<li><p><strong>integrator_template</strong> (<em>Integrator</em><em> | </em><em>None</em>) – An <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html">openmm.Integrator</a> object to be used as a template for the algorithm that
+advances the extra DOFs. If not provided, the physical system’s integrator is
+used as a template.</p></li>
 </ul>
 </dd>
 </dl>
@@ -70,22 +70,22 @@ context’s integrator will be used as a template.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmmtools</span> <span class="kn">import</span> <span class="n">testsystems</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">testsystems</span><span class="o">.</span><span class="n">AlanineDipeptideVacuum</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">umbrella_potential</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="sa">f</span><span class="s2">&quot;0.5*kappa*min(delta,</span><span class="si">{</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="si">}</span><span class="s2">-delta)^2; delta=abs(phi_cv-phi_dv)&quot;</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="p">[</span><span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi_cv&quot;</span><span class="p">)],</span>
+<span class="gp">... </span>    <span class="sa">f</span><span class="s2">&quot;0.5*kappa*min(delta,</span><span class="si">{</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="si">}</span><span class="s2">-delta)^2; delta=abs(phi-phi0)&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi&quot;</span><span class="p">)],</span>
 <span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">kappa</span><span class="o">=</span><span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">phi_dv</span><span class="o">=</span><span class="n">pi</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">phi0</span><span class="o">=</span><span class="n">pi</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">umbrella_potential</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">LangevinMiddleIntegrator</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtosecond</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">platform</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">&quot;Reference&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">phi_dv</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtraDOF</span><span class="p">(</span><span class="s2">&quot;phi_dv&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtraDOF</span><span class="p">(</span><span class="s2">&quot;phi0&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceContext</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">platform</span><span class="p">),</span>
-<span class="gp">... </span>    <span class="p">[</span><span class="n">phi_dv</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="n">umbrella_potential</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setVelocitiesToTemperature</span><span class="p">(</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
@@ -94,9 +94,29 @@ context’s integrator will be used as a template.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getExtraValues</span><span class="p">()</span>
 <span class="go">(Quantity(value=..., unit=radian),)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getExtensionState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">state</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">()</span>
+<span class="go">Quantity(value=..., unit=kilojoule/mole)</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtensionState">
+<span class="sig-name descname"><span class="pre">getExtensionState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtensionState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtensionState" title="Link to this definition">¶</a></dt>
+<dd><p>Get an <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">openmm.State</a> object containing the state of the extension system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>kwargs</strong> (<em>Any</em>) – The same arguments accepted by the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.getState.html">openmm.Context.getState</a> method.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The state of the extension system.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>mm.State</p>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtraValues">
 <span class="sig-name descname"><span class="pre">getExtraValues</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtraValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraValues" title="Link to this definition">¶</a></dt>
@@ -203,7 +223,6 @@ to ensure that the extended degrees of freedom are also updated accordingly.</p>
 <li class="toctree-l3"><a class="reference internal" href="ExtraDOF.html">ExtraDOF</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="functions.html">Functions</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
