@@ -35,7 +35,7 @@ def create_coupling_potential(
     if phi0 is not None:
         kwargs["phi0"] = phi0
     return cvpack.MetaCollectiveVariable(
-        f"0.5*kappa*min(delta_phi,{2*np.pi}-delta_phi)^2; delta_phi=abs(phi-psi0)",
+        f"0.5*kappa*min(delta_phi,{2*np.pi}-delta_phi)^2; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
         unit,
         **kwargs,
