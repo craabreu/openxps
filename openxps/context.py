@@ -157,10 +157,12 @@ class ExtendedSpaceContext(mm.Context):
 
         extra_dof_cvs = []
         for index, xdof in enumerate(self._extra_dofs):
-            bounds = None
-            if isinstance(xdof.bounds, Periodic):
-                bounds = [xdof.bounds.lower, xdof.bounds.upper] * xdof.unit
-            force = mm.CustomExternalForce("x")
+            bounds = xdof.bounds
+            if bounds is None:
+                force = mm.CustomExternalForce("x")
+            else:
+                force = mm.CustomExternalForce(bounds.leptonExpression("x"))
+                bounds = bounds.asQuantity() if isinstance(bounds, Periodic) else None
             force.addParticle(index, [])
             extra_dof_cvs.append(
                 cvpack.OpenMMForceWrapper(force, xdof.unit, bounds, xdof.name)
