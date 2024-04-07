@@ -42,10 +42,12 @@ def create_coupling_potential(
     )
 
 
-def create_extended_context(model):
+def create_extended_context(model, coupling_potential=None):
     """Helper function to create an ExtendedSpaceContext object."""
     return ExtendedSpaceContext(
-        create_basic_context(model), [create_extra_dof()], create_coupling_potential()
+        create_basic_context(model),
+        [create_extra_dof()],
+        coupling_potential or create_coupling_potential(),
     )
 
 
@@ -155,3 +157,37 @@ def test_validation():
         context.reinitialize()
         ExtendedSpaceContext(context, extra_dofs, coupling_potential)
     assert "The context already contains {'phi0'} among its parameters." in str(e.value)
+
+
+def test_consistency():
+    """Test the consistency of the extended space context."""
+    model = testsystems.AlanineDipeptideVacuum()
+    coupling = create_coupling_potential()
+    coupling.addEnergyParameterDerivative("phi0")
+    context = create_extended_context(model, coupling)
+    context.setPositions(model.positions)
+    context.setVelocitiesToTemperature(300 * mmunit.kelvin)
+    context.setExtraValues([1000 * mmunit.degrees])
+    context.setExtraVelocitiesToTemperature(300 * mmunit.kelvin)
+
+    for _ in range(10):
+        context.getIntegrator().step(1000)
+
+        # pylint: disable=unexpected-keyword-arg
+        physical_state = context.getState(getParameterDerivatives=True)
+        extension_state = context.getExtensionState(getEnergy=True, getForces=True)
+        # pylint: enable=unexpected-keyword-arg
+
+        # Check the consistency of the potential energy
+        x1 = extension_state.getPotentialEnergy() / mmunit.kilojoule_per_mole
+        x2 = coupling.getValue(context) / mmunit.kilojoule_per_mole
+        assert x1 == pytest.approx(x2)
+
+        # Check the consistency of the energy parameter derivatives
+        x1 = {
+            xdof.name: -force.x
+            for xdof, force in zip(context.getExtraDOFs(), extension_state.getForces())
+        }
+        x2 = physical_state.getEnergyParameterDerivatives()
+        for xdof in context.getExtraDOFs():
+            assert x1[xdof.name] == pytest.approx(x2[xdof.name])

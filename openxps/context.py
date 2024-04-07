@@ -190,12 +190,20 @@ class ExtendedSpaceContext(mm.Context):
             mm.Platform.getPlatformByName("Reference"),
         )
 
+    def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
+        """
+        Get the extra degrees of freedom included in the extended phase-space system.
+
+        Returns
+        -------
+        t.Tuple[ExtraDOF]
+            A tuple containing the extra degrees of freedom.
+        """
+        return self._extra_dofs
+
     def setPositions(self, positions: cvpack.units.MatrixQuantity) -> None:
         """
         Sets the positions of all particles in the physical system.
-
-        This method extends the base ``setPositions`` method of OpenMM's Context class
-        to ensure that the extended degrees of freedom are also updated accordingly.
 
         Parameters
         ----------
@@ -213,7 +221,8 @@ class ExtendedSpaceContext(mm.Context):
         Parameters
         ----------
         values
-            A dictionary containing the values of the extra degrees of freedom.
+            A sequence of quantities containing the values and units of all extra
+            degrees of freedom.
         """
         positions = []
         for xdof, value in zip(self._extra_dofs, values):
