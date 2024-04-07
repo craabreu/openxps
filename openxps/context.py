@@ -130,12 +130,12 @@ class ExtendedSpaceContext(mm.Context):
         parameter_units = {
             name: quantity.unit for name, quantity in force_parameters.items()
         }
-        if parameters := set(parameter_units) & context_parameters:
+        if parameters := sorted(set(parameter_units) & context_parameters):
             raise ValueError(
                 f"The context already contains {parameters} among its parameters."
             )
         xdof_units = {xdof.name: xdof.unit for xdof in self._extra_dofs}
-        if parameters := set(xdof_units) - set(parameter_units):
+        if parameters := sorted(set(xdof_units) - set(parameter_units)):
             raise ValueError(
                 f"The coupling potential parameters do not include {parameters}."
             )

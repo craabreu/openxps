@@ -118,3 +118,12 @@ def test_bounds_wrap_not_implemented():
     bounds = Bounds(-1, 1, mmunit.meters)
     with pytest.raises(NotImplementedError):
         bounds.wrap(0, 0)
+
+
+def test_bounds_transformation_not_implemented():
+    """
+    Test the NotImplementedError when calling the transformation method of Bounds.
+    """
+    bounds = Bounds(-1, 1, mmunit.meters)
+    with pytest.raises(NotImplementedError):
+        bounds.leptonExpression("x")

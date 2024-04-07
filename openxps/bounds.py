@@ -127,9 +127,12 @@ class Bounds(Serializable):
         -------
         >>> import openxps as xps
         >>> from openmm import unit
-        >>> bounds = xps.bounds.Periodic(-180, 180, unit.degree)
-        >>> bounds.leptonExpression("x")
+        >>> periodic = xps.bounds.Periodic(-180, 180, unit.degree)
+        >>> periodic.leptonExpression("x")
         'lb+T*(xs-floor(xs));xs=(x-lb)/T;lb=-180;T=360'
+        >>> reflective = xps.bounds.Reflective(1, 10, unit.angstrom)
+        >>> reflective.leptonExpression("y")
+        'lb+T*min(ys,1-ys);ys=xs-floor(xs);xs=(y-lb)/T;lb=1;T=18'
         """
         raise NotImplementedError(
             "The method transformation must be implemented in subclasses."
