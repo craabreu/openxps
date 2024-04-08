@@ -8,6 +8,7 @@ ExtendedSpaceContext
     .. rubric:: Methods
 
     .. automethod:: getExtensionState
+    .. automethod:: getExtraDOFs
     .. automethod:: getExtraValues
     .. automethod:: getExtraVelocities
     .. automethod:: setExtraValues

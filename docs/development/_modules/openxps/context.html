@@ -168,12 +168,12 @@
         <span class="n">parameter_units</span> <span class="o">=</span> <span class="p">{</span>
             <span class="n">name</span><span class="p">:</span> <span class="n">quantity</span><span class="o">.</span><span class="n">unit</span> <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">quantity</span> <span class="ow">in</span> <span class="n">force_parameters</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="p">}</span>
-        <span class="k">if</span> <span class="n">parameters</span> <span class="o">:=</span> <span class="nb">set</span><span class="p">(</span><span class="n">parameter_units</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">context_parameters</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">parameters</span> <span class="o">:=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">parameter_units</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">context_parameters</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;The context already contains </span><span class="si">{</span><span class="n">parameters</span><span class="si">}</span><span class="s2"> among its parameters.&quot;</span>
             <span class="p">)</span>
         <span class="n">xdof_units</span> <span class="o">=</span> <span class="p">{</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">xdof</span><span class="o">.</span><span class="n">unit</span> <span class="k">for</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">}</span>
-        <span class="k">if</span> <span class="n">parameters</span> <span class="o">:=</span> <span class="nb">set</span><span class="p">(</span><span class="n">xdof_units</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">parameter_units</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">parameters</span> <span class="o">:=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">xdof_units</span><span class="p">)</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="n">parameter_units</span><span class="p">)):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;The coupling potential parameters do not include </span><span class="si">{</span><span class="n">parameters</span><span class="si">}</span><span class="s2">.&quot;</span>
             <span class="p">)</span>
@@ -195,10 +195,12 @@
 
         <span class="n">extra_dof_cvs</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">):</span>
-            <span class="n">bounds</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">Periodic</span><span class="p">):</span>
-                <span class="n">bounds</span> <span class="o">=</span> <span class="p">[</span><span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">upper</span><span class="p">]</span> <span class="o">*</span> <span class="n">xdof</span><span class="o">.</span><span class="n">unit</span>
-            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+            <span class="n">bounds</span> <span class="o">=</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span>
+            <span class="k">if</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="n">bounds</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
+                <span class="n">bounds</span> <span class="o">=</span> <span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">()</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">bounds</span><span class="p">,</span> <span class="n">Periodic</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
             <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">[])</span>
             <span class="n">extra_dof_cvs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">xdof</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span> <span class="n">bounds</span><span class="p">,</span> <span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
@@ -226,14 +228,25 @@
             <span class="n">mm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">&quot;Reference&quot;</span><span class="p">),</span>
         <span class="p">)</span>
 
+<div class="viewcode-block" id="ExtendedSpaceContext.getExtraDOFs">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getExtraDOFs">[docs]</a>
+    <span class="k">def</span> <span class="nf">getExtraDOFs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">ExtraDOF</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the extra degrees of freedom included in the extended phase-space system.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        t.Tuple[ExtraDOF]</span>
+<span class="sd">            A tuple containing the extra degrees of freedom.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span></div>
+
+
 <div class="viewcode-block" id="ExtendedSpaceContext.setPositions">
 <a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.setPositions">[docs]</a>
     <span class="k">def</span> <span class="nf">setPositions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">positions</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">units</span><span class="o">.</span><span class="n">MatrixQuantity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Sets the positions of all particles in the physical system.</span>
-
-<span class="sd">        This method extends the base ``setPositions`` method of OpenMM&#39;s Context class</span>
-<span class="sd">        to ensure that the extended degrees of freedom are also updated accordingly.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -254,7 +267,8 @@
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        values</span>
-<span class="sd">            A dictionary containing the values of the extra degrees of freedom.</span>
+<span class="sd">            A sequence of quantities containing the values and units of all extra</span>
+<span class="sd">            degrees of freedom.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">positions</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">xdof</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>

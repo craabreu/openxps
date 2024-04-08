@@ -118,6 +118,20 @@ used as a template.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtraDOFs">
+<span class="sig-name descname"><span class="pre">getExtraDOFs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtraDOFs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraDOFs" title="Link to this definition">¶</a></dt>
+<dd><p>Get the extra degrees of freedom included in the extended phase-space system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A tuple containing the extra degrees of freedom.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>t.Tuple[<a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.ExtraDOF">ExtraDOF</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtraValues">
 <span class="sig-name descname"><span class="pre">getExtraValues</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtraValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraValues" title="Link to this definition">¶</a></dt>
 <dd><p>Get the values of the extra degrees of freedom.</p>
@@ -151,7 +165,8 @@ used as a template.</p></li>
 <dd><p>Set the values of the extra degrees of freedom.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>values</strong> (<em>Iterable</em><em>[</em><em>Quantity</em><em>]</em>) – A dictionary containing the values of the extra degrees of freedom.</p>
+<dd class="field-odd"><p><strong>values</strong> (<em>Iterable</em><em>[</em><em>Quantity</em><em>]</em>) – A sequence of quantities containing the values and units of all extra
+degrees of freedom.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -182,8 +197,6 @@ used as a template.</p></li>
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setPositions">
 <span class="sig-name descname"><span class="pre">setPositions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setPositions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setPositions" title="Link to this definition">¶</a></dt>
 <dd><p>Sets the positions of all particles in the physical system.</p>
-<p>This method extends the base <code class="docutils literal notranslate"><span class="pre">setPositions</span></code> method of OpenMM’s Context class
-to ensure that the extended degrees of freedom are also updated accordingly.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>positions</strong> (<em>Quantity</em><em> | </em><em>ndarray</em><em> | </em><em>Sequence</em><em>[</em><em>Vec3</em><em>] </em><em>| </em><em>Sequence</em><em>[</em><em>ndarray</em><em>]</em>) – The positions for each particle in the system.</p>
