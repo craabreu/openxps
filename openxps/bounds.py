@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import cvpack
 import numpy as np
 from cvpack.serialization import Serializable
+from cvpack.units import Quantity
 from openmm import unit as mmunit
 
 from .utils import preprocess_args
@@ -89,6 +90,54 @@ class Bounds(Serializable):
             raise ValueError("The unit must be compatible with the bounds unit.")
         return type(self)(factor * self.lower, factor * self.upper, unit)
 
+    def asQuantity(self) -> mmunit.Quantity:
+        """
+        Return the bounds as a Quantity object.
+
+        Returns
+        -------
+        Quantity
+            The bounds as a Quantity object.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> from openmm import unit
+        >>> bounds = xps.bounds.Periodic(-180, 180, unit.degree)
+        >>> bounds.asQuantity()
+        (-180, 180) deg
+        """
+        return Quantity((self.lower, self.upper), self.unit)
+
+    def leptonExpression(self, variable: str) -> str:
+        """
+        Return a lepton expression representing the transformation from an unwrapped
+        variable to a wrapped value under the boundary conditions.
+
+        Parameters
+        ----------
+        variable
+            The name of the variable in the expression.
+        Returns
+        -------
+        str
+            A string representing the transformation.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> from openmm import unit
+        >>> periodic = xps.bounds.Periodic(-180, 180, unit.degree)
+        >>> periodic.leptonExpression("x")
+        'lb+T*(xs-floor(xs));xs=(x-lb)/T;lb=-180;T=360'
+        >>> reflective = xps.bounds.Reflective(1, 10, unit.angstrom)
+        >>> reflective.leptonExpression("y")
+        'lb+T*min(ys,1-ys);ys=xs-floor(xs);xs=(y-lb)/T;lb=1;T=18'
+        """
+        raise NotImplementedError(
+            "The method transformation must be implemented in subclasses."
+        )
+
     def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
         """
         Wrap a value around the bounds and adjust its rate of change.
@@ -145,6 +194,14 @@ class Periodic(Bounds):
         super().__post_init__()
         self.period = self.upper - self.lower
 
+    def leptonExpression(self, variable: str) -> str:
+        return (
+            "lb+T*(xs-floor(xs))"
+            f";xs=({variable}-lb)/T"
+            f";lb={self.lower}"
+            f";T={self.period}"
+        )
+
     def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
         return (value - self.lower) % self.period + self.lower, rate
 
@@ -181,6 +238,15 @@ class Reflective(Bounds):
     def __post_init__(self) -> None:
         super().__post_init__()
         self.period = 2 * (self.upper - self.lower)
+
+    def leptonExpression(self, variable: str) -> str:
+        return (
+            f"lb+T*min(ys,1-ys)"
+            f";ys=xs-floor(xs)"
+            f";xs=({variable}-lb)/T"
+            f";lb={self.lower}"
+            f";T={self.period}"
+        )
 
     def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
         x = (value - self.lower) % self.period
