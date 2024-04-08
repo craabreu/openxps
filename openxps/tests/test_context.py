@@ -9,7 +9,7 @@ import pytest
 from openmm import unit as mmunit
 from openmmtools import testsystems
 
-from openxps.bounds import CIRCULAR
+from openxps.bounds import CIRCULAR, Reflective
 from openxps.context import ExtendedSpaceContext
 from openxps.extra_dof import ExtraDOF
 
@@ -24,9 +24,11 @@ def create_basic_context(model):
 def create_extra_dofs():
     """Helper function to create an ExtraDOF object."""
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
+    kwargs = {"unit": mmunit.nanometer, "mass": 1 * mmunit.dalton}
     return [
         ExtraDOF(name="phi0", unit=mmunit.radian, mass=mass, bounds=CIRCULAR),
-        ExtraDOF(name="x0", unit=mmunit.nanometer, mass=1 * mmunit.dalton, bounds=None),
+        ExtraDOF(name="x0", bounds=None, **kwargs),
+        ExtraDOF(name="y0", bounds=Reflective(-1, 1, mmunit.nanometer), **kwargs),
     ]
 
 
@@ -36,13 +38,14 @@ def create_coupling_potential(
     """Helper function to create a MetaCollectiveVariable object."""
     kwargs = {
         "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radians**2,
-        "alpha": 0.01 * mmunit.kilojoule_per_mole / mmunit.nanometer,
+        "alpha": 0.01 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
         "x0": 1 * mmunit.nanometer,
+        "y0": 1 * mmunit.nanometer,
     }
     if phi0 is not None:
         kwargs["phi0"] = phi0
     return cvpack.MetaCollectiveVariable(
-        f"0.5*kappa*min(delta_phi,{2*np.pi}-delta_phi)^2+alpha*x0"
+        f"0.5*kappa*min(delta_phi,{2*np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
         unit,
@@ -80,8 +83,8 @@ def test_set_positions_and_velocities():
 
     context.setPositions(positions)
     context.setVelocities(velocities)
-    context.setExtraValues([1 * urad, 0.1 * unm])
-    context.setExtraVelocities([1 * urad / ups, 1 * unm / ups])
+    context.setExtraValues([1 * urad, 0.1 * unm, 0.1 * unm])
+    context.setExtraVelocities([1 * urad / ups, 1 * unm / ups, 1 * unm / ups])
 
     state = context.getState(  # pylint: disable=unexpected-keyword-arg
         getPositions=True, getVelocities=True
@@ -91,9 +94,11 @@ def test_set_positions_and_velocities():
     assert context.getExtraValues() == (
         pytest.approx(1) * urad,
         pytest.approx(0.1) * unm,
+        pytest.approx(0.1) * unm,
     )
     assert context.getExtraVelocities() == (
         pytest.approx(1) * urad / ups,
+        pytest.approx(1) * unm / ups,
         pytest.approx(1) * unm / ups,
     )
 
@@ -118,7 +123,9 @@ def test_raise_exceptions():
         context.getIntegrator().step(1)
     assert "Particle positions have not been set" in str(e.value)
 
-    context.setExtraValues([1 * mmunit.radian, 0.1 * mmunit.nanometer])
+    context.setExtraValues(
+        [1 * mmunit.radian, 0.1 * mmunit.nanometer, 0.1 * mmunit.nanometer]
+    )
     context.setExtraVelocitiesToTemperature(300 * mmunit.kelvin)
 
     state = context.getState(  # pylint: disable=unexpected-keyword-arg
@@ -127,7 +134,7 @@ def test_raise_exceptions():
     velocities = state.getVelocities()
     extra_velocities = context.getExtraVelocities()
     assert len(velocities) == len(model.positions)
-    assert len(extra_velocities) == 2
+    assert len(extra_velocities) == 3
 
 
 def test_validation():
@@ -165,11 +172,13 @@ def test_validation():
         force = mm.CustomExternalForce("phi0*x")
         force.addGlobalParameter("phi0", 180 * mmunit.degrees)
         force.addGlobalParameter("x0", 1 * mmunit.nanometer)
+        force.addGlobalParameter("y0", 1 * mmunit.nanometer)
         context.getSystem().addForce(force)
         context.reinitialize()
         ExtendedSpaceContext(context, extra_dofs, coupling_potential)
-    assert "The context already contains ['phi0', 'x0'] among its parameters." in str(
-        e.value
+    assert (
+        "The context already contains ['phi0', 'x0', 'y0'] among its parameters."
+        in str(e.value)
     )
 
 
@@ -179,10 +188,13 @@ def test_consistency():
     coupling = create_coupling_potential()
     coupling.addEnergyParameterDerivative("phi0")
     coupling.addEnergyParameterDerivative("x0")
+    coupling.addEnergyParameterDerivative("y0")
     context = create_extended_context(model, coupling)
     context.setPositions(model.positions)
     context.setVelocitiesToTemperature(300 * mmunit.kelvin)
-    context.setExtraValues([1000 * mmunit.degrees, 1 * mmunit.nanometer])
+    context.setExtraValues(
+        [1000 * mmunit.degrees, 1 * mmunit.nanometer, 1 * mmunit.nanometer]
+    )
     context.setExtraVelocitiesToTemperature(300 * mmunit.kelvin)
 
     for _ in range(10):
@@ -190,7 +202,9 @@ def test_consistency():
 
         # pylint: disable=unexpected-keyword-arg
         physical_state = context.getState(getParameterDerivatives=True)
-        extension_state = context.getExtensionState(getEnergy=True, getForces=True)
+        extension_state = context.getExtensionState(
+            getEnergy=True, getPositions=True, getForces=True
+        )
         # pylint: enable=unexpected-keyword-arg
 
         # Check the consistency of the potential energy
@@ -199,10 +213,14 @@ def test_consistency():
         assert x1 == pytest.approx(x2)
 
         # Check the consistency of the energy parameter derivatives
-        x1 = {
-            xdof.name: -force.x
-            for xdof, force in zip(context.getExtraDOFs(), extension_state.getForces())
-        }
+        positions = extension_state.getPositions()
+        forces = extension_state.getForces()
+        x1 = {}
+        for i, xdof in enumerate(context.getExtraDOFs()):
+            force = forces[i].x
+            if xdof.bounds is not None:
+                _, force = xdof.bounds.wrap(positions[i].x, force)
+            x1[xdof.name] = -force
         x2 = physical_state.getEnergyParameterDerivatives()
         for xdof in context.getExtraDOFs():
             assert x1[xdof.name] == pytest.approx(x2[xdof.name])
