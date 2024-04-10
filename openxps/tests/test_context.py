@@ -186,9 +186,6 @@ def test_consistency():
     """Test the consistency of the extended space context."""
     model = testsystems.AlanineDipeptideVacuum()
     coupling = create_coupling_potential()
-    coupling.addEnergyParameterDerivative("phi0")
-    coupling.addEnergyParameterDerivative("x0")
-    coupling.addEnergyParameterDerivative("y0")
     context = create_extended_context(model, coupling)
     context.setPositions(model.positions)
     context.setVelocitiesToTemperature(300 * mmunit.kelvin)
@@ -201,7 +198,6 @@ def test_consistency():
         context.getIntegrator().step(1000)
 
         # pylint: disable=unexpected-keyword-arg
-        physical_state = context.getState(getParameterDerivatives=True)
         extension_state = context.getExtensionState(
             getEnergy=True, getPositions=True, getForces=True
         )
@@ -221,6 +217,6 @@ def test_consistency():
             if xdof.bounds is not None:
                 _, force = xdof.bounds.wrap(positions[i].x, force)
             x1[xdof.name] = -force
-        x2 = physical_state.getEnergyParameterDerivatives()
+        x2 = coupling.getParameterDerivatives(context)
         for xdof in context.getExtraDOFs():
-            assert x1[xdof.name] == pytest.approx(x2[xdof.name])
+            assert x1[xdof.name] == pytest.approx(x2[xdof.name] / x2[xdof.name].unit)
