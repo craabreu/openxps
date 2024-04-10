@@ -19,7 +19,6 @@ from openmm import unit as mmunit
 
 from .bounds import Periodic
 from .extra_dof import ExtraDOF
-from .extension_writer import ExtensionWriter
 
 
 class ExtendedSpaceContext(mm.Context):
@@ -326,22 +325,6 @@ class ExtendedSpaceContext(mm.Context):
             The state of the extension system.
         """
         return self._extension_context.getState(**kwargs)
-
-    def getExtensionWriter(self, **kwargs: t.Any) -> ExtensionWriter:
-        """
-        Get a custom writer for phase-space extension data.
-
-        Parameters
-        ----------
-        kwargs
-            The same arguments accepted by the :OpenMM:`Simulation` constructor.
-
-        Returns
-        -------
-        ExtensionWriter
-            A custom writer for phase-space extension data.
-        """
-        return ExtensionWriter(self._extension_context, **kwargs)
 
 
 def integrate_extended_space(
