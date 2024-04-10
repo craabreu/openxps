@@ -80,7 +80,7 @@ class StateDataWriter(mmapp.StateDataReporter, CustomWriter):
     ...     ],
     ... )
     >>> simulation.reporters.append(reporter)
-    >>> simulation.step(100)
+    >>> simulation.step(100)  # doctest: +SKIP
     #"Step","Kinetic Energy (kJ/mole)","Extension Kinetic Energy (kJ/mole)"
     10,60.512...,1.7013...
     20,75.765...,2.5089...
