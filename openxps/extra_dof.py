@@ -70,7 +70,7 @@ class ExtraDOF(Serializable):
     def __post_init__(self) -> None:
         if not mmunit.is_unit(self.unit):
             raise ValueError("The unit must be a valid OpenMM unit.")
-        if 1 * self.unit != 1 * mmunit.md_unit_system.express_unit(self.unit):
+        if (1 * self.unit).value_in_unit_system(mmunit.md_unit_system) != 1:
             raise ValueError(
                 f"Unit {self.unit} is incompatible with OpenMM's MD unit system."
             )

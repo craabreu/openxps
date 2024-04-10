@@ -151,9 +151,7 @@ class ExtendedSpaceContext(mm.Context):
 
         extension_system = mm.System()
         for xdof in self._extra_dofs:
-            extension_system.addParticle(
-                xdof.mass.value_in_unit_system(mm.unit.md_unit_system)
-            )
+            extension_system.addParticle(xdof.mass / xdof.mass.unit)
 
         extra_dof_cvs = []
         for index, xdof in enumerate(self._extra_dofs):
@@ -358,22 +356,27 @@ def integrate_extended_space(
         initialized in the context.
     """
 
-    extension_integrator = extension_context.getIntegrator()
-    physical_integrator = physical_context.getIntegrator()
-
     for _ in range(steps):
-        mmswig.Integrator_step(physical_integrator, 1)
-        mmswig.Integrator_step(extension_integrator, 1)
+        # pylint: disable=protected-access
+        mmswig.Integrator_step(physical_context._integrator, 1)
+        mmswig.Integrator_step(extension_context._integrator, 1)
+        # pylint: enable=protected-access
 
         state = mmswig.Context_getState(extension_context, mm.State.Positions)
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-        collective_variables = coupling_potential.getInnerValues(physical_context)
-
         for i, xdof in enumerate(extra_dofs):
             value = positions[i].x
             if xdof.bounds is not None:
                 value, _ = xdof.bounds.wrap(value, 0)
             mmswig.Context_setParameter(physical_context, xdof.name, value)
 
-        for name, value in collective_variables.items():
-            mmswig.Context_setParameter(extension_context, name, value / value.unit)
+        collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
+            coupling_potential,
+            physical_context,
+        )
+        for i, value in enumerate(collective_variables):
+            mmswig.Context_setParameter(
+                extension_context,
+                mmswig.CustomCVForce_getCollectiveVariableName(coupling_potential, i),
+                value,
+            )
