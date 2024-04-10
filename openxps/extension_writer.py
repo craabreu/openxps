@@ -76,7 +76,7 @@ class ExtensionWriter(CustomWriter):
     ...     writers=[xps.ExtensionWriter(context, kinetic=True)],
     ... )
     >>> simulation.reporters.append(reporter)
-    >>> simulation.step(100)
+    >>> simulation.step(100)  # doctest: +ELLIPSIS
     #"Step","Kinetic Energy (kJ/mole)","Extension Kinetic Energy (kJ/mole)"
     10,60.512...,1.7013...
     20,75.765...,2.5089...
@@ -115,7 +115,6 @@ class ExtensionWriter(CustomWriter):
                 mmunit.kilojoules_per_mole / mmunit.kelvin
             )
             self._temp_factor = 2 / (number * kb)
-            print(f"Temperature factor: {self._temp_factor}")
 
     def getHeaders(self) -> t.List[str]:
         headers = []
