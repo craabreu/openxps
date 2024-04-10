@@ -100,6 +100,8 @@ class ExtendedSpaceContext(mm.Context):
         self._coupling_potential = coupling_potential
         self._validate()
         self._coupling_potential.addToSystem(self._system)
+        self._extra_kinetic_energy = self._createKineticEnergyProxy()
+        self._extra_kinetic_energy.addToSystem(self._system)
         self.reinitialize(preserveState=True)
         self._extension_context = self._createExtensionContext(integrator_template)
         self._integrator.step = MethodType(
@@ -108,6 +110,7 @@ class ExtendedSpaceContext(mm.Context):
                 extra_dofs=self._extra_dofs,
                 extension_context=self._extension_context,
                 coupling_potential=coupling_potential,
+                extra_kinetic_energy=self._extra_kinetic_energy,
             ),
             self,
         )
@@ -190,6 +193,16 @@ class ExtendedSpaceContext(mm.Context):
             mm.Platform.getPlatformByName("Reference"),
         )
 
+    def _createKineticEnergyProxy(self) -> cvpack.OpenMMForceWrapper:
+        force = mm.CustomExternalForce("m*v^2/2")
+        force.addPerParticleParameter("m")
+        force.addPerParticleParameter("v")
+        for xdof in self._extra_dofs:
+            force.addParticle(0, [xdof.mass, 0])
+        return cvpack.OpenMMForceWrapper(
+            force, mmunit.kilojoule_per_mole, None, "extra_kinetic_energy"
+        )
+
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """
         Get the extra degrees of freedom included in the extended phase-space system.
@@ -269,7 +282,9 @@ class ExtendedSpaceContext(mm.Context):
             if mmunit.is_quantity(value):
                 value = value.value_in_unit(xdof.unit / mmunit.picosecond)
             velocities[i] = mm.Vec3(value, 0, 0)
+            self._extra_kinetic_energy.setParticleParameters(i, 0, [xdof.mass, value])
         self._extension_context.setVelocities(velocities)
+        self._extra_kinetic_energy.updateParametersInContext(self)
 
     def setExtraVelocitiesToTemperature(
         self, temperature: mmunit.Quantity, seed: t.Optional[int] = None
@@ -286,7 +301,7 @@ class ExtendedSpaceContext(mm.Context):
         self._extension_context.setVelocitiesToTemperature(*args)
         state = mmswig.Context_getState(self._extension_context, mm.State.Velocities)
         velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
-        self._extension_context.setVelocities([mm.Vec3(v.x, 0, 0) for v in velocities])
+        self.setExtraVelocities([v.x for v in velocities])
 
     def getExtraVelocities(self) -> t.Tuple[mmunit.Quantity]:
         """
@@ -333,6 +348,7 @@ def integrate_extended_space(
     extra_dofs: t.Tuple[ExtraDOF],
     extension_context: mm.Context,
     coupling_potential: cvpack.MetaCollectiveVariable,
+    extra_kinetic_energy: cvpack.OpenMMForceWrapper,
 ) -> None:
     """
     Advances the extended phase-space simulation by integrating the physical and
@@ -350,6 +366,8 @@ def integrate_extended_space(
         The OpenMM context containing the extension system.
     coupling_potential
         The potential that couples the physical and extra degrees of freedom.
+    extra_kinetic_energy
+        The force that calculates the kinetic energy of the extra degrees of freedom.
 
     Raises
     ------
@@ -365,8 +383,11 @@ def integrate_extended_space(
         mmswig.Integrator_step(physical_integrator, 1)
         mmswig.Integrator_step(extension_integrator, 1)
 
-        state = mmswig.Context_getState(extension_context, mm.State.Positions)
+        state = mmswig.Context_getState(
+            extension_context, mm.State.Positions | mm.State.Velocities
+        )
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
+        velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
         collective_variables = coupling_potential.getInnerValues(physical_context)
 
         for i, xdof in enumerate(extra_dofs):
@@ -374,6 +395,10 @@ def integrate_extended_space(
             if xdof.bounds is not None:
                 value, _ = xdof.bounds.wrap(value, 0)
             mmswig.Context_setParameter(physical_context, xdof.name, value)
+            extra_kinetic_energy.setParticleParameters(
+                i, 0, [xdof.mass, velocities[i].x]
+            )
+        extra_kinetic_energy.updateParametersInContext(physical_context)
 
         for name, value in collective_variables.items():
             mmswig.Context_setParameter(extension_context, name, value / value.unit)
