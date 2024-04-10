@@ -342,7 +342,7 @@ class ExtendedSpaceContext(mm.Context):
         return self._extension_context.getState(**kwargs)
 
 
-def integrate_extended_space(
+def integrate_extended_space(  # pylint: disable=too-many-arguments
     physical_context: mm.Context,
     steps: int,
     extra_dofs: t.Tuple[ExtraDOF],
@@ -376,12 +376,11 @@ def integrate_extended_space(
         initialized in the context.
     """
 
-    extension_integrator = extension_context.getIntegrator()
-    physical_integrator = physical_context.getIntegrator()
-
     for _ in range(steps):
-        mmswig.Integrator_step(physical_integrator, 1)
-        mmswig.Integrator_step(extension_integrator, 1)
+        # pylint: disable=protected-access
+        mmswig.Integrator_step(physical_context._integrator, 1)
+        mmswig.Integrator_step(extension_context._integrator, 1)
+        # pylint: enable=protected-access
 
         state = mmswig.Context_getState(
             extension_context, mm.State.Positions | mm.State.Velocities
