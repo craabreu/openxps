@@ -1,0 +1,12 @@
+StateDataWriter
+===============
+
+.. currentmodule:: openxps
+.. autoclass:: StateDataWriter
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getHeaders
+    .. automethod:: getValues
+    .. automethod:: initialize

@@ -6,6 +6,7 @@ Classes
 
     ExtendedSpaceContext
     ExtraDOF
+    StateDataWriter
 
 .. testsetup::
 
