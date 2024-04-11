@@ -60,12 +60,12 @@
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
-            <a id="prevFileLink" class="nav" href="d_8432743c5fc6133b_context_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="prevFileLink" class="nav" href="d_8432743c5fc6133b_extension_writer_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="d_8432743c5fc6133b_state_data_writer_py.html">&#xbb; next</a>
+            <a id="nextFileLink" class="nav" href="d_8432743c5fc6133b_utils_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.4.4">coverage.py v7.4.4</a>,
-            created at 2024-04-10 21:11 +0000
+            created at 2024-04-11 12:58 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"/>
@@ -152,7 +152,7 @@
     <p class="run"><span class="n"><a id="t70" href="#t70">70</a></span><span class="t">    <span class="key">def</span> <span class="nam">__post_init__</span><span class="op">(</span><span class="nam">self</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t71" href="#t71">71</a></span><span class="t">        <span class="key">if</span> <span class="key">not</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">is_unit</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">unit</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t72" href="#t72">72</a></span><span class="t">            <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="str">"The unit must be a valid OpenMM unit."</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">        <span class="key">if</span> <span class="num">1</span> <span class="op">*</span> <span class="nam">self</span><span class="op">.</span><span class="nam">unit</span> <span class="op">!=</span> <span class="num">1</span> <span class="op">*</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">md_unit_system</span><span class="op">.</span><span class="nam">express_unit</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">unit</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t73" href="#t73">73</a></span><span class="t">        <span class="key">if</span> <span class="op">(</span><span class="num">1</span> <span class="op">*</span> <span class="nam">self</span><span class="op">.</span><span class="nam">unit</span><span class="op">)</span><span class="op">.</span><span class="nam">value_in_unit_system</span><span class="op">(</span><span class="nam">mmunit</span><span class="op">.</span><span class="nam">md_unit_system</span><span class="op">)</span> <span class="op">!=</span> <span class="num">1</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t74" href="#t74">74</a></span><span class="t">            <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t75" href="#t75">75</a></span><span class="t">                <span class="str">f"Unit {self.unit} is incompatible with OpenMM's MD unit system."</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t76" href="#t76">76</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
@@ -190,12 +190,12 @@
 <footer>
     <div class="content">
         <p>
-            <a id="prevFileLink" class="nav" href="d_8432743c5fc6133b_context_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="prevFileLink" class="nav" href="d_8432743c5fc6133b_extension_writer_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="d_8432743c5fc6133b_state_data_writer_py.html">&#xbb; next</a>
+            <a id="nextFileLink" class="nav" href="d_8432743c5fc6133b_utils_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.4.4">coverage.py v7.4.4</a>,
-            created at 2024-04-10 21:11 +0000
+            created at 2024-04-11 12:58 +0000
         </p>
     </div>
 </footer>

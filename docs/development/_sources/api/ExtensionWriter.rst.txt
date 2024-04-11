@@ -1,8 +1,8 @@
-StateDataWriter
+ExtensionWriter
 ===============
 
 .. currentmodule:: openxps
-.. autoclass:: StateDataWriter
+.. autoclass:: ExtensionWriter
     :member-order: alphabetical
 
     .. rubric:: Methods

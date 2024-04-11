@@ -5,8 +5,8 @@ Classes
     :titlesonly:
 
     ExtendedSpaceContext
+    ExtensionWriter
     ExtraDOF
-    StateDataWriter
 
 .. testsetup::
 
