@@ -10,11 +10,13 @@
 import typing as t
 from dataclasses import dataclass
 
+import cvpack
+import openmm as mm
 from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit
 
-from .bounds import Bounds
+from .bounds import Bounds, Periodic
 from .utils import preprocess_args
 
 
@@ -99,6 +101,43 @@ class ExtraDOF(Serializable):
 
     def __setstate__(self, keywords: t.Dict[str, t.Any]) -> None:
         self.__init__(**keywords)
+
+    def createCollectiveVariable(self, particle: int) -> cvpack.OpenMMForceWrapper:
+        """
+        Returns a :CVPack:`OpenMMForceWrapper` object associating this extra degree of
+        freedom with the x coordinate of a particle in an OpenMM system.
+
+        Parameters
+        ----------
+        particle
+            The index of the particle whose x coordinate will be associated with this
+            extra degree of freedom.
+
+        Returns
+        -------
+        cvpack.OpenMMForceWrapper
+            The collective variable object representing this extra degree of freedom.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> from openmm import unit
+        >>> xdof = xps.ExtraDOF(
+        ...     "psi",
+        ...     unit.radian,
+        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
+        ...     xps.bounds.Periodic(-180, 180, unit.degree)
+        ... )
+        >>> cv = xdof.createCollectiveVariable(0)
+        """
+        bounds = self.bounds
+        if bounds is None:
+            force = mm.CustomExternalForce("x")
+        else:
+            force = mm.CustomExternalForce(bounds.leptonExpression("x"))
+            bounds = bounds.asQuantity() if isinstance(bounds, Periodic) else None
+        force.addParticle(particle, [])
+        return cvpack.OpenMMForceWrapper(force, self.unit, bounds, self.name)
 
 
 ExtraDOF.__init__ = preprocess_args(ExtraDOF.__init__)

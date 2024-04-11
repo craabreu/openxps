@@ -17,7 +17,6 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .bounds import Periodic
 from .extra_dof import ExtraDOF
 
 
@@ -153,19 +152,6 @@ class ExtendedSpaceContext(mm.Context):
         for xdof in self._extra_dofs:
             extension_system.addParticle(xdof.mass / xdof.mass.unit)
 
-        extra_dof_cvs = []
-        for index, xdof in enumerate(self._extra_dofs):
-            bounds = xdof.bounds
-            if bounds is None:
-                force = mm.CustomExternalForce("x")
-            else:
-                force = mm.CustomExternalForce(bounds.leptonExpression("x"))
-                bounds = bounds.asQuantity() if isinstance(bounds, Periodic) else None
-            force.addParticle(index, [])
-            extra_dof_cvs.append(
-                cvpack.OpenMMForceWrapper(force, xdof.unit, bounds, xdof.name)
-            )
-
         meta_cv = self._coupling_potential
         parameters = meta_cv.getParameterDefaultValues()
         for xdof in self._extra_dofs:
@@ -174,7 +160,10 @@ class ExtendedSpaceContext(mm.Context):
 
         flipped_potential = cvpack.MetaCollectiveVariable(
             function=meta_cv.getEnergyFunction(),
-            variables=extra_dof_cvs,
+            variables=[
+                xdof.createCollectiveVariable(index)
+                for index, xdof in enumerate(self._extra_dofs)
+            ],
             unit=meta_cv.getUnit(),
             periodicBounds=meta_cv.getPeriodicBounds(),
             name=meta_cv.getName(),
