@@ -80,7 +80,7 @@ class ExtendedSpaceContext(mm.Context):
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
     (Quantity(value=..., unit=radian),)
-    >>> state = context.getExtensionState(getEnergy=True)
+    >>> state = context.getExtensionContext().getState(getEnergy=True)
     >>> state.getPotentialEnergy()
     Quantity(value=..., unit=kilojoule/mole)
     """
@@ -297,21 +297,16 @@ class ExtendedSpaceContext(mm.Context):
             velocities[i] = rate * xdof.unit / mmunit.picosecond
         return tuple(velocities)
 
-    def getExtensionState(self, **kwargs: t.Any) -> mm.State:
+    def getExtensionContext(self) -> mm.Context:
         """
-        Get an :OpenMM:`State` object containing the state of the extension system.
-
-        Parameters
-        ----------
-        kwargs
-            The same arguments accepted by the :OpenMM:`Context.getState` method.
+        Get a reference to the OpenMM context containing the extension system.
 
         Returns
         -------
-        mm.State
-            The state of the extension system.
+        mm.Context
+            The context containing the extension system.
         """
-        return self._extension_context.getState(**kwargs)
+        return self._extension_context
 
 
 def integrate_extended_space(
