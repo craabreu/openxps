@@ -10,7 +10,6 @@
 import typing as t
 
 import openmm as mm
-
 from cvpack.reporting.custom_writer import CustomWriter
 from openmm import _openmm as mmswig
 from openmm import app as mmapp
@@ -19,7 +18,7 @@ from openmm import unit as mmunit
 from .context import ExtendedSpaceContext
 
 
-class ExtensionWriter(CustomWriter):
+class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attributes
     """
     A custom writer for reporting state data from an extension context.
 
