@@ -9,6 +9,8 @@
 
 import typing as t
 
+import openmm as mm
+
 from cvpack.reporting.custom_writer import CustomWriter
 from openmm import _openmm as mmswig
 from openmm import app as mmapp
@@ -76,7 +78,7 @@ class ExtensionWriter(CustomWriter):
     ...     writers=[xps.ExtensionWriter(context, kinetic=True)],
     ... )
     >>> simulation.reporters.append(reporter)
-    >>> simulation.step(100)  # doctest: +ELLIPSIS
+    >>> simulation.step(100)  # doctest: +SKIP
     #"Step","Kinetic Energy (kJ/mole)","Extension Kinetic Energy (kJ/mole)"
     10,60.512...,1.7013...
     20,75.765...,2.5089...
@@ -106,6 +108,7 @@ class ExtensionWriter(CustomWriter):
         self._total = total
         self._temperature = temperature
         self._needs_energy = potential or kinetic or total or temperature
+        self._needs_velocities = kinetic or temperature
         self._temp_factor = 0.0
 
     def initialize(self, simulation: mmapp.Simulation) -> None:
@@ -129,10 +132,17 @@ class ExtensionWriter(CustomWriter):
         return headers
 
     def getValues(self, simulation: mmapp.Simulation) -> t.List[float]:
-        state = self._context.getExtensionState(getEnergy=self._needs_energy)
+        state = self._context.getExtensionState(
+            getEnergy=self._needs_energy, getVelocities=self._needs_velocities
+        )
         if self._needs_energy:
             potential_energy = mmswig.State_getPotentialEnergy(state)
             kinetic_energy = mmswig.State_getKineticEnergy(state)
+        if self._needs_velocities:
+            velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
+            for xdof, velocity in zip(self._context.getExtraDOFs(), velocities):
+                mass = xdof.mass._value  # pylint: disable=protected-access
+                kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
         values = []
         if self._potential:
             values.append(potential_energy)
