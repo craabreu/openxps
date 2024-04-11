@@ -102,6 +102,30 @@ class ExtraDOF(Serializable):
     def __setstate__(self, keywords: t.Dict[str, t.Any]) -> None:
         self.__init__(**keywords)
 
+    def isPeriodic(self) -> bool:
+        """
+        Returns whether this extra degree of freedom is periodic.
+
+        Returns
+        -------
+        bool
+            ``True`` if this extra degree of freedom is periodic, ``False`` otherwise.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> from openmm import unit
+        >>> dv = xps.ExtraDOF(
+        ...     "psi",
+        ...     unit.radian,
+        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
+        ...     xps.bounds.Periodic(-180, 180, unit.degree)
+        ... )
+        >>> dv.isPeriodic()
+        True
+        """
+        return isinstance(self.bounds, Periodic)
+
     def createCollectiveVariable(self, particle: int) -> cvpack.OpenMMForceWrapper:
         """
         Returns a :CVPack:`OpenMMForceWrapper` object associating this extra degree of
@@ -135,7 +159,7 @@ class ExtraDOF(Serializable):
             force = mm.CustomExternalForce("x")
         else:
             force = mm.CustomExternalForce(bounds.leptonExpression("x"))
-            bounds = bounds.asQuantity() if isinstance(bounds, Periodic) else None
+            bounds = bounds.asQuantity() if self.isPeriodic() else None
         force.addParticle(particle, [])
         return cvpack.OpenMMForceWrapper(force, self.unit, bounds, self.name)
 
