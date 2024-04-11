@@ -163,6 +163,52 @@ class ExtraDOF(Serializable):
         force.addParticle(particle, [])
         return cvpack.OpenMMForceWrapper(force, self.unit, bounds, self.name)
 
+    def _distanceToCV(self, other: cvpack.CollectiveVariable) -> str:
+        name = other.getName()
+        diff = f"{name}-{self.name}"
+        if other.getPeriodicBounds() is None and not self.isPeriodic():
+            return f"({diff})"
+        if self.isPeriodic() and other.getPeriodicBounds() == self.bounds.asQuantity():
+            period = self.bounds.period
+            return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
+        raise ValueError("Incompatible boundary conditions.")
+
+    def distanceTo(self, other: cvpack.CollectiveVariable) -> str:
+        """
+        Returns a Lepton expression representing the distance between this extra degree
+        of freedom and another variable.
+
+        Parameters
+        ----------
+        other
+            The other variable to which the distance will be calculated.
+
+        Returns
+        -------
+        str
+            A string representing the distance between the two variables.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> import pytest
+        >>> from openmm import unit
+        >>> xdof = xps.ExtraDOF(
+        ...     "psi0",
+        ...     unit.radian,
+        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
+        ...     xps.bounds.Periodic(-180, 180, unit.degree)
+        ... )
+        >>> psi = cvpack.Torsion(6, 8, 14, 16, name="psi")
+        >>> xdof.distanceTo(psi)
+        '(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))'
+        >>>
+
+        """
+        if isinstance(other, cvpack.CollectiveVariable):
+            return self._distanceToCV(other)
+        raise TypeError(f"Method distanceTo not implemented for type {type(other)}.")
+
 
 ExtraDOF.__init__ = preprocess_args(ExtraDOF.__init__)
 
