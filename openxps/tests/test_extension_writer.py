@@ -8,6 +8,7 @@ from math import pi
 
 import cvpack
 import openmm
+import pytest
 from openmm import app, unit
 from openmmtools import testsystems
 
@@ -68,3 +69,19 @@ def test_extension_writer():
                     '"Extension Temperature (K)"\n',
                 ]
             )
+
+
+def test_raise_exception():
+    """
+    Test the extension writer raises an exception
+    """
+
+    model = testsystems.AlanineDipeptideVacuum()
+    integrator = openmm.VerletIntegrator(0.001)
+    platform = openmm.Platform.getPlatformByName("Reference")
+    context = openmm.Context(model.system, integrator, platform)
+    with pytest.raises(TypeError) as excinfo:
+        xps.ExtensionWriter(context, potential=True)
+    assert "The context must be an instance of ExtendedSpaceContext" in str(
+        excinfo.value
+    )
