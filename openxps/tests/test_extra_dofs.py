@@ -106,12 +106,25 @@ def test_extra_dof_distance_method():
     psi0 = ExtraDOF(
         "psi0",
         mmunit.radian,
-        3 * mmunit.dalton*(mmunit.nanometer/mmunit.radian)**2,
-        Periodic(-180, 180, mmunit.degree)
+        3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
+        Periodic(-180, 180, mmunit.degree),
     )
+    phi0 = ExtraDOF(
+        "phi0",
+        mmunit.radian,
+        3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
+        Periodic(-180, 180, mmunit.degree),
+    )
+
     assert psi0.distanceTo(cvpack.Torsion(6, 8, 14, 16, name="psi")) == (
         "(psi-psi0-6.283185307179586*floor(0.5+(psi-psi0)/6.283185307179586))"
     )
+
+    assert (
+        psi0.distanceTo(phi0)
+        == "(phi0-psi0-6.283185307179586*floor(0.5+(phi0-psi0)/6.283185307179586))"
+    )
+
     with pytest.raises(TypeError) as excinfo:
         psi0.distanceTo("not_cv")
     assert "Method distanceTo not implemented for type" in str(excinfo.value)
@@ -120,10 +133,17 @@ def test_extra_dof_distance_method():
         psi0.distanceTo(cvpack.Distance(0, 1))
     assert "Incompatible boundary conditions." in str(excinfo.value)
 
+    with pytest.raises(ValueError) as excinfo:
+        psi0.distanceTo(ExtraDOF("x", mmunit.nanometer, 3 * mmunit.dalton, None))
+    assert "Incompatible boundary conditions." in str(excinfo.value)
+
     distance0 = ExtraDOF(
         "distance0",
         mmunit.nanometer,
         3 * mmunit.dalton,
-        Reflective(0, 1, mmunit.nanometer)
+        Reflective(0, 1, mmunit.nanometer),
     )
     assert distance0.distanceTo(cvpack.Distance(0, 1)) == "(distance-distance0)"
+
+    distance1 = ExtraDOF("distance1", mmunit.nanometer, 3 * mmunit.dalton, None)
+    assert distance1.distanceTo(distance0) == "(distance0-distance1)"

@@ -126,7 +126,9 @@ class ExtraDOF(Serializable):
         """
         return isinstance(self.bounds, Periodic)
 
-    def createCollectiveVariable(self, particle: int) -> cvpack.OpenMMForceWrapper:
+    def createCollectiveVariable(
+        self, particle: int, name: t.Optional[str] = None
+    ) -> cvpack.OpenMMForceWrapper:
         """
         Returns a :CVPack:`OpenMMForceWrapper` object associating this extra degree of
         freedom with the x coordinate of a particle in an OpenMM system.
@@ -136,6 +138,9 @@ class ExtraDOF(Serializable):
         particle
             The index of the particle whose x coordinate will be associated with this
             extra degree of freedom.
+        name
+            The name of the context parameter to be used in the OpenMM system. If
+            ``None``, the name of the extra degree of freedom will be used.
 
         Returns
         -------
@@ -161,7 +166,12 @@ class ExtraDOF(Serializable):
             force = mm.CustomExternalForce(bounds.leptonExpression("x"))
             bounds = bounds.asQuantity() if self.isPeriodic() else None
         force.addParticle(particle, [])
-        return cvpack.OpenMMForceWrapper(force, self.unit, bounds, self.name)
+        return cvpack.OpenMMForceWrapper(
+            force,
+            self.unit,
+            bounds,
+            self.name if name is None else name,
+        )
 
     def _distanceToCV(self, other: cvpack.CollectiveVariable) -> str:
         name = other.getName()
@@ -169,6 +179,15 @@ class ExtraDOF(Serializable):
         if other.getPeriodicBounds() is None and not self.isPeriodic():
             return f"({diff})"
         if self.isPeriodic() and other.getPeriodicBounds() == self.bounds.asQuantity():
+            period = self.bounds.period
+            return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
+        raise ValueError("Incompatible boundary conditions.")
+
+    def _distanceToExtraDOF(self, other: "ExtraDOF") -> str:
+        diff = f"{other.name}-{self.name}"
+        if not (self.isPeriodic() or other.isPeriodic()):
+            return f"({diff})"
+        if other.isPeriodic() and self.isPeriodic():
             period = self.bounds.period
             return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
         raise ValueError("Incompatible boundary conditions.")
@@ -207,6 +226,8 @@ class ExtraDOF(Serializable):
         """
         if isinstance(other, cvpack.CollectiveVariable):
             return self._distanceToCV(other)
+        if isinstance(other, ExtraDOF):
+            return self._distanceToExtraDOF(other)
         raise TypeError(f"Method distanceTo not implemented for type {type(other)}.")
 
 
