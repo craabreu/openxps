@@ -46,11 +46,13 @@
 <span class="kn">import</span> <span class="nn">typing</span> <span class="k">as</span> <span class="nn">t</span>
 <span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
 
+<span class="kn">import</span> <span class="nn">cvpack</span>
+<span class="kn">import</span> <span class="nn">openmm</span> <span class="k">as</span> <span class="nn">mm</span>
 <span class="kn">from</span> <span class="nn">cvpack.serialization</span> <span class="kn">import</span> <span class="n">Serializable</span>
 <span class="kn">from</span> <span class="nn">cvpack.units</span> <span class="kn">import</span> <span class="n">Quantity</span>
 <span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span> <span class="nn">.bounds</span> <span class="kn">import</span> <span class="n">Bounds</span>
+<span class="kn">from</span> <span class="nn">.bounds</span> <span class="kn">import</span> <span class="n">Bounds</span><span class="p">,</span> <span class="n">Periodic</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">preprocess_args</span>
 
 
@@ -136,7 +138,144 @@
         <span class="p">}</span>
 
     <span class="k">def</span> <span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keywords</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">keywords</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">keywords</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ExtraDOF.isPeriodic">
+<a class="viewcode-back" href="../../api/ExtraDOF.html#openxps.ExtraDOF.isPeriodic">[docs]</a>
+    <span class="k">def</span> <span class="nf">isPeriodic</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns whether this extra degree of freedom is periodic.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        bool</span>
+<span class="sd">            ``True`` if this extra degree of freedom is periodic, ``False`` otherwise.</span>
+
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">        &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">        &gt;&gt;&gt; dv = xps.ExtraDOF(</span>
+<span class="sd">        ...     &quot;psi&quot;,</span>
+<span class="sd">        ...     unit.radian,</span>
+<span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
+<span class="sd">        ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; dv.isPeriodic()</span>
+<span class="sd">        True</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">Periodic</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ExtraDOF.createCollectiveVariable">
+<a class="viewcode-back" href="../../api/ExtraDOF.html#openxps.ExtraDOF.createCollectiveVariable">[docs]</a>
+    <span class="k">def</span> <span class="nf">createCollectiveVariable</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">particle</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a :CVPack:`OpenMMForceWrapper` object associating this extra degree of</span>
+<span class="sd">        freedom with the x coordinate of a particle in an OpenMM system.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        particle</span>
+<span class="sd">            The index of the particle whose x coordinate will be associated with this</span>
+<span class="sd">            extra degree of freedom.</span>
+<span class="sd">        name</span>
+<span class="sd">            The name of the context parameter to be used in the OpenMM system. If</span>
+<span class="sd">            ``None``, the name of the extra degree of freedom will be used.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        cvpack.OpenMMForceWrapper</span>
+<span class="sd">            The collective variable object representing this extra degree of freedom.</span>
+
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">        &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">        &gt;&gt;&gt; xdof = xps.ExtraDOF(</span>
+<span class="sd">        ...     &quot;psi&quot;,</span>
+<span class="sd">        ...     unit.radian,</span>
+<span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
+<span class="sd">        ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; cv = xdof.createCollectiveVariable(0)</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span>
+        <span class="k">if</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="n">bounds</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
+            <span class="n">bounds</span> <span class="o">=</span> <span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">particle</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="k">return</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">(</span>
+            <span class="n">force</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+            <span class="n">bounds</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">name</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_distanceToCV</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">():</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">():</span>
+            <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">period</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Incompatible boundary conditions.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_distanceToExtraDOF</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s2">&quot;ExtraDOF&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">or</span> <span class="n">other</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()):</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)&quot;</span>
+        <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">():</span>
+            <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">period</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))&quot;</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Incompatible boundary conditions.&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ExtraDOF.distanceTo">
+<a class="viewcode-back" href="../../api/ExtraDOF.html#openxps.ExtraDOF.distanceTo">[docs]</a>
+    <span class="k">def</span> <span class="nf">distanceTo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a Lepton expression representing the distance between this extra degree</span>
+<span class="sd">        of freedom and another variable.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other</span>
+<span class="sd">            The other variable to which the distance will be calculated.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            A string representing the distance between the two variables.</span>
+
+<span class="sd">        Example</span>
+<span class="sd">        -------</span>
+<span class="sd">        &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">        &gt;&gt;&gt; import pytest</span>
+<span class="sd">        &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">        &gt;&gt;&gt; xdof = xps.ExtraDOF(</span>
+<span class="sd">        ...     &quot;psi0&quot;,</span>
+<span class="sd">        ...     unit.radian,</span>
+<span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
+<span class="sd">        ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; psi = cvpack.Torsion(6, 8, 14, 16, name=&quot;psi&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; xdof.distanceTo(psi)</span>
+<span class="sd">        &#39;(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))&#39;</span>
+<span class="sd">        &gt;&gt;&gt;</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distanceToCV</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">ExtraDOF</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distanceToExtraDOF</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Method distanceTo not implemented for type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
+</div>
 
 
 

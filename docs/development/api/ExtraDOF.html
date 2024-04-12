@@ -79,6 +79,103 @@ measurement must be compatible with the extra degree of freedom’s own unit.</p
 <span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">dv</span><span class="p">))</span> <span class="o">==</span> <span class="n">dv</span>
 </pre></div>
 </div>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtraDOF.createCollectiveVariable">
+<span class="sig-name descname"><span class="pre">createCollectiveVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">particle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extra_dof.html#ExtraDOF.createCollectiveVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtraDOF.createCollectiveVariable" title="Link to this definition">¶</a></dt>
+<dd><p>Returns a <a class="reference external" href="https://redesignscience.github.io/cvpack/latest/api/OpenMMForceWrapper.html">cvpack.OpenMMForceWrapper</a> object associating this extra degree of
+freedom with the x coordinate of a particle in an OpenMM system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>particle</strong> (<em>int</em>) – The index of the particle whose x coordinate will be associated with this
+extra degree of freedom.</p></li>
+<li><p><strong>name</strong> (<em>str</em><em> | </em><em>None</em>) – The name of the context parameter to be used in the OpenMM system. If
+<code class="docutils literal notranslate"><span class="pre">None</span></code>, the name of the extra degree of freedom will be used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The collective variable object representing this extra degree of freedom.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>cvpack.OpenMMForceWrapper</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">openxps</span> <span class="k">as</span> <span class="nn">xps</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xdof</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtraDOF</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s2">&quot;psi&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span> <span class="o">=</span> <span class="n">xdof</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtraDOF.distanceTo">
+<span class="sig-name descname"><span class="pre">distanceTo</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">other</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extra_dof.html#ExtraDOF.distanceTo"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtraDOF.distanceTo" title="Link to this definition">¶</a></dt>
+<dd><p>Returns a Lepton expression representing the distance between this extra degree
+of freedom and another variable.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>other</strong> (<em>CollectiveVariable</em>) – The other variable to which the distance will be calculated.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A string representing the distance between the two variables.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">openxps</span> <span class="k">as</span> <span class="nn">xps</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">pytest</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xdof</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtraDOF</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s2">&quot;psi0&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">psi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;psi&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xdof</span><span class="o">.</span><span class="n">distanceTo</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
+<span class="go">&#39;(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))&#39;</span>
+<span class="gp">&gt;&gt;&gt;</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtraDOF.isPeriodic">
+<span class="sig-name descname"><span class="pre">isPeriodic</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extra_dof.html#ExtraDOF.isPeriodic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtraDOF.isPeriodic" title="Link to this definition">¶</a></dt>
+<dd><p>Returns whether this extra degree of freedom is periodic.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><code class="docutils literal notranslate"><span class="pre">True</span></code> if this extra degree of freedom is periodic, <code class="docutils literal notranslate"><span class="pre">False</span></code> otherwise.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>bool</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span> <span class="nn">openxps</span> <span class="k">as</span> <span class="nn">xps</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtraDOF</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s2">&quot;psi&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span>
+<span class="go">True</span>
+</pre></div>
+</div>
+</dd></dl>
+
 </dd></dl>
 
 </section>

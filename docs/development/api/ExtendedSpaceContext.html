@@ -94,25 +94,22 @@ used as a template.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getExtraValues</span><span class="p">()</span>
 <span class="go">(Quantity(value=..., unit=radian),)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getExtensionState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">state</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">()</span>
 <span class="go">Quantity(value=..., unit=kilojoule/mole)</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtensionState">
-<span class="sig-name descname"><span class="pre">getExtensionState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtensionState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtensionState" title="Link to this definition">¶</a></dt>
-<dd><p>Get an <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">openmm.State</a> object containing the state of the extension system.</p>
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtensionContext">
+<span class="sig-name descname"><span class="pre">getExtensionContext</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtensionContext" title="Link to this definition">¶</a></dt>
+<dd><p>Get a reference to the OpenMM context containing the extension system.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>kwargs</strong> (<em>Any</em>) – The same arguments accepted by the <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.getState.html">openmm.Context.getState</a> method.</p>
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The context containing the extension system.</p>
 </dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The state of the extension system.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>mm.State</p>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>mm.Context</p>
 </dd>
 </dl>
 </dd></dl>

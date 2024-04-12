@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for openxps/extension_writer.py: 98%</title>
+    <title>Coverage for openxps/extension_writer.py: 100%</title>
     <link rel="icon" sizes="32x32" href="favicon_32.png">
     <link rel="stylesheet" href="style.css" type="text/css">
     <script type="text/javascript" src="coverage_html.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>openxps/extension_writer.py</b>:
-            <span class="pc_cov">98%</span>
+            <span class="pc_cov">100%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,8 +55,8 @@
         </aside>
         <h2>
             <span class="text">55 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">54<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">1<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">55<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">0<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="d_8432743c5fc6133b_extra_dof_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.4.4">coverage.py v7.4.4</a>,
-            created at 2024-04-11 12:58 +0000
+            created at 2024-04-12 17:39 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"/>
@@ -182,7 +182,7 @@
     <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">        <span class="nam">temperature</span><span class="op">:</span> <span class="nam">bool</span> <span class="op">=</span> <span class="key">False</span><span class="op">,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t101" href="#t101">101</a></span><span class="t">    <span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t102" href="#t102">102</a></span><span class="t">        <span class="key">if</span> <span class="key">not</span> <span class="nam">isinstance</span><span class="op">(</span><span class="nam">context</span><span class="op">,</span> <span class="nam">ExtendedSpaceContext</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">            <span class="key">raise</span> <span class="nam">TypeError</span><span class="op">(</span><span class="str">"The context must be an instance of ExtendedSpaceContext."</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t103" href="#t103">103</a></span><span class="t">            <span class="key">raise</span> <span class="nam">TypeError</span><span class="op">(</span><span class="str">"The context must be an instance of ExtendedSpaceContext."</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">_context</span> <span class="op">=</span> <span class="nam">context</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">_potential</span> <span class="op">=</span> <span class="nam">potential</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t">        <span class="nam">self</span><span class="op">.</span><span class="nam">_kinetic</span> <span class="op">=</span> <span class="nam">kinetic</span>&nbsp;</span><span class="r"></span></p>
@@ -213,7 +213,7 @@
     <p class="run"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t">        <span class="key">return</span> <span class="nam">headers</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t">    <span class="key">def</span> <span class="nam">getValues</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">simulation</span><span class="op">:</span> <span class="nam">mmapp</span><span class="op">.</span><span class="nam">Simulation</span><span class="op">)</span> <span class="op">-></span> <span class="nam">t</span><span class="op">.</span><span class="nam">List</span><span class="op">[</span><span class="nam">float</span><span class="op">]</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">        <span class="nam">state</span> <span class="op">=</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_context</span><span class="op">.</span><span class="nam">getExtensionState</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t">        <span class="nam">state</span> <span class="op">=</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_context</span><span class="op">.</span><span class="nam">getExtensionContext</span><span class="op">(</span><span class="op">)</span><span class="op">.</span><span class="nam">getState</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t">            <span class="nam">getEnergy</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">_needs_energy</span><span class="op">,</span> <span class="nam">getVelocities</span><span class="op">=</span><span class="nam">self</span><span class="op">.</span><span class="nam">_needs_velocities</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t">        <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t137" href="#t137">137</a></span><span class="t">        <span class="key">if</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_needs_energy</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -243,7 +243,7 @@
             <a id="nextFileLink" class="nav" href="d_8432743c5fc6133b_extra_dof_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.4.4">coverage.py v7.4.4</a>,
-            created at 2024-04-11 12:58 +0000
+            created at 2024-04-12 17:39 +0000
         </p>
     </div>
 </footer>

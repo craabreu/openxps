@@ -177,7 +177,7 @@
 <div class="viewcode-block" id="ExtensionWriter.getValues">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getValues">[docs]</a>
     <span class="k">def</span> <span class="nf">getValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">mmapp</span><span class="o">.</span><span class="n">Simulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
-        <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getExtensionState</span><span class="p">(</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
             <span class="n">getEnergy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">,</span> <span class="n">getVelocities</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">:</span>
