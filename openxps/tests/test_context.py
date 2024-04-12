@@ -198,7 +198,7 @@ def test_consistency():
         context.getIntegrator().step(1000)
 
         # pylint: disable=unexpected-keyword-arg
-        extension_state = context.getExtensionState(
+        extension_state = context.getExtensionContext().getState(
             getEnergy=True, getPositions=True, getForces=True
         )
         # pylint: enable=unexpected-keyword-arg

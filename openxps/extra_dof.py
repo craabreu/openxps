@@ -10,11 +10,13 @@
 import typing as t
 from dataclasses import dataclass
 
+import cvpack
+import openmm as mm
 from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit
 
-from .bounds import Bounds
+from .bounds import Bounds, Periodic
 from .utils import preprocess_args
 
 
@@ -99,6 +101,134 @@ class ExtraDOF(Serializable):
 
     def __setstate__(self, keywords: t.Dict[str, t.Any]) -> None:
         self.__init__(**keywords)
+
+    def isPeriodic(self) -> bool:
+        """
+        Returns whether this extra degree of freedom is periodic.
+
+        Returns
+        -------
+        bool
+            ``True`` if this extra degree of freedom is periodic, ``False`` otherwise.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> from openmm import unit
+        >>> dv = xps.ExtraDOF(
+        ...     "psi",
+        ...     unit.radian,
+        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
+        ...     xps.bounds.Periodic(-180, 180, unit.degree)
+        ... )
+        >>> dv.isPeriodic()
+        True
+        """
+        return isinstance(self.bounds, Periodic)
+
+    def createCollectiveVariable(
+        self, particle: int, name: t.Optional[str] = None
+    ) -> cvpack.OpenMMForceWrapper:
+        """
+        Returns a :CVPack:`OpenMMForceWrapper` object associating this extra degree of
+        freedom with the x coordinate of a particle in an OpenMM system.
+
+        Parameters
+        ----------
+        particle
+            The index of the particle whose x coordinate will be associated with this
+            extra degree of freedom.
+        name
+            The name of the context parameter to be used in the OpenMM system. If
+            ``None``, the name of the extra degree of freedom will be used.
+
+        Returns
+        -------
+        cvpack.OpenMMForceWrapper
+            The collective variable object representing this extra degree of freedom.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> from openmm import unit
+        >>> xdof = xps.ExtraDOF(
+        ...     "psi",
+        ...     unit.radian,
+        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
+        ...     xps.bounds.Periodic(-180, 180, unit.degree)
+        ... )
+        >>> cv = xdof.createCollectiveVariable(0)
+        """
+        bounds = self.bounds
+        if bounds is None:
+            force = mm.CustomExternalForce("x")
+        else:
+            force = mm.CustomExternalForce(bounds.leptonExpression("x"))
+            bounds = bounds.asQuantity() if self.isPeriodic() else None
+        force.addParticle(particle, [])
+        return cvpack.OpenMMForceWrapper(
+            force,
+            self.unit,
+            bounds,
+            self.name if name is None else name,
+        )
+
+    def _distanceToCV(self, other: cvpack.CollectiveVariable) -> str:
+        name = other.getName()
+        diff = f"{name}-{self.name}"
+        if other.getPeriodicBounds() is None and not self.isPeriodic():
+            return f"({diff})"
+        if self.isPeriodic() and other.getPeriodicBounds() == self.bounds.asQuantity():
+            period = self.bounds.period
+            return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
+        raise ValueError("Incompatible boundary conditions.")
+
+    def _distanceToExtraDOF(self, other: "ExtraDOF") -> str:
+        diff = f"{other.name}-{self.name}"
+        if not (self.isPeriodic() or other.isPeriodic()):
+            return f"({diff})"
+        if other.isPeriodic() and self.isPeriodic():
+            period = self.bounds.period
+            return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
+        raise ValueError("Incompatible boundary conditions.")
+
+    def distanceTo(self, other: cvpack.CollectiveVariable) -> str:
+        """
+        Returns a Lepton expression representing the distance between this extra degree
+        of freedom and another variable.
+
+        Parameters
+        ----------
+        other
+            The other variable to which the distance will be calculated.
+
+        Returns
+        -------
+        str
+            A string representing the distance between the two variables.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> import pytest
+        >>> from openmm import unit
+        >>> xdof = xps.ExtraDOF(
+        ...     "psi0",
+        ...     unit.radian,
+        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
+        ...     xps.bounds.Periodic(-180, 180, unit.degree)
+        ... )
+        >>> psi = cvpack.Torsion(6, 8, 14, 16, name="psi")
+        >>> xdof.distanceTo(psi)
+        '(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))'
+        >>>
+
+        """
+        if isinstance(other, cvpack.CollectiveVariable):
+            return self._distanceToCV(other)
+        if isinstance(other, ExtraDOF):
+            return self._distanceToExtraDOF(other)
+        raise TypeError(f"Method distanceTo not implemented for type {type(other)}.")
 
 
 ExtraDOF.__init__ = preprocess_args(ExtraDOF.__init__)

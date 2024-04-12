@@ -17,7 +17,6 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .bounds import Periodic
 from .extra_dof import ExtraDOF
 
 
@@ -81,7 +80,7 @@ class ExtendedSpaceContext(mm.Context):
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
     (Quantity(value=..., unit=radian),)
-    >>> state = context.getExtensionState(getEnergy=True)
+    >>> state = context.getExtensionContext().getState(getEnergy=True)
     >>> state.getPotentialEnergy()
     Quantity(value=..., unit=kilojoule/mole)
     """
@@ -153,19 +152,6 @@ class ExtendedSpaceContext(mm.Context):
         for xdof in self._extra_dofs:
             extension_system.addParticle(xdof.mass / xdof.mass.unit)
 
-        extra_dof_cvs = []
-        for index, xdof in enumerate(self._extra_dofs):
-            bounds = xdof.bounds
-            if bounds is None:
-                force = mm.CustomExternalForce("x")
-            else:
-                force = mm.CustomExternalForce(bounds.leptonExpression("x"))
-                bounds = bounds.asQuantity() if isinstance(bounds, Periodic) else None
-            force.addParticle(index, [])
-            extra_dof_cvs.append(
-                cvpack.OpenMMForceWrapper(force, xdof.unit, bounds, xdof.name)
-            )
-
         meta_cv = self._coupling_potential
         parameters = meta_cv.getParameterDefaultValues()
         for xdof in self._extra_dofs:
@@ -174,7 +160,10 @@ class ExtendedSpaceContext(mm.Context):
 
         flipped_potential = cvpack.MetaCollectiveVariable(
             function=meta_cv.getEnergyFunction(),
-            variables=extra_dof_cvs,
+            variables=[
+                xdof.createCollectiveVariable(index)
+                for index, xdof in enumerate(self._extra_dofs)
+            ],
             unit=meta_cv.getUnit(),
             periodicBounds=meta_cv.getPeriodicBounds(),
             name=meta_cv.getName(),
@@ -308,21 +297,16 @@ class ExtendedSpaceContext(mm.Context):
             velocities[i] = rate * xdof.unit / mmunit.picosecond
         return tuple(velocities)
 
-    def getExtensionState(self, **kwargs: t.Any) -> mm.State:
+    def getExtensionContext(self) -> mm.Context:
         """
-        Get an :OpenMM:`State` object containing the state of the extension system.
-
-        Parameters
-        ----------
-        kwargs
-            The same arguments accepted by the :OpenMM:`Context.getState` method.
+        Get a reference to the OpenMM context containing the extension system.
 
         Returns
         -------
-        mm.State
-            The state of the extension system.
+        mm.Context
+            The context containing the extension system.
         """
-        return self._extension_context.getState(**kwargs)
+        return self._extension_context
 
 
 def integrate_extended_space(

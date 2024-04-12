@@ -131,7 +131,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
         return headers
 
     def getValues(self, simulation: mmapp.Simulation) -> t.List[float]:
-        state = self._context.getExtensionState(
+        state = self._context.getExtensionContext().getState(
             getEnergy=self._needs_energy, getVelocities=self._needs_velocities
         )
         if self._needs_energy:
