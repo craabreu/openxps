@@ -103,6 +103,9 @@ def test_extra_dof_bounds_type_error():
 
 
 def test_extra_dof_distance_method():
+    """
+    Test the distanceTo method of ExtraDOF.
+    """
     psi0 = ExtraDOF(
         "psi0",
         mmunit.radian,
