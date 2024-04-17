@@ -18,9 +18,10 @@ from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from .extra_dof import ExtraDOF
+from .spline_grid import SplineGrid
 
 
-class ExtendedSpaceContext(mm.Context):
+class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-attributes
     """
     Wraps an :OpenMM:`Context` object to include extra degrees of freedom (DOFs) and
     allow for extended phase-space (XPS) simulations.
@@ -45,6 +46,13 @@ class ExtendedSpaceContext(mm.Context):
         An :OpenMM:`Integrator` object to be used as a template for the algorithm that
         advances the extra DOFs. If not provided, the physical system's integrator is
         used as a template.
+    biased_dofs
+        A subset of the extra DOFs to be subject to a bias potential. If not provided,
+        no bias is applied.
+    spline_grid
+        The number of points in each dimension of the grid used to interpolate the bias
+        potential. If not provided, no interpolation is performed. This argument is
+        ignored if ``bias_dofs`` is not provided.
 
     Example
     -------
@@ -72,6 +80,7 @@ class ExtendedSpaceContext(mm.Context):
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi0],
     ...     umbrella_potential,
+    ...     bias_dofs=[phi0],
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
@@ -85,12 +94,14 @@ class ExtendedSpaceContext(mm.Context):
     Quantity(value=..., unit=kilojoule/mole)
     """
 
-    def __init__(  # pylint: disable=super-init-not-called
+    def __init__(  # pylint: disable=super-init-not-called,too-many-arguments
         self,
         context: mm.Context,
-        extra_dofs: t.Iterable[ExtraDOF],
+        extra_dofs: t.Sequence[ExtraDOF],
         coupling_potential: cvpack.MetaCollectiveVariable,
         integrator_template: t.Optional[mm.Integrator] = None,
+        bias_dofs: t.Sequence[ExtraDOF] = (),
+        spline_grid: t.Sequence[int] = (),
     ) -> None:
         self.this = context.this
         self._system = context.getSystem()
@@ -100,6 +111,10 @@ class ExtendedSpaceContext(mm.Context):
         self._validate()
         self._coupling_potential.addToSystem(self._system)
         self.reinitialize(preserveState=True)
+        self._bias_dof_indices = tuple(
+            self._extra_dofs.index(xdof) for xdof in bias_dofs
+        )
+        self._bias_grid, self._bias_potential = self._createBias(spline_grid)
         self._extension_context = self._createExtensionContext(integrator_template)
         self._integrator.step = MethodType(
             partial(
@@ -141,6 +156,43 @@ class ExtendedSpaceContext(mm.Context):
         for name, unit in xdof_units.items():
             if not unit.is_compatible(parameter_units[name]):
                 raise ValueError(f"Unit mismatch for parameter '{name}'.")
+
+    def _createBias(
+        self, grid_sizes: t.Sequence[int]
+    ) -> t.Tuple[t.Optional[cvpack.AtomicFunction], t.Optional[SplineGrid]]:
+        if not self._bias_dof_indices:
+            return None, None
+
+        extra_dofs = [self._extra_dofs[index] for index in self._bias_dof_indices]
+        if grid_sizes:
+            expr = f"bias({','.join(xdof.name for xdof in extra_dofs)})"
+        else:
+            summands = []
+            for xdof in extra_dofs:
+                distance = f"({xdof.name}-{xdof.name}_center)"
+                if xdof.isPeriodic():
+                    distance = f"(sin(pi*{distance})/pi)"  # von Mises kernel
+                summands.append(f"({distance}/{xdof.name}_sigma)^2")
+            expr = f"height*exp(-0.5*({'+'.join(summands)}))"
+        for index, xdof in enumerate(extra_dofs):
+            variable = f"x{index}"
+            if xdof.bounds is not None:
+                variable = xdof.bounds.leptonExpression(variable)
+            expr += f";{xdof.name}={variable}"
+
+        bias_potential = cvpack.AtomicFunction(
+            function=expr,
+            unit=mmunit.kilojoule_per_mole,
+            groups=[self._bias_dof_indices],
+            name="bias_potential",
+        )
+
+        if grid_sizes:
+            bias_grid = SplineGrid(extra_dofs, grid_sizes)
+            bias_potential.addTabulatedFunction("bias", bias_grid)
+            return bias_potential, bias_grid
+
+        return bias_potential, None
 
     def _createExtensionContext(
         self, integrator_template: t.Union[mm.Integrator, None]
