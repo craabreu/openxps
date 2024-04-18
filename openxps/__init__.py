@@ -9,9 +9,9 @@ from .extension_writer import ExtensionWriter  # noqa: F401
 from .extra_dof import ExtraDOF  # noqa: F401
 
 __all__ = [
+    "AdaptiveBiasingPotential",
+    "SplineBiasingPotential",
     "ExtendedSpaceContext",
     "ExtensionWriter",
     "ExtraDOF",
-    "SplineBiasingPotential",
-    "AdaptiveBiasingPotential",
 ]

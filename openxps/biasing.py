@@ -17,6 +17,81 @@ from openmm import unit as mmunit
 from .extra_dof import ExtraDOF
 
 
+class BiasingPotential(cvpack.OpenMMForceWrapper):
+    """
+    Abstract class for bias potentials applied to extra degrees of freedom.
+
+    Parameters
+    ----------
+    extra_dofs
+        The extra degrees of freedom subject to the bias potential.
+    function
+        The mathematical expression defining the bias potential.
+    """
+
+    def __init__(
+        self,
+        extra_dofs: t.Sequence[ExtraDOF],
+        function: str,
+    ) -> None:
+        self._extra_dofs = tuple(extra_dofs)
+        self._extra_dof_indices = None
+        expression = function
+        for index, xdof in enumerate(extra_dofs, start=1):
+            variable = f"x{index}"
+            if xdof.bounds is not None:
+                variable = xdof.bounds.leptonExpression(variable)
+            expression += f";{xdof.name}={variable}"
+        super().__init__(
+            mm.CustomCompoundBondForce(len(extra_dofs), expression),
+            mmunit.kilojoules_per_mole,
+            name="biasing_potential",
+        )
+
+    def addKernel(
+        self,
+        context: mm.Context,
+        height: mmunit.Quantity,
+        bandwidths: t.Sequence[mmunit.Quantity],
+        centers: t.Sequence[mmunit.Quantity],
+    ) -> None:
+        """
+        Add a Gaussian kernel to the bias potential.
+
+        Parameters
+        ----------
+        context
+            The extension context where the kernel will be added.
+        height
+            The height of the kernel.
+        bandwidths
+            The bandwidths of the kernel.
+        centers
+            The centers of the kernel.
+        """
+        raise NotImplementedError(
+            "Adding kernels to bias potentials is not supported by this class"
+        )
+
+    def initialize(self, context_extra_dofs: t.Sequence[ExtraDOF]) -> None:
+        """
+        Initialize the bias potential for a specific context.
+
+        Parameters
+        ----------
+        context_extra_dofs
+            The extra degrees of freedom in the context.
+        """
+        try:
+            self._extra_dof_indices = tuple(
+                map(context_extra_dofs.index, self._extra_dofs)
+            )
+        except ValueError as error:
+            raise ValueError(
+                "Not all extra DOFs in the bias potential are present in the context"
+            ) from error
+
+
 class SplineGrid(mm.TabulatedFunction):
     """
     A grid used to interpolate a bias potential applied to extra degrees of freedom.
@@ -71,31 +146,6 @@ class SplineGrid(mm.TabulatedFunction):
         ).this
 
 
-class BiasingPotential(cvpack.OpenMMForceWrapper):
-    """
-    A bias potential applied to extra degrees of freedom.
-
-    Parameters
-    ----------
-    extra_dofs
-        The extra degrees of freedom subject to the bias potential.
-    expression
-        The mathematical expression defining the bias potential.
-    """
-
-    def __init__(
-        self,
-        extra_dofs: t.Sequence[ExtraDOF],
-        expression: str,
-    ) -> None:
-        self._extra_dofs = extra_dofs
-        super().__init__(
-            mm.CustomCompoundBondForce(len(extra_dofs), expression),
-            mmunit.kilojoules_per_mole,
-            name="biasing_potential",
-        )
-
-
 class SplineBiasingPotential(BiasingPotential):
     """
     A bias potential applied to extra degrees of freedom using a spline grid.
@@ -119,15 +169,19 @@ class SplineBiasingPotential(BiasingPotential):
             raise ValueError("Spline biasing potential requires 1 to 3 extra DOFs")
         if len(grid_sizes) != num_dims:
             raise ValueError("Grid sizes must match the number of extra DOFs")
-        expression = f"bias({','.join(xdof.name for xdof in extra_dofs)})"
-        for index, xdof in enumerate(extra_dofs):
-            variable = f"x{index}"
-            if xdof.bounds is not None:
-                variable = xdof.bounds.leptonExpression(variable)
-            expression += f";{xdof.name}={variable}"
-        super().__init__(extra_dofs, expression)
+        function = f"bias({','.join(xdof.name for xdof in extra_dofs)})"
+        super().__init__(extra_dofs, function)
         self._bias_grid = SplineGrid(extra_dofs, grid_sizes)
         self.addTabulatedFunction("bias", self._bias_grid)
+
+    def addKernel(
+        self,
+        context: mm.Context,
+        height: mmunit.Quantity,
+        bandwidths: t.Sequence[mmunit.Quantity],
+        centers: t.Sequence[mmunit.Quantity],
+    ) -> None:
+        pass
 
 
 class AdaptiveBiasingPotential(BiasingPotential):
@@ -146,7 +200,6 @@ class AdaptiveBiasingPotential(BiasingPotential):
     def __init__(
         self,
         extra_dofs: t.Sequence[ExtraDOF],
-        buffer_size: int = 100,
     ) -> None:
         summands = []
         for xdof in extra_dofs:
@@ -154,20 +207,21 @@ class AdaptiveBiasingPotential(BiasingPotential):
             if xdof.isPeriodic():
                 distance = f"(sin(pi*{distance})/pi)"  # von Mises kernel
             summands.append(f"({distance}/{xdof.name}_sigma)^2")
-        expression = f"height*exp(-0.5*({'+'.join(summands)}))"
-        for index, xdof in enumerate(extra_dofs):
-            variable = f"x{index}"
-            if xdof.bounds is not None:
-                variable = xdof.bounds.leptonExpression(variable)
-            expression += f";{xdof.name}={variable}"
-
-        super().__init__(extra_dofs, expression)
+        function = f"height*exp(-0.5*({'+'.join(summands)}))"
+        if any(xdof.isPeriodic() for xdof in extra_dofs):
+            function += f";pi={np.pi}"
+        super().__init__(extra_dofs, function)
         self.addPerBondParameter("height")
         for xdof in extra_dofs:
             self.addPerBondParameter(f"{xdof.name}_center")
         for xdof in extra_dofs:
             self.addPerBondParameter(f"{xdof.name}_sigma")
 
-        num_dims = len(extra_dofs)
-        for _ in range(buffer_size):
-            self.addBond(range(num_dims), [0] * (num_dims + 1) + [1] * num_dims)
+    def addKernel(
+        self,
+        context: mm.Context,
+        height: mmunit.Quantity,
+        bandwidths: t.Sequence[mmunit.Quantity],
+        centers: t.Sequence[mmunit.Quantity],
+    ) -> None:
+        pass

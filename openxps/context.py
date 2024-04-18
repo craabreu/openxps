@@ -75,8 +75,8 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi0],
     ...     umbrella_potential,
-    ...     #biasing_potential=xps.SplineBiasingPotential([phi0], [10]),
-    ...     biasing_potential=xps.AdaptiveBiasingPotential([phi0]),
+    ...     biasing_potential=xps.SplineBiasingPotential([phi0], [10]),
+    ...     #biasing_potential=xps.AdaptiveBiasingPotential([phi0]),
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
@@ -178,11 +178,38 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         )
         flipped_potential.addToSystem(extension_system)
 
+        if self._biasing_potential is not None:
+            self._biasing_potential.initialize(self._extra_dofs)
+            self._biasing_potential.addToSystem(extension_system)
+
         return mm.Context(
             extension_system,
             extension_integrator,
             mm.Platform.getPlatformByName("Reference"),
         )
+
+    def addBiasKernel(
+        self, height: mmunit.Quantity, bandwidths: t.Sequence[mmunit.Quantity]
+    ) -> None:
+        """
+        Add a Gaussian kernel to the biasing potential.
+
+        Parameters
+        ----------
+        height
+            The height of the bias kernel. It must have units of molar energy.
+        bandwidths
+            The bandwidths of the bias kernel in each dimension. They must have units
+            of the corresponding extra degrees of freedom.
+        """
+        try:
+            self._biasing_potential.addKernel(
+                self._extension_context, height, bandwidths, self.getExtraValues()
+            )
+        except AttributeError as error:
+            raise AttributeError(
+                "No biasing potential was provided when creating the context."
+            ) from error
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """
