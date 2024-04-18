@@ -76,7 +76,6 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     [phi0],
     ...     umbrella_potential,
     ...     biasing_potential=xps.SplineBiasingPotential([phi0], [10]),
-    ...     #biasing_potential=xps.AdaptiveBiasingPotential([phi0]),
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
@@ -85,6 +84,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
     (Quantity(value=..., unit=radian),)
+    >>> context.addBiasKernel(2 * unit.kilojoule_per_mole, [18 * unit.degree])
     >>> state = context.getExtensionContext().getState(getEnergy=True)
     >>> state.getPotentialEnergy()
     Quantity(value=..., unit=kilojoule/mole)
@@ -202,14 +202,17 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             The bandwidths of the bias kernel in each dimension. They must have units
             of the corresponding extra degrees of freedom.
         """
-        try:
-            self._biasing_potential.addKernel(
-                self._extension_context, height, bandwidths, self.getExtraValues()
-            )
-        except AttributeError as error:
+        if self._biasing_potential is None:
             raise AttributeError(
                 "No biasing potential was provided when creating the context."
-            ) from error
+            )
+        center = [
+            self.getParameter(xdof.name) * xdof.unit
+            for xdof in self._biasing_potential.getExtraDOFs()
+        ]
+        self._biasing_potential.addKernel(
+            self._extension_context, height, bandwidths, center
+        )
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """
@@ -266,14 +269,9 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         t.Tuple[mmunit.Quantity]
             A tuple containing the values of the extra degrees of freedom.
         """
-        state = mmswig.Context_getState(self._extension_context, mm.State.Positions)
-        positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-        for i, xdof in enumerate(self._extra_dofs):
-            value = positions[i].x
-            if xdof.bounds is not None:
-                value, _ = xdof.bounds.wrap(value, 0)
-            positions[i] = value * xdof.unit
-        return tuple(positions)
+        return tuple(
+            self.getParameter(xdof.name) * xdof.unit for xdof in self._extra_dofs
+        )
 
     def setExtraVelocities(self, velocities: t.Iterable[mmunit.Quantity]) -> None:
         """
