@@ -46,7 +46,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             variable = f"x{index}"
             if xdof.bounds is not None:
                 variable = xdof.bounds.leptonExpression(variable)
-            expression += f";{xdof.name}={variable}"
+            expression += f";\n{xdof.name}={variable}"
         super().__init__(
             mm.CustomCompoundBondForce(len(extra_dofs), expression),
             mmunit.kilojoules_per_mole,
