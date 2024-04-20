@@ -11,14 +11,14 @@
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
     <script src="../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../_static/doctools.js?v=888ff710"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="ExtensionWriter" href="ExtensionWriter.html" />
-    <link rel="prev" title="Classes" href="classes.html" />
+    <link rel="prev" title="SplineBiasingPotential" href="SplineBiasingPotential.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -40,7 +40,7 @@
 <h1>ExtendedSpaceContext<a class="headerlink" href="#extendedspacecontext" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_dofs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling_potential</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_dofs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling_potential</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">biasing_potential</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
 <dd><p>Wraps an <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> object to include extra degrees of freedom (DOFs) and
 allow for extended phase-space (XPS) simulations.</p>
 <p><strong>Note</strong>: The system and integrator attached to the context are modified in-place.</p>
@@ -51,13 +51,14 @@ a custom function that advances the physical and extension systems in tandem.</p
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>context</strong> (<em>Context</em>) – The original OpenMM context containing the physical system.</p></li>
-<li><p><strong>extra_dofs</strong> (<em>Iterable</em><em>[</em><a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><em>ExtraDOF</em></a><em>]</em>) – A group of extra degrees of freedom to be included in the XPS simulation.</p></li>
+<li><p><strong>extra_dofs</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><em>ExtraDOF</em></a><em>]</em>) – A group of extra degrees of freedom to be included in the XPS simulation.</p></li>
 <li><p><strong>coupling_potential</strong> (<em>MetaCollectiveVariable</em>) – A meta-collective variable defining the potential energy term that couples the
 physical system to the extra DOFs. It must have units of <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mole</span></code>
 or equivalent.</p></li>
 <li><p><strong>integrator_template</strong> (<em>Integrator</em><em> | </em><em>None</em>) – An <a class="reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html">openmm.Integrator</a> object to be used as a template for the algorithm that
 advances the extra DOFs. If not provided, the physical system’s integrator is
 used as a template.</p></li>
+<li><p><strong>biasing_potential</strong> (<em>SplineGrid</em><em> | </em><em>None</em>) – A bias potential applied to the extra DOFs. If not provided, no bias is applied.</p></li>
 </ul>
 </dd>
 </dl>
@@ -86,6 +87,7 @@ used as a template.</p></li>
 <span class="gp">... </span>    <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">platform</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
 <span class="gp">... </span>    <span class="n">umbrella_potential</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">biasing_potential</span><span class="o">=</span><span class="n">xps</span><span class="o">.</span><span class="n">SplineBiasingPotential</span><span class="p">([</span><span class="n">phi0</span><span class="p">],</span> <span class="p">[</span><span class="mi">10</span><span class="p">]),</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setVelocitiesToTemperature</span><span class="p">(</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
@@ -94,12 +96,28 @@ used as a template.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getExtraValues</span><span class="p">()</span>
 <span class="go">(Quantity(value=..., unit=radian),)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">addBiasKernel</span><span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span> <span class="p">[</span><span class="mi">18</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">state</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">()</span>
 <span class="go">Quantity(value=..., unit=kilojoule/mole)</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.addBiasKernel">
+<span class="sig-name descname"><span class="pre">addBiasKernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">height</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bandwidths</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.addBiasKernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.addBiasKernel" title="Link to this definition">¶</a></dt>
+<dd><p>Add a Gaussian kernel to the biasing potential.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>height</strong> (<em>Quantity</em>) – The height of the bias kernel. It must have units of molar energy.</p></li>
+<li><p><strong>bandwidths</strong> (<em>Sequence</em><em>[</em><em>Quantity</em><em>]</em>) – The bandwidths of the bias kernel in each dimension. They must have units
+of the corresponding extra degrees of freedom.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtensionContext">
 <span class="sig-name descname"><span class="pre">getExtensionContext</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtensionContext" title="Link to this definition">¶</a></dt>
@@ -229,6 +247,7 @@ degrees of freedom.</p>
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="SplineBiasingPotential.html">SplineBiasingPotential</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">ExtendedSpaceContext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtraDOF.html">ExtraDOF</a></li>
@@ -239,7 +258,7 @@ degrees of freedom.</p>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
 </ul>
 
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
@@ -247,7 +266,7 @@ degrees of freedom.</p>
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
@@ -257,7 +276,7 @@ degrees of freedom.</p>
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
       |

@@ -4,6 +4,7 @@ Classes
 .. toctree::
     :titlesonly:
 
+    SplineBiasingPotential
     ExtendedSpaceContext
     ExtensionWriter
     ExtraDOF

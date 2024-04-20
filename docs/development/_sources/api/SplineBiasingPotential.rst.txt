@@ -1,0 +1,11 @@
+SplineBiasingPotential
+======================
+
+.. currentmodule:: openxps
+.. autoclass:: SplineBiasingPotential
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getBias
+    .. automethod:: initialize

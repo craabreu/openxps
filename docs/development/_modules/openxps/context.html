@@ -10,7 +10,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=572d9513" />
     <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../../_static/doctools.js?v=888ff710"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=ccdb6887"></script>
@@ -53,12 +53,13 @@
 <span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
 <span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
+<span class="kn">from</span> <span class="nn">.biasing</span> <span class="kn">import</span> <span class="n">SplineGrid</span>
 <span class="kn">from</span> <span class="nn">.extra_dof</span> <span class="kn">import</span> <span class="n">ExtraDOF</span>
 
 
 <div class="viewcode-block" id="ExtendedSpaceContext">
 <a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext">[docs]</a>
-<span class="k">class</span> <span class="nc">ExtendedSpaceContext</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">ExtendedSpaceContext</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>  <span class="c1"># pylint: disable=too-many-instance-attributes</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Wraps an :OpenMM:`Context` object to include extra degrees of freedom (DOFs) and</span>
 <span class="sd">    allow for extended phase-space (XPS) simulations.</span>
@@ -83,6 +84,8 @@
 <span class="sd">        An :OpenMM:`Integrator` object to be used as a template for the algorithm that</span>
 <span class="sd">        advances the extra DOFs. If not provided, the physical system&#39;s integrator is</span>
 <span class="sd">        used as a template.</span>
+<span class="sd">    biasing_potential</span>
+<span class="sd">        A bias potential applied to the extra DOFs. If not provided, no bias is applied.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -110,6 +113,7 @@
 <span class="sd">    ...     openmm.Context(model.system, integrator, platform),</span>
 <span class="sd">    ...     [phi0],</span>
 <span class="sd">    ...     umbrella_potential,</span>
+<span class="sd">    ...     biasing_potential=xps.SplineBiasingPotential([phi0], [10]),</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; context.setPositions(model.positions)</span>
 <span class="sd">    &gt;&gt;&gt; context.setVelocitiesToTemperature(300 * unit.kelvin)</span>
@@ -118,17 +122,19 @@
 <span class="sd">    &gt;&gt;&gt; context.getIntegrator().step(100)</span>
 <span class="sd">    &gt;&gt;&gt; context.getExtraValues()</span>
 <span class="sd">    (Quantity(value=..., unit=radian),)</span>
+<span class="sd">    &gt;&gt;&gt; context.addBiasKernel(2 * unit.kilojoule_per_mole, [18 * unit.degree])</span>
 <span class="sd">    &gt;&gt;&gt; state = context.getExtensionContext().getState(getEnergy=True)</span>
 <span class="sd">    &gt;&gt;&gt; state.getPotentialEnergy()</span>
 <span class="sd">    Quantity(value=..., unit=kilojoule/mole)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># pylint: disable=super-init-not-called</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># pylint: disable=super-init-not-called,too-many-arguments</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
-        <span class="n">extra_dofs</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">ExtraDOF</span><span class="p">],</span>
+        <span class="n">extra_dofs</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">ExtraDOF</span><span class="p">],</span>
         <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
         <span class="n">integrator_template</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">biasing_potential</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">SplineGrid</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">this</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_system</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span>
@@ -138,6 +144,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_system</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">(</span><span class="n">preserveState</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_biasing_potential</span> <span class="o">=</span> <span class="n">biasing_potential</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_createExtensionContext</span><span class="p">(</span><span class="n">integrator_template</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">MethodType</span><span class="p">(</span>
             <span class="n">partial</span><span class="p">(</span>
@@ -209,11 +216,44 @@
         <span class="p">)</span>
         <span class="n">flipped_potential</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">extension_system</span><span class="p">)</span>
 
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_biasing_potential</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_biasing_potential</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_biasing_potential</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">extension_system</span><span class="p">)</span>
+
         <span class="k">return</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span>
             <span class="n">extension_system</span><span class="p">,</span>
             <span class="n">extension_integrator</span><span class="p">,</span>
             <span class="n">mm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">&quot;Reference&quot;</span><span class="p">),</span>
         <span class="p">)</span>
+
+<div class="viewcode-block" id="ExtendedSpaceContext.addBiasKernel">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.addBiasKernel">[docs]</a>
+    <span class="k">def</span> <span class="nf">addBiasKernel</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">height</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="n">bandwidths</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add a Gaussian kernel to the biasing potential.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        height</span>
+<span class="sd">            The height of the bias kernel. It must have units of molar energy.</span>
+<span class="sd">        bandwidths</span>
+<span class="sd">            The bandwidths of the bias kernel in each dimension. They must have units</span>
+<span class="sd">            of the corresponding extra degrees of freedom.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_biasing_potential</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+                <span class="s2">&quot;No biasing potential was provided when creating the context.&quot;</span>
+            <span class="p">)</span>
+        <span class="n">center</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">*</span> <span class="n">xdof</span><span class="o">.</span><span class="n">unit</span>
+            <span class="k">for</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_biasing_potential</span><span class="o">.</span><span class="n">getExtraDOFs</span><span class="p">()</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_biasing_potential</span><span class="o">.</span><span class="n">addKernel</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">bandwidths</span><span class="p">,</span> <span class="n">center</span>
+        <span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="ExtendedSpaceContext.getExtraDOFs">
 <a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getExtraDOFs">[docs]</a>
@@ -281,14 +321,9 @@
 <span class="sd">        t.Tuple[mmunit.Quantity]</span>
 <span class="sd">            A tuple containing the values of the extra degrees of freedom.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">state</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_getState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
-        <span class="n">positions</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span><span class="p">):</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">positions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">x</span>
-            <span class="k">if</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">xdof</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="n">positions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span> <span class="o">*</span> <span class="n">xdof</span><span class="o">.</span><span class="n">unit</span>
-        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">xdof</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">*</span> <span class="n">xdof</span><span class="o">.</span><span class="n">unit</span> <span class="k">for</span> <span class="n">xdof</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extra_dofs</span>
+        <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceContext.setExtraVelocities">
@@ -454,7 +489,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../references.html">Bibliography</a></li>
 </ul>
 
-<div id="searchbox" style="display: none" role="search">
+<search id="searchbox" style="display: none" role="search">
   <h3 id="searchlabel">Quick search</h3>
     <div class="searchformwrapper">
     <form class="search" action="../../search.html" method="get">
@@ -462,7 +497,7 @@
       <input type="submit" value="Go" />
     </form>
     </div>
-</div>
+</search>
 <script>document.getElementById('searchbox').style.display = "block"</script>
         </div>
       </div>
@@ -472,7 +507,7 @@
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.2.6</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
       
     </div>
