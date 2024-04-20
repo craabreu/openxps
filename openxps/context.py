@@ -17,10 +17,11 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
+from .biasing import SplineGrid
 from .extra_dof import ExtraDOF
 
 
-class ExtendedSpaceContext(mm.Context):
+class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-attributes
     """
     Wraps an :OpenMM:`Context` object to include extra degrees of freedom (DOFs) and
     allow for extended phase-space (XPS) simulations.
@@ -45,6 +46,8 @@ class ExtendedSpaceContext(mm.Context):
         An :OpenMM:`Integrator` object to be used as a template for the algorithm that
         advances the extra DOFs. If not provided, the physical system's integrator is
         used as a template.
+    biasing_potential
+        A bias potential applied to the extra DOFs. If not provided, no bias is applied.
 
     Example
     -------
@@ -72,6 +75,7 @@ class ExtendedSpaceContext(mm.Context):
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi0],
     ...     umbrella_potential,
+    ...     biasing_potential=xps.SplineBiasingPotential([phi0], [10]),
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
@@ -80,17 +84,19 @@ class ExtendedSpaceContext(mm.Context):
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
     (Quantity(value=..., unit=radian),)
+    >>> context.addBiasKernel(2 * unit.kilojoule_per_mole, [18 * unit.degree])
     >>> state = context.getExtensionContext().getState(getEnergy=True)
     >>> state.getPotentialEnergy()
     Quantity(value=..., unit=kilojoule/mole)
     """
 
-    def __init__(  # pylint: disable=super-init-not-called
+    def __init__(  # pylint: disable=super-init-not-called,too-many-arguments
         self,
         context: mm.Context,
-        extra_dofs: t.Iterable[ExtraDOF],
+        extra_dofs: t.Sequence[ExtraDOF],
         coupling_potential: cvpack.MetaCollectiveVariable,
         integrator_template: t.Optional[mm.Integrator] = None,
+        biasing_potential: t.Optional[SplineGrid] = None,
     ) -> None:
         self.this = context.this
         self._system = context.getSystem()
@@ -100,6 +106,7 @@ class ExtendedSpaceContext(mm.Context):
         self._validate()
         self._coupling_potential.addToSystem(self._system)
         self.reinitialize(preserveState=True)
+        self._biasing_potential = biasing_potential
         self._extension_context = self._createExtensionContext(integrator_template)
         self._integrator.step = MethodType(
             partial(
@@ -171,10 +178,40 @@ class ExtendedSpaceContext(mm.Context):
         )
         flipped_potential.addToSystem(extension_system)
 
+        if self._biasing_potential is not None:
+            self._biasing_potential.initialize(self._extra_dofs)
+            self._biasing_potential.addToSystem(extension_system)
+
         return mm.Context(
             extension_system,
             extension_integrator,
             mm.Platform.getPlatformByName("Reference"),
+        )
+
+    def addBiasKernel(
+        self, height: mmunit.Quantity, bandwidths: t.Sequence[mmunit.Quantity]
+    ) -> None:
+        """
+        Add a Gaussian kernel to the biasing potential.
+
+        Parameters
+        ----------
+        height
+            The height of the bias kernel. It must have units of molar energy.
+        bandwidths
+            The bandwidths of the bias kernel in each dimension. They must have units
+            of the corresponding extra degrees of freedom.
+        """
+        if self._biasing_potential is None:
+            raise AttributeError(
+                "No biasing potential was provided when creating the context."
+            )
+        center = [
+            self.getParameter(xdof.name) * xdof.unit
+            for xdof in self._biasing_potential.getExtraDOFs()
+        ]
+        self._biasing_potential.addKernel(
+            self._extension_context, height, bandwidths, center
         )
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
@@ -232,14 +269,9 @@ class ExtendedSpaceContext(mm.Context):
         t.Tuple[mmunit.Quantity]
             A tuple containing the values of the extra degrees of freedom.
         """
-        state = mmswig.Context_getState(self._extension_context, mm.State.Positions)
-        positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-        for i, xdof in enumerate(self._extra_dofs):
-            value = positions[i].x
-            if xdof.bounds is not None:
-                value, _ = xdof.bounds.wrap(value, 0)
-            positions[i] = value * xdof.unit
-        return tuple(positions)
+        return tuple(
+            self.getParameter(xdof.name) * xdof.unit for xdof in self._extra_dofs
+        )
 
     def setExtraVelocities(self, velocities: t.Iterable[mmunit.Quantity]) -> None:
         """
