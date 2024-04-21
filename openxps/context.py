@@ -17,7 +17,7 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .biasing import SplineGrid
+from .biasing_potential import BiasingPotential
 from .extra_dof import ExtraDOF
 
 
@@ -65,26 +65,31 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
     ...     phi0=pi*unit.radian,
     ... )
+    >>> temp = 300 * unit.kelvin
     >>> integrator = openmm.LangevinMiddleIntegrator(
-    ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond
+    ...     temp, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
     >>> platform = openmm.Platform.getPlatformByName("Reference")
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.ExtraDOF("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> height = 2 * unit.kilojoule_per_mole
+    >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi0],
     ...     umbrella_potential,
-    ...     biasing_potential=xps.SplineBiasingPotential([phi0], [10]),
+    ...     biasing_potential=xps.MetadynamicsBias(
+    ...         [phi0], [sigma], height, temp, 10, [100]
+    ...     ),
     ... )
     >>> context.setPositions(model.positions)
-    >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
+    >>> context.setVelocitiesToTemperature(temp)
     >>> context.setExtraValues([180 * unit.degree])
-    >>> context.setExtraVelocitiesToTemperature(300 * unit.kelvin)
+    >>> context.setExtraVelocitiesToTemperature(temp)
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
     (Quantity(value=..., unit=radian),)
-    >>> context.addBiasKernel(2 * unit.kilojoule_per_mole, [18 * unit.degree])
+    >>> context.addBiasKernel()
     >>> state = context.getExtensionContext().getState(getEnergy=True)
     >>> state.getPotentialEnergy()
     Quantity(value=..., unit=kilojoule/mole)
@@ -96,7 +101,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         extra_dofs: t.Sequence[ExtraDOF],
         coupling_potential: cvpack.MetaCollectiveVariable,
         integrator_template: t.Optional[mm.Integrator] = None,
-        biasing_potential: t.Optional[SplineGrid] = None,
+        biasing_potential: t.Optional[BiasingPotential] = None,
     ) -> None:
         self.this = context.this
         self._system = context.getSystem()
@@ -108,6 +113,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         self.reinitialize(preserveState=True)
         self._biasing_potential = biasing_potential
         self._extension_context = self._createExtensionContext(integrator_template)
+
         self._integrator.step = MethodType(
             partial(
                 integrate_extended_space,
@@ -188,31 +194,16 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             mm.Platform.getPlatformByName("Reference"),
         )
 
-    def addBiasKernel(
-        self, height: mmunit.Quantity, bandwidths: t.Sequence[mmunit.Quantity]
-    ) -> None:
+    def addBiasKernel(self) -> None:
         """
         Add a Gaussian kernel to the biasing potential.
-
-        Parameters
-        ----------
-        height
-            The height of the bias kernel. It must have units of molar energy.
-        bandwidths
-            The bandwidths of the bias kernel in each dimension. They must have units
-            of the corresponding extra degrees of freedom.
         """
-        if self._biasing_potential is None:
+        try:
+            self._biasing_potential.addKernel(self._extension_context)
+        except AttributeError as error:
             raise AttributeError(
                 "No biasing potential was provided when creating the context."
-            )
-        center = [
-            self.getParameter(xdof.name) * xdof.unit
-            for xdof in self._biasing_potential.getExtraDOFs()
-        ]
-        self._biasing_potential.addKernel(
-            self._extension_context, height, bandwidths, center
-        )
+            ) from error
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """
