@@ -17,7 +17,7 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .biasing import SplineGrid
+from .biasing import BiasingPotential
 from .extra_dof import ExtraDOF
 
 
@@ -96,7 +96,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         extra_dofs: t.Sequence[ExtraDOF],
         coupling_potential: cvpack.MetaCollectiveVariable,
         integrator_template: t.Optional[mm.Integrator] = None,
-        biasing_potential: t.Optional[SplineGrid] = None,
+        biasing_potential: t.Optional[BiasingPotential] = None,
     ) -> None:
         self.this = context.this
         self._system = context.getSystem()
@@ -106,8 +106,11 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         self._validate()
         self._coupling_potential.addToSystem(self._system)
         self.reinitialize(preserveState=True)
-        self._biasing_potential = biasing_potential
         self._extension_context = self._createExtensionContext(integrator_template)
+        if biasing_potential is not None:
+            biasing_potential.initialize(self._extension_context, self._extra_dofs)
+        self._biasing_potential = biasing_potential
+
         self._integrator.step = MethodType(
             partial(
                 integrate_extended_space,
@@ -178,10 +181,6 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         )
         flipped_potential.addToSystem(extension_system)
 
-        if self._biasing_potential is not None:
-            self._biasing_potential.initialize(self._extra_dofs)
-            self._biasing_potential.addToSystem(extension_system)
-
         return mm.Context(
             extension_system,
             extension_integrator,
@@ -210,9 +209,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             self.getParameter(xdof.name) * xdof.unit
             for xdof in self._biasing_potential.getExtraDOFs()
         ]
-        self._biasing_potential.addKernel(
-            self._extension_context, height, bandwidth, center
-        )
+        self._biasing_potential.addKernel(height, bandwidth, center)
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """

@@ -43,6 +43,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         force_constructor: t.Callable[[str], mm.Force],
     ) -> None:
         self._extra_dofs = tuple(extra_dofs)
+        self._context = None
         self._extra_dof_indices = None
         self._kernel_info = []
         expression = function
@@ -59,7 +60,6 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
 
     def _performAddKernel(
         self,
-        context: mm.Context,
         height: float,
         bandwidth: t.Sequence[float],
         center: t.Sequence[float],
@@ -68,9 +68,29 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             "Method _performAddKernel must be implemented by derived classes"
         )
 
+    def initialize(self, context: mm.Context, extra_dofs: t.Sequence[ExtraDOF]) -> None:
+        """
+        Initialize the bias potential for a specific context.
+
+        Parameters
+        ----------
+        context
+            The extension context where the bias potential will be applied.
+        extra_dofs
+            All the extra degrees of freedom in the extension context.
+        """
+        try:
+            self._extra_dof_indices = tuple(map(extra_dofs.index, self._extra_dofs))
+        except ValueError as error:
+            raise ValueError(
+                "Not all extra DOFs in the bias potential are present in the context"
+            ) from error
+        self._context = context
+        self.addToSystem(context.getSystem())
+        context.reinitialize(preserveState=True)
+
     def addKernel(
         self,
-        context: mm.Context,
         height: mmunit.Quantity,
         bandwidth: t.Sequence[mmunit.Quantity],
         center: t.Sequence[mmunit.Quantity],
@@ -80,8 +100,6 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
 
         Parameters
         ----------
-        context
-            The extension context where the kernel will be added.
         height
             The height of the kernel with units of energy.
         bandwidth
@@ -101,7 +119,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             for quantity, xdof in zip(center, self._extra_dofs)
         ]
         self._kernel_info.append(KernelInfo(height, bandwidth, center))
-        self._performAddKernel(context, height, bandwidth, center)
+        self._performAddKernel(height, bandwidth, center)
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """
@@ -113,24 +131,6 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             The extra degrees of freedom subject to the bias potential.
         """
         return self._extra_dofs
-
-    def initialize(self, context_extra_dofs: t.Sequence[ExtraDOF]) -> None:
-        """
-        Initialize the bias potential for a specific context.
-
-        Parameters
-        ----------
-        context_extra_dofs
-            The extra degrees of freedom in the context.
-        """
-        try:
-            self._extra_dof_indices = tuple(
-                map(context_extra_dofs.index, self._extra_dofs)
-            )
-        except ValueError as error:
-            raise ValueError(
-                "Not all extra DOFs in the bias potential are present in the context"
-            ) from error
 
 
 class SplineGrid(mm.TabulatedFunction):
@@ -314,14 +314,13 @@ class MetadynamicsPotential(BiasingPotential):
 
     def _performAddKernel(
         self,
-        context: mm.Context,
         height: float,
         bandwidth: t.Sequence[float],
         center: t.Sequence[float],
     ) -> None:
         if self._bias_grid is None:
             self.addBond(self._extra_dof_indices, [height, *bandwidth, *center])
-            context.reinitialize(preserveState=True)
+            self._context.reinitialize(preserveState=True)
         else:
             exponents = []
             for i, xdof in enumerate(self._extra_dofs):
@@ -337,12 +336,13 @@ class MetadynamicsPotential(BiasingPotential):
                 else functools.reduce(np.add.outer, reversed(exponents))
             )
             self._bias_grid.addBias(kernel)
-            self.updateParametersInContext(context)
+            self.updateParametersInContext(self._context)
 
-    def initialize(self, context_extra_dofs: t.Sequence[ExtraDOF]) -> None:
-        super().initialize(context_extra_dofs)
+    def initialize(self, context: mm.Context, extra_dofs: t.Sequence[ExtraDOF]) -> None:
+        super().initialize(context, extra_dofs)
         if self._bias_grid is not None:
             self.addBond(self._extra_dof_indices, [])
+            context.reinitialize(preserveState=True)
 
     def getBias(self) -> np.ndarray:
         """
