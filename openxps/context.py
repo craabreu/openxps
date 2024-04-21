@@ -111,10 +111,8 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         self._validate()
         self._coupling_potential.addToSystem(self._system)
         self.reinitialize(preserveState=True)
-        self._extension_context = self._createExtensionContext(integrator_template)
-        if biasing_potential is not None:
-            biasing_potential.initialize(self._extension_context, self._extra_dofs)
         self._biasing_potential = biasing_potential
+        self._extension_context = self._createExtensionContext(integrator_template)
 
         self._integrator.step = MethodType(
             partial(
@@ -186,6 +184,10 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         )
         flipped_potential.addToSystem(extension_system)
 
+        if self._biasing_potential is not None:
+            self._biasing_potential.initialize(self._extra_dofs)
+            self._biasing_potential.addToSystem(extension_system)
+
         return mm.Context(
             extension_system,
             extension_integrator,
@@ -197,7 +199,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         Add a Gaussian kernel to the biasing potential.
         """
         try:
-            self._biasing_potential.addKernel()
+            self._biasing_potential.addKernel(self._extension_context)
         except AttributeError as error:
             raise AttributeError(
                 "No biasing potential was provided when creating the context."

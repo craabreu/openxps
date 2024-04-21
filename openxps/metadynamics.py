@@ -119,11 +119,13 @@ class MetadynamicsBias(BiasingPotential):
             self._bias_grid = SplineGrid(extra_dofs, grid_sizes)
             self.addTabulatedFunction("bias", self._bias_grid)
 
-    def _performAddKernel(self, center: t.Sequence[float], potential: float) -> None:
+    def _performAddKernel(
+        self, context: mm.Context, center: t.Sequence[float], potential: float
+    ) -> None:
         height = self._initial_height * np.exp(-potential / self._kb_delta_t)
         if self._bias_grid is None:
             self.addBond(self._extra_dof_indices, [height, *center])
-            self._context.reinitialize(preserveState=True)
+            context.reinitialize(preserveState=True)
         else:
             exponents = []
             for i, xdof in enumerate(self._extra_dofs):
@@ -139,13 +141,12 @@ class MetadynamicsBias(BiasingPotential):
                 else functools.reduce(np.add.outer, reversed(exponents))
             )
             self._bias_grid.addBias(kernel)
-            self.updateParametersInContext(self._context)
+            self.updateParametersInContext(context)
 
-    def initialize(self, context: mm.Context, extra_dofs: t.Sequence[ExtraDOF]) -> None:
-        super().initialize(context, extra_dofs)
+    def initialize(self, context_extra_dofs: t.Sequence[ExtraDOF]) -> None:
+        super().initialize(context_extra_dofs)
         if self._bias_grid is not None:
             self.addBond(self._extra_dof_indices, [])
-            context.reinitialize(preserveState=True)
 
     def getBias(self) -> np.ndarray:
         """
