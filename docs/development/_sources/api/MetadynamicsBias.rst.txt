@@ -1,8 +1,8 @@
-SplineBiasingPotential
-======================
+MetadynamicsBias
+================
 
 .. currentmodule:: openxps
-.. autoclass:: SplineBiasingPotential
+.. autoclass:: MetadynamicsBias
     :member-order: alphabetical
 
     .. rubric:: Methods
