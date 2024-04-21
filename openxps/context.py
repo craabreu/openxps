@@ -17,7 +17,7 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .biasing import BiasingPotential
+from .biasing_potential import BiasingPotential
 from .extra_dof import ExtraDOF
 
 
