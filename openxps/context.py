@@ -78,7 +78,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi0],
     ...     umbrella_potential,
-    ...     biasing_potential=xps.MetadynamicsPotential(
+    ...     biasing_potential=xps.MetadynamicsBias(
     ...         [phi0], [sigma], height, temp, 10, [100]
     ...     ),
     ... )

@@ -1,5 +1,5 @@
 """
-.. module:: openxps.metadynamics_potential
+.. module:: openxps.metadynamics
    :platform: Linux, Windows, macOS
    :synopsis: Biasing potentials applied to extra degrees of freedom.
 
@@ -18,7 +18,7 @@ from .biasing_potential import BiasingPotential
 from .extra_dof import ExtraDOF
 
 
-class MetadynamicsPotential(BiasingPotential):
+class MetadynamicsBias(BiasingPotential):
     r"""
     A Metadynamics potential applied to extra degrees of freedom.
 
@@ -77,17 +77,19 @@ class MetadynamicsPotential(BiasingPotential):
         bias_factor: float,
         grid_sizes: t.Union[t.Sequence[int], None],
     ) -> None:
+        if bias_factor <= 1:
+            raise ValueError("bias_factor must be a float larger than 1")
         self._bandwidth = [
             quantity.value_in_unit(xdof.unit)
             for quantity, xdof in zip(bandwidth, extra_dofs)
         ]
-        self._initial_height = initial_height.value_in_unit(mmunit.kilojoules_per_mole)
-        if bias_factor <= 1:
-            raise ValueError("bias_factor must be a float larger than 1")
-        self._kb_delta_t = mmunit.MOLAR_GAS_CONSTANT_R * temperature * (bias_factor - 1)
-        if not self._kb_delta_t.unit.is_compatible(mmunit.kilojoules_per_mole):
-            raise ValueError("Invalid temperature units")
-
+        self._initial_height, self._kb_delta_t = [
+            quantity.value_in_unit(mmunit.kilojoules_per_mole)
+            for quantity in (
+                initial_height,
+                mmunit.MOLAR_GAS_CONSTANT_R * temperature * (bias_factor - 1),
+            )
+        ]
         if grid_sizes is None:
             summands = []
             distances = []
@@ -117,10 +119,8 @@ class MetadynamicsPotential(BiasingPotential):
             self._bias_grid = SplineGrid(extra_dofs, grid_sizes)
             self.addTabulatedFunction("bias", self._bias_grid)
 
-    def _performAddKernel(self, center: t.Sequence[float]) -> None:
-        height = self._initial_height * np.exp(
-            -self.getValue(self._context) / self._kb_delta_t
-        )
+    def _performAddKernel(self, center: t.Sequence[float], potential: float) -> None:
+        height = self._initial_height * np.exp(-potential / self._kb_delta_t)
         if self._bias_grid is None:
             self.addBond(self._extra_dof_indices, [height, *center])
             self._context.reinitialize(preserveState=True)
@@ -189,7 +189,7 @@ class SplineGrid(mm.TabulatedFunction):
     >>> mass = 1.0 * unit.dalton
     >>> bounds = xps.bounds.Reflective(0, 1, unit.nanometers)
     >>> extra_dof = xps.ExtraDOF("x", unit.nanometers, mass, bounds)
-    >>> grid = xps.metadynamics_potential.SplineGrid([extra_dof], [10])
+    >>> grid = xps.metadynamics.SplineGrid([extra_dof], [10])
     """
 
     def __init__(  # pylint: disable=super-init-not-called

@@ -39,8 +39,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         force_constructor: t.Callable[[str], mm.Force],
     ) -> None:
         self._extra_dofs = tuple(extra_dofs)
-        self._context = None
-        self._extra_dof_indices = None
+        self._context = self._extra_dof_indices = self._get_state_args = None
         expression = function
         for index, xdof in enumerate(extra_dofs, start=1):
             variable = f"x{index}"
@@ -53,7 +52,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             name="biasing_potential",
         )
 
-    def _performAddKernel(self, center: t.Sequence[float]) -> None:
+    def _performAddKernel(self, center: t.Sequence[float], potential: float) -> None:
         raise NotImplementedError(
             "Method _performAddKernel must be implemented by derived classes"
         )
@@ -77,6 +76,12 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             ) from error
         self._context = context
         self.addToSystem(context.getSystem())
+        self._get_state_args = (
+            self._context,
+            mm.State.Positions | mm.State.Energy,
+            False,
+            1 << self.getForceGroup(),
+        )
         context.reinitialize(preserveState=True)
 
     def addKernel(self) -> None:
@@ -86,7 +91,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         if self._extra_dof_indices is None:
             raise ValueError("Bias potential has not been initialized")
 
-        state = mmswig.Context_getState(self._context, mm.State.Positions)
+        state = mmswig.Context_getState(*self._get_state_args)
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         center = []
         for xdof, index in zip(self._extra_dofs, self._extra_dof_indices):
@@ -94,15 +99,4 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             if xdof.bounds is not None:
                 value, _ = xdof.bounds.wrap(value, 0)
             center.append(value)
-        self._performAddKernel(center)
-
-    def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
-        """
-        Get the extra degrees of freedom subject to the bias potential.
-
-        Returns
-        -------
-        Tuple[ExtraDOF]
-            The extra degrees of freedom subject to the bias potential.
-        """
-        return self._extra_dofs
+        self._performAddKernel(center, mmswig.State_getPotentialEnergy(state))
