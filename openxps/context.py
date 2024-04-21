@@ -72,12 +72,14 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     >>> platform = openmm.Platform.getPlatformByName("Reference")
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.ExtraDOF("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> height = 2 * unit.kilojoule_per_mole
+    >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi0],
     ...     umbrella_potential,
     ...     biasing_potential=xps.MetadynamicsPotential(
-    ...         [phi0], 2 * unit.kilojoule_per_mole, temp, 10, [10]
+    ...         [phi0], [sigma], height, temp, 10, [100]
     ...     ),
     ... )
     >>> context.setPositions(model.positions)
@@ -87,7 +89,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
     (Quantity(value=..., unit=radian),)
-    >>> context.addBiasKernel([18 * unit.degree])
+    >>> context.addBiasKernel()
     >>> state = context.getExtensionContext().getState(getEnergy=True)
     >>> state.getPotentialEnergy()
     Quantity(value=..., unit=kilojoule/mole)
@@ -190,15 +192,9 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             mm.Platform.getPlatformByName("Reference"),
         )
 
-    def addBiasKernel(self, bandwidth: t.Sequence[mmunit.Quantity]) -> None:
+    def addBiasKernel(self) -> None:
         """
         Add a Gaussian kernel to the biasing potential.
-
-        Parameters
-        ----------
-        bandwidth
-            The bandwidth vector of the bias kernel in each dimension. Each element
-            must have units of the corresponding extra degree of freedom.
         """
         if self._biasing_potential is None:
             raise AttributeError(
@@ -208,7 +204,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             self.getParameter(xdof.name) * xdof.unit
             for xdof in self._biasing_potential.getExtraDOFs()
         ]
-        self._biasing_potential.addKernel(bandwidth, center)
+        self._biasing_potential.addKernel(center)
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """

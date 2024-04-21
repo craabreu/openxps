@@ -54,11 +54,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             name="biasing_potential",
         )
 
-    def _performAddKernel(
-        self,
-        bandwidth: t.Sequence[float],
-        center: t.Sequence[float],
-    ) -> None:
+    def _performAddKernel(self, center: t.Sequence[float]) -> None:
         raise NotImplementedError(
             "Method _performAddKernel must be implemented by derived classes"
         )
@@ -84,32 +80,22 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         self.addToSystem(context.getSystem())
         context.reinitialize(preserveState=True)
 
-    def addKernel(
-        self,
-        bandwidth: t.Sequence[mmunit.Quantity],
-        center: t.Sequence[mmunit.Quantity],
-    ) -> None:
+    def addKernel(self, center: t.Sequence[mmunit.Quantity]) -> None:
         """
         Add a Gaussian kernel to the bias potential.
 
         Parameters
         ----------
-        bandwidth
-            The bandwidth vector of the kernel.
         center
             The center vector of the kernel.
         """
         if self._extra_dof_indices is None:
             raise ValueError("Bias potential has not been initialized")
-        bandwidth = [
-            quantity.value_in_unit(xdof.unit)
-            for quantity, xdof in zip(bandwidth, self._extra_dofs)
-        ]
         center = [
             quantity.value_in_unit(xdof.unit)
             for quantity, xdof in zip(center, self._extra_dofs)
         ]
-        self._performAddKernel(bandwidth, center)
+        self._performAddKernel(center)
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """
@@ -261,6 +247,9 @@ class MetadynamicsPotential(BiasingPotential):
     ----------
     extra_dofs
         The extra degrees of freedom subject to the bias potential.
+    bandwidth
+        The bandwidth vector of the Gaussian kernel. Each element must have units of
+        the corresponding extra degree of freedom.
     initial_height
         The initial height of the Gaussian kernels. It must have units of molar energy.
     temperature
@@ -282,11 +271,16 @@ class MetadynamicsPotential(BiasingPotential):
     def __init__(  # pylint: disable=too-many-arguments
         self,
         extra_dofs: t.Sequence[ExtraDOF],
+        bandwidth: t.Sequence[mmunit.Quantity],
         initial_height: mmunit.Quantity,
         temperature: mmunit.Quantity,
         bias_factor: float,
         grid_sizes: t.Union[t.Sequence[int], None],
     ) -> None:
+        self._bandwidth = [
+            quantity.value_in_unit(xdof.unit)
+            for quantity, xdof in zip(bandwidth, extra_dofs)
+        ]
         self._initial_height = initial_height.value_in_unit(mmunit.kilojoules_per_mole)
         if bias_factor <= 1:
             raise ValueError("bias_factor must be a float larger than 1")
@@ -297,13 +291,13 @@ class MetadynamicsPotential(BiasingPotential):
         if grid_sizes is None:
             summands = []
             distances = []
-            for xdof in extra_dofs:
+            for xdof, sigma in zip(extra_dofs, self._bandwidth):
                 distance = f"{xdof.name}-{xdof.name}_center"
                 if xdof.isPeriodic():
                     length = xdof.bounds.period
                     distance = f"{length / np.pi}*sin({np.pi / length}*({distance}))"
                 distances.append(distance)
-                summands.append(f"({xdof.name}_dist/{xdof.name}_sigma)^2")
+                summands.append(f"({xdof.name}_dist/{sigma})^2")
             function = f"height*exp(-0.5*({'+'.join(summands)}))"
             for xdof, distance in zip(extra_dofs, distances):
                 function += f";\n{xdof.name}_dist={distance}"
@@ -318,23 +312,17 @@ class MetadynamicsPotential(BiasingPotential):
             self._bias_grid = None
             self.addPerBondParameter("height")
             for xdof in extra_dofs:
-                self.addPerBondParameter(f"{xdof.name}_sigma")
-            for xdof in extra_dofs:
                 self.addPerBondParameter(f"{xdof.name}_center")
         else:
             self._bias_grid = SplineGrid(extra_dofs, grid_sizes)
             self.addTabulatedFunction("bias", self._bias_grid)
 
-    def _performAddKernel(
-        self,
-        bandwidth: t.Sequence[float],
-        center: t.Sequence[float],
-    ) -> None:
+    def _performAddKernel(self, center: t.Sequence[float]) -> None:
         height = self._initial_height * np.exp(
             -self.getValue(self._context) / self._kb_delta_t
         )
         if self._bias_grid is None:
-            self.addBond(self._extra_dof_indices, [height, *bandwidth, *center])
+            self.addBond(self._extra_dof_indices, [height, *center])
             self._context.reinitialize(preserveState=True)
         else:
             exponents = []
@@ -344,7 +332,7 @@ class MetadynamicsPotential(BiasingPotential):
                     length = xdof.bounds.upper - xdof.bounds.lower
                     distances = (length / np.pi) * np.sin((np.pi / length) * distances)
                     distances[-1] = distances[0]
-                exponents.append(-0.5 * (distances / bandwidth[i]) ** 2)
+                exponents.append(-0.5 * (distances / self._bandwidth[i]) ** 2)
             kernel = height * np.exp(
                 exponents[0]
                 if len(self._extra_dofs) == 1
