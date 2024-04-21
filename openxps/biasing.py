@@ -18,7 +18,7 @@ from openmm import unit as mmunit
 
 from .extra_dof import ExtraDOF
 
-KernelInfo = namedtuple("KernelInfo", ["height", "bandwidths", "center"])
+KernelInfo = namedtuple("KernelInfo", ["height", "bandwidth", "center"])
 
 
 class BiasingPotential(cvpack.OpenMMForceWrapper):
@@ -31,12 +31,16 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         The extra degrees of freedom subject to the bias potential.
     function
         The mathematical expression defining the bias potential.
+    force_constructor
+        A function that constructs the OpenMM force object from the mathematical
+        expression.
     """
 
     def __init__(
         self,
         extra_dofs: t.Sequence[ExtraDOF],
         function: str,
+        force_constructor: t.Callable[[str], mm.Force],
     ) -> None:
         self._extra_dofs = tuple(extra_dofs)
         self._extra_dof_indices = None
@@ -48,7 +52,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
                 variable = xdof.bounds.leptonExpression(variable)
             expression += f";{xdof.name}={variable}"
         super().__init__(
-            mm.CustomCompoundBondForce(len(extra_dofs), expression),
+            force_constructor(expression),
             mmunit.kilojoules_per_mole,
             name="biasing_potential",
         )
@@ -57,7 +61,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         self,
         context: mm.Context,
         height: float,
-        bandwidths: t.Sequence[float],
+        bandwidth: t.Sequence[float],
         center: t.Sequence[float],
     ) -> None:
         raise NotImplementedError(
@@ -68,7 +72,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         self,
         context: mm.Context,
         height: mmunit.Quantity,
-        bandwidths: t.Sequence[mmunit.Quantity],
+        bandwidth: t.Sequence[mmunit.Quantity],
         center: t.Sequence[mmunit.Quantity],
     ) -> None:
         """
@@ -79,25 +83,25 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         context
             The extension context where the kernel will be added.
         height
-            The height of the kernel.
-        bandwidths
-            The bandwidths of the kernel.
+            The height of the kernel with units of energy.
+        bandwidth
+            The bandwidth vector of the kernel.
         center
-            The center of the kernel.
+            The center vector of the kernel.
         """
         if self._extra_dof_indices is None:
             raise ValueError("Bias potential has not been initialized")
         height = height.value_in_unit(mmunit.kilojoule_per_mole)
-        bandwidths = [
+        bandwidth = [
             quantity.value_in_unit(xdof.unit)
-            for quantity, xdof in zip(bandwidths, self._extra_dofs)
+            for quantity, xdof in zip(bandwidth, self._extra_dofs)
         ]
         center = [
             quantity.value_in_unit(xdof.unit)
             for quantity, xdof in zip(center, self._extra_dofs)
         ]
-        self._kernel_info.append(KernelInfo(height, bandwidths, center))
-        self._performAddKernel(context, height, bandwidths, center)
+        self._kernel_info.append(KernelInfo(height, bandwidth, center))
+        self._performAddKernel(context, height, bandwidth, center)
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """
@@ -238,9 +242,30 @@ class SplineGrid(mm.TabulatedFunction):
         )
 
 
-class SplineBiasingPotential(BiasingPotential):
-    """
-    A bias potential applied to extra degrees of freedom using a spline grid.
+class MetadynamicsPotential(BiasingPotential):
+    r"""
+    A Metadynamics potential applied to extra degrees of freedom.
+
+    .. math::
+
+        V({\bf x}) = \sum_{i=1}^{N} h_i \exp\left\{
+            -\frac{1}{2} \left(
+                {\bf x} - {\bf c}_i
+            \right)^T [{\bf D}({\boldsymbol \sigma}_i)]^{-2} \left(
+                {\bf x} - {\bf c}_i
+            \right)
+        \right\}
+
+    where :math:`{\bf x}` is the vector of extra degrees of freedom, :math:`h_i` is
+    the height of the Gaussian kernel, :math:`{\bf c}_i` is the center of the kernel,
+    :math:`{\boldsymbol \sigma}_i` is the bandwidth vector of the kernel, and
+    :math:`{\bf D}(\cdot)` builds a diagonal matrix from a vector.
+
+    The bias potential can be interpolated on a grid using natural splines for 1D, 2D,
+    or 3D functions. This is done by providing the number of points in each dimension
+    of the grid. If the grid is not provided, the bias potential is evaluated directly
+    from the mathematical expression, which gets more expensive as the number of added
+    kernels increases.
 
     Parameters
     ----------
@@ -254,39 +279,70 @@ class SplineBiasingPotential(BiasingPotential):
     def __init__(
         self,
         extra_dofs: t.Sequence[ExtraDOF],
-        grid_sizes: t.Sequence[int],
+        grid_sizes: t.Union[t.Sequence[int], None],
     ) -> None:
-        function = f"bias({','.join(xdof.name for xdof in extra_dofs)})"
-        super().__init__(extra_dofs, function)
-        self._bias_grid = SplineGrid(extra_dofs, grid_sizes)
-        self.addTabulatedFunction("bias", self._bias_grid)
+        if grid_sizes is None:
+            summands = []
+            distances = []
+            for xdof in extra_dofs:
+                distance = f"{xdof.name}-{xdof.name}_center"
+                if xdof.isPeriodic():
+                    length = xdof.bounds.period
+                    distance = f"{length / np.pi}*sin({np.pi / length}*({distance}))"
+                distances.append(distance)
+                summands.append(f"({xdof.name}_dist/{xdof.name}_sigma)^2")
+            function = f"height*exp(-0.5*({'+'.join(summands)}))"
+            for xdof, distance in zip(extra_dofs, distances):
+                function += f";\n{xdof.name}_dist={distance}"
+        else:
+            function = f"bias({','.join(xdof.name for xdof in extra_dofs)})"
+        super().__init__(
+            extra_dofs,
+            function,
+            functools.partial(mm.CustomCompoundBondForce, len(extra_dofs)),
+        )
+        if grid_sizes is None:
+            self._bias_grid = None
+            self.addPerBondParameter("height")
+            for xdof in extra_dofs:
+                self.addPerBondParameter(f"{xdof.name}_sigma")
+            for xdof in extra_dofs:
+                self.addPerBondParameter(f"{xdof.name}_center")
+        else:
+            self._bias_grid = SplineGrid(extra_dofs, grid_sizes)
+            self.addTabulatedFunction("bias", self._bias_grid)
 
     def _performAddKernel(
         self,
         context: mm.Context,
         height: float,
-        bandwidths: t.Sequence[float],
+        bandwidth: t.Sequence[float],
         center: t.Sequence[float],
     ) -> None:
-        exponents = []
-        for i, xdof in enumerate(self._extra_dofs):
-            distances = self._bias_grid.getGridPoints(i) - center[i]
-            if xdof.isPeriodic():
-                length = xdof.bounds.upper - xdof.bounds.lower
-                distances = (length / np.pi) * np.sin((np.pi / length) * distances)
-                distances[-1] = distances[0]
-            exponents.append(-0.5 * (distances / bandwidths[i]) ** 2)
-        kernel = height * np.exp(
-            exponents[0]
-            if len(self._extra_dofs) == 1
-            else functools.reduce(np.add.outer, reversed(exponents))
-        )
-        self._bias_grid.addBias(kernel)
-        self.updateParametersInContext(context)
+        if self._bias_grid is None:
+            self.addBond(self._extra_dof_indices, [height, *bandwidth, *center])
+            context.reinitialize(preserveState=True)
+        else:
+            exponents = []
+            for i, xdof in enumerate(self._extra_dofs):
+                distances = self._bias_grid.getGridPoints(i) - center[i]
+                if xdof.isPeriodic():
+                    length = xdof.bounds.upper - xdof.bounds.lower
+                    distances = (length / np.pi) * np.sin((np.pi / length) * distances)
+                    distances[-1] = distances[0]
+                exponents.append(-0.5 * (distances / bandwidth[i]) ** 2)
+            kernel = height * np.exp(
+                exponents[0]
+                if len(self._extra_dofs) == 1
+                else functools.reduce(np.add.outer, reversed(exponents))
+            )
+            self._bias_grid.addBias(kernel)
+            self.updateParametersInContext(context)
 
     def initialize(self, context_extra_dofs: t.Sequence[ExtraDOF]) -> None:
         super().initialize(context_extra_dofs)
-        self.addBond(self._extra_dof_indices, [])
+        if self._bias_grid is not None:
+            self.addBond(self._extra_dof_indices, [])
 
     def getBias(self) -> np.ndarray:
         """

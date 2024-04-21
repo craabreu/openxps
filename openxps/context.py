@@ -75,7 +75,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi0],
     ...     umbrella_potential,
-    ...     biasing_potential=xps.SplineBiasingPotential([phi0], [10]),
+    ...     biasing_potential=xps.MetadynamicsPotential([phi0], [10]),
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
@@ -189,7 +189,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         )
 
     def addBiasKernel(
-        self, height: mmunit.Quantity, bandwidths: t.Sequence[mmunit.Quantity]
+        self, height: mmunit.Quantity, bandwidth: t.Sequence[mmunit.Quantity]
     ) -> None:
         """
         Add a Gaussian kernel to the biasing potential.
@@ -198,9 +198,9 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         ----------
         height
             The height of the bias kernel. It must have units of molar energy.
-        bandwidths
-            The bandwidths of the bias kernel in each dimension. They must have units
-            of the corresponding extra degrees of freedom.
+        bandwidth
+            The bandwidth vector of the bias kernel in each dimension. Each element
+            must have units of the corresponding extra degree of freedom.
         """
         if self._biasing_potential is None:
             raise AttributeError(
@@ -211,7 +211,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             for xdof in self._biasing_potential.getExtraDOFs()
         ]
         self._biasing_potential.addKernel(
-            self._extension_context, height, bandwidths, center
+            self._extension_context, height, bandwidth, center
         )
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
