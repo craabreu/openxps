@@ -65,8 +65,9 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
     ...     phi0=pi*unit.radian,
     ... )
+    >>> temp = 300 * unit.kelvin
     >>> integrator = openmm.LangevinMiddleIntegrator(
-    ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond
+    ...     temp, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
     >>> platform = openmm.Platform.getPlatformByName("Reference")
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
@@ -75,16 +76,18 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi0],
     ...     umbrella_potential,
-    ...     biasing_potential=xps.MetadynamicsPotential([phi0], [10]),
+    ...     biasing_potential=xps.MetadynamicsPotential(
+    ...         [phi0], 2 * unit.kilojoule_per_mole, temp, 10, [10]
+    ...     ),
     ... )
     >>> context.setPositions(model.positions)
-    >>> context.setVelocitiesToTemperature(300 * unit.kelvin)
+    >>> context.setVelocitiesToTemperature(temp)
     >>> context.setExtraValues([180 * unit.degree])
-    >>> context.setExtraVelocitiesToTemperature(300 * unit.kelvin)
+    >>> context.setExtraVelocitiesToTemperature(temp)
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
     (Quantity(value=..., unit=radian),)
-    >>> context.addBiasKernel(2 * unit.kilojoule_per_mole, [18 * unit.degree])
+    >>> context.addBiasKernel([18 * unit.degree])
     >>> state = context.getExtensionContext().getState(getEnergy=True)
     >>> state.getPotentialEnergy()
     Quantity(value=..., unit=kilojoule/mole)
@@ -187,16 +190,12 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             mm.Platform.getPlatformByName("Reference"),
         )
 
-    def addBiasKernel(
-        self, height: mmunit.Quantity, bandwidth: t.Sequence[mmunit.Quantity]
-    ) -> None:
+    def addBiasKernel(self, bandwidth: t.Sequence[mmunit.Quantity]) -> None:
         """
         Add a Gaussian kernel to the biasing potential.
 
         Parameters
         ----------
-        height
-            The height of the bias kernel. It must have units of molar energy.
         bandwidth
             The bandwidth vector of the bias kernel in each dimension. Each element
             must have units of the corresponding extra degree of freedom.
@@ -209,7 +208,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             self.getParameter(xdof.name) * xdof.unit
             for xdof in self._biasing_potential.getExtraDOFs()
         ]
-        self._biasing_potential.addKernel(height, bandwidth, center)
+        self._biasing_potential.addKernel(bandwidth, center)
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """

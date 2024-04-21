@@ -9,7 +9,6 @@
 
 import functools
 import typing as t
-from collections import namedtuple
 
 import cvpack
 import numpy as np
@@ -17,8 +16,6 @@ import openmm as mm
 from openmm import unit as mmunit
 
 from .extra_dof import ExtraDOF
-
-KernelInfo = namedtuple("KernelInfo", ["height", "bandwidth", "center"])
 
 
 class BiasingPotential(cvpack.OpenMMForceWrapper):
@@ -45,7 +42,6 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         self._extra_dofs = tuple(extra_dofs)
         self._context = None
         self._extra_dof_indices = None
-        self._kernel_info = []
         expression = function
         for index, xdof in enumerate(extra_dofs, start=1):
             variable = f"x{index}"
@@ -60,7 +56,6 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
 
     def _performAddKernel(
         self,
-        height: float,
         bandwidth: t.Sequence[float],
         center: t.Sequence[float],
     ) -> None:
@@ -91,7 +86,6 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
 
     def addKernel(
         self,
-        height: mmunit.Quantity,
         bandwidth: t.Sequence[mmunit.Quantity],
         center: t.Sequence[mmunit.Quantity],
     ) -> None:
@@ -100,8 +94,6 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
 
         Parameters
         ----------
-        height
-            The height of the kernel with units of energy.
         bandwidth
             The bandwidth vector of the kernel.
         center
@@ -109,7 +101,6 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         """
         if self._extra_dof_indices is None:
             raise ValueError("Bias potential has not been initialized")
-        height = height.value_in_unit(mmunit.kilojoule_per_mole)
         bandwidth = [
             quantity.value_in_unit(xdof.unit)
             for quantity, xdof in zip(bandwidth, self._extra_dofs)
@@ -118,8 +109,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             quantity.value_in_unit(xdof.unit)
             for quantity, xdof in zip(center, self._extra_dofs)
         ]
-        self._kernel_info.append(KernelInfo(height, bandwidth, center))
-        self._performAddKernel(height, bandwidth, center)
+        self._performAddKernel(bandwidth, center)
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """
@@ -271,16 +261,39 @@ class MetadynamicsPotential(BiasingPotential):
     ----------
     extra_dofs
         The extra degrees of freedom subject to the bias potential.
+    initial_height
+        The initial height of the Gaussian kernels. It must have units of molar energy.
+    temperature
+        The temperature of the system (with units).
+    bias_factor
+        The bias factor that controls the equilibrium bias potential and the rate of
+        convergence. It must be larger than 1.
     grid_sizes
         The number of points in each dimension of the grid used to interpolate the bias
         potential.
+
+    Raises
+    ------
+    ValueError
+        If the bias factor is not larger than 1 or if temperature does not have valid
+        units.
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         extra_dofs: t.Sequence[ExtraDOF],
+        initial_height: mmunit.Quantity,
+        temperature: mmunit.Quantity,
+        bias_factor: float,
         grid_sizes: t.Union[t.Sequence[int], None],
     ) -> None:
+        self._initial_height = initial_height.value_in_unit(mmunit.kilojoules_per_mole)
+        if bias_factor <= 1:
+            raise ValueError("bias_factor must be a float larger than 1")
+        self._kb_delta_t = mmunit.MOLAR_GAS_CONSTANT_R * temperature * (bias_factor - 1)
+        if not self._kb_delta_t.unit.is_compatible(mmunit.kilojoules_per_mole):
+            raise ValueError("Invalid temperature units")
+
         if grid_sizes is None:
             summands = []
             distances = []
@@ -314,10 +327,12 @@ class MetadynamicsPotential(BiasingPotential):
 
     def _performAddKernel(
         self,
-        height: float,
         bandwidth: t.Sequence[float],
         center: t.Sequence[float],
     ) -> None:
+        height = self._initial_height * np.exp(
+            -self.getValue(self._context) / self._kb_delta_t
+        )
         if self._bias_grid is None:
             self.addBond(self._extra_dof_indices, [height, *bandwidth, *center])
             self._context.reinitialize(preserveState=True)
