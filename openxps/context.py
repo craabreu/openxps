@@ -196,15 +196,12 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         """
         Add a Gaussian kernel to the biasing potential.
         """
-        if self._biasing_potential is None:
+        try:
+            self._biasing_potential.addKernel()
+        except AttributeError as error:
             raise AttributeError(
                 "No biasing potential was provided when creating the context."
-            )
-        center = [
-            self.getParameter(xdof.name) * xdof.unit
-            for xdof in self._biasing_potential.getExtraDOFs()
-        ]
-        self._biasing_potential.addKernel(center)
+            ) from error
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
         """

@@ -11,6 +11,7 @@ import typing as t
 
 import cvpack
 import openmm as mm
+from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from .extra_dof import ExtraDOF
@@ -78,21 +79,21 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         self.addToSystem(context.getSystem())
         context.reinitialize(preserveState=True)
 
-    def addKernel(self, center: t.Sequence[mmunit.Quantity]) -> None:
+    def addKernel(self) -> None:
         """
         Add a Gaussian kernel to the bias potential.
-
-        Parameters
-        ----------
-        center
-            The center vector of the kernel.
         """
         if self._extra_dof_indices is None:
             raise ValueError("Bias potential has not been initialized")
-        center = [
-            quantity.value_in_unit(xdof.unit)
-            for quantity, xdof in zip(center, self._extra_dofs)
-        ]
+
+        state = mmswig.Context_getState(self._context, mm.State.Positions)
+        positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
+        center = []
+        for xdof, index in zip(self._extra_dofs, self._extra_dof_indices):
+            value = positions[index].x
+            if xdof.bounds is not None:
+                value, _ = xdof.bounds.wrap(value, 0)
+            center.append(value)
         self._performAddKernel(center)
 
     def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
