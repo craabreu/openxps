@@ -128,11 +128,14 @@ class Bounds(Serializable):
         >>> import openxps as xps
         >>> from openmm import unit
         >>> periodic = xps.bounds.Periodic(-180, 180, unit.degree)
-        >>> periodic.leptonExpression("x")
-        'lb+T*(xs-floor(xs));xs=(x-lb)/T;lb=-180;T=360'
+        >>> print(periodic.leptonExpression("x"))
+        (scaled_x-floor(scaled_x))*360-180;
+        scaled_x=(x+180)/360
         >>> reflective = xps.bounds.Reflective(1, 10, unit.angstrom)
-        >>> reflective.leptonExpression("y")
-        'lb+T*min(ys,1-ys);ys=xs-floor(xs);xs=(y-lb)/T;lb=1;T=18'
+        >>> print(reflective.leptonExpression("y"))
+        min(wrapped_y,1-wrapped_y)*18+1;
+        wrapped_y=scaled_y-floor(scaled_y);
+        scaled_y=(y-1)/18
         """
         raise NotImplementedError(
             "The method transformation must be implemented in subclasses."
@@ -195,11 +198,18 @@ class Periodic(Bounds):
         self.period = self.upper - self.lower
 
     def leptonExpression(self, variable: str) -> str:
+        scaled = f"scaled_{variable}"
+        if self.lower == 0:
+            shift = deshift = ""
+        elif self.lower > 0:
+            shift = f"-{self.lower}"
+            deshift = f"+{self.lower}"
+        else:
+            shift = f"+{-self.lower}"
+            deshift = f"-{-self.lower}"
         return (
-            "lb+T*(xs-floor(xs))"
-            f";xs=({variable}-lb)/T"
-            f";lb={self.lower}"
-            f";T={self.period}"
+            f"({scaled}-floor({scaled}))*{self.period}{deshift}"
+            f";\n{scaled}=({variable}{shift})/{self.period}"
         )
 
     def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
@@ -240,12 +250,20 @@ class Reflective(Bounds):
         self.period = 2 * (self.upper - self.lower)
 
     def leptonExpression(self, variable: str) -> str:
+        scaled = f"scaled_{variable}"
+        wrapped = f"wrapped_{variable}"
+        if self.lower == 0:
+            shift = deshift = ""
+        elif self.lower > 0:
+            shift = f"-{self.lower}"
+            deshift = f"+{self.lower}"
+        else:
+            shift = f"+{-self.lower}"
+            deshift = f"-{-self.lower}"
         return (
-            f"lb+T*min(ys,1-ys)"
-            f";ys=xs-floor(xs)"
-            f";xs=({variable}-lb)/T"
-            f";lb={self.lower}"
-            f";T={self.period}"
+            f"min({wrapped},1-{wrapped})*{self.period}{deshift}"
+            f";\n{wrapped}={scaled}-floor({scaled})"
+            f";\n{scaled}=({variable}{shift})/{self.period}"
         )
 
     def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
