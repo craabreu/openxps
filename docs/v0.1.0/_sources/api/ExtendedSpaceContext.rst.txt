@@ -1,0 +1,18 @@
+ExtendedSpaceContext
+====================
+
+.. currentmodule:: openxps
+.. autoclass:: ExtendedSpaceContext
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: addBiasKernel
+    .. automethod:: getExtensionContext
+    .. automethod:: getExtraDOFs
+    .. automethod:: getExtraValues
+    .. automethod:: getExtraVelocities
+    .. automethod:: setExtraValues
+    .. automethod:: setExtraVelocities
+    .. automethod:: setExtraVelocitiesToTemperature
+    .. automethod:: setPositions

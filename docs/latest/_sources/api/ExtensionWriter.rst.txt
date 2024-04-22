@@ -1,0 +1,12 @@
+ExtensionWriter
+===============
+
+.. currentmodule:: openxps
+.. autoclass:: ExtensionWriter
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getHeaders
+    .. automethod:: getValues
+    .. automethod:: initialize

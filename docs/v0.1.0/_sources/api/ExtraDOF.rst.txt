@@ -1,0 +1,12 @@
+ExtraDOF
+========
+
+.. currentmodule:: openxps
+.. autoclass:: ExtraDOF
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: createCollectiveVariable
+    .. automethod:: distanceTo
+    .. automethod:: isPeriodic
