@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.10"]
+        python-version: ["3.12"]
 
     steps:
       - uses: actions/checkout@v4
@@ -41,18 +41,6 @@ jobs:
           python -m pip install . --no-deps
           micromamba list
 
-      - name: Run flake8
+      - name: Run ruff
         shell: bash -l {0}
-        run: flake8 openxps
-
-      - name: Run black
-        shell: bash -l {0}
-        run: black --diff --color openxps
-
-      - name: Run isort
-        shell: bash -l {0}
-        run: isort --check-only openxps
-
-      - name: Run pylint
-        shell: bash -l {0}
-        run: pylint openxps
+        run: ruff check chempropstereo
