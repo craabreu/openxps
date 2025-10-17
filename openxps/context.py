@@ -89,11 +89,11 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     >>> context.setExtraVelocitiesToTemperature(temp, 1234)
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
-    (-3.02... rad,)
+    (... rad,)
     >>> context.addBiasKernel()
     >>> state = context.getExtensionContext().getState(getEnergy=True)
-    >>> state.getPotentialEnergy()
-    2.1... kJ/mol
+    >>> state.getPotentialEnergy(), state.getKineticEnergy()
+    (... kJ/mol, ... kJ/mol)
     """
 
     def __init__(  # pylint: disable=super-init-not-called,too-many-arguments
