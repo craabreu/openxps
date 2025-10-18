@@ -34,14 +34,18 @@ def test_extension_writer():
     )
     integrator.setRandomNumberSeed(1234)
     platform = openmm.Platform.getPlatformByName("Reference")
-    simulation = app.Simulation(model.topology, deepcopy(model.system), deepcopy(integrator), platform)
+    simulation = app.Simulation(
+        model.topology, deepcopy(model.system), deepcopy(integrator), platform
+    )
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
     phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
-    context = xps.ExtendedSpaceContext(model.system, integrator, platform, [phi0], umbrella_potential)
+    context = xps.ExtendedSpaceContext(
+        [phi0], umbrella_potential, model.system, integrator, platform
+    )
     context.setPositions(model.positions)
     context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
-    context.setExtraValues([180 * unit.degree])
-    context.setExtraVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    context.setDynamicalVariables([180 * unit.degree])
+    context.setDynamicalVariableVelocitiesToTemperature(300 * unit.kelvin, 1234)
     simulation.context = context
     simulation.integrator = context.getIntegrator()
     with tempfile.TemporaryDirectory() as dirpath:

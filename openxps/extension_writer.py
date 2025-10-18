@@ -64,12 +64,12 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> context = xps.ExtendedSpaceContext(
-    ...     model.system, integrator, platform, [phi0], umbrella_potential
+    ...     [phi0], umbrella_potential, model.system, integrator, platform
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
-    >>> context.setExtraValues([180 * unit.degree])
-    >>> context.setExtraVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    >>> context.setDynamicalVariables([180 * unit.degree])
+    >>> context.setDynamicalVariableVelocitiesToTemperature(300 * unit.kelvin, 1234)
     >>> simulation.context = context
     >>> simulation.integrator = context.getIntegrator()
     >>> reporter = cvpack.reporting.StateDataReporter(
@@ -115,7 +115,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
 
     def initialize(self, simulation: mmapp.Simulation) -> None:
         if self._temperature:
-            number = len(self._context.getExtraDOFs())
+            number = len(self._context.getDynamicalVariables())
             kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
                 mmunit.kilojoules_per_mole / mmunit.kelvin
             )
@@ -142,7 +142,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
             kinetic_energy = mmswig.State_getKineticEnergy(state)
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
-            for dv, velocity in zip(self._context.getExtraDOFs(), velocities):
+            for dv, velocity in zip(self._context.getDynamicalVariables(), velocities):
                 mass = dv.mass._value  # pylint: disable=protected-access
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
         values = []
