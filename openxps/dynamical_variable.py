@@ -8,6 +8,7 @@
 """
 
 import typing as t
+import typing_extensions as te
 from dataclasses import dataclass
 
 import cvpack
@@ -183,7 +184,7 @@ class DynamicalVariable(Serializable):
             return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
         raise ValueError("Incompatible boundary conditions.")
 
-    def _distanceToDV(self, other: t.Self) -> str:
+    def _distanceToDV(self, other: te.Self) -> str:
         diff = f"{other.name}-{self.name}"
         if not (self.isPeriodic() or other.isPeriodic()):
             return f"({diff})"
@@ -192,7 +193,7 @@ class DynamicalVariable(Serializable):
             return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
         raise ValueError("Incompatible boundary conditions.")
 
-    def distanceTo(self, other: cvpack.CollectiveVariable | t.Self) -> str:
+    def distanceTo(self, other: cvpack.CollectiveVariable | te.Self) -> str:
         """
         Returns a Lepton expression representing the distance between this extra degree
         of freedom and another variable.

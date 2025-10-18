@@ -284,7 +284,9 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         """
         return tuple(self.getParameter(dv.name) * dv.unit for dv in self._dvs)
 
-    def setDynamicalVariableVelocities(self, velocities: t.Iterable[mmunit.Quantity]) -> None:
+    def setDynamicalVariableVelocities(
+        self, velocities: t.Iterable[mmunit.Quantity]
+    ) -> None:
         """
         Set the velocities of the dynamical variables.
 

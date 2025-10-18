@@ -86,7 +86,9 @@ def test_set_positions_and_velocities():
     context.setPositions(positions)
     context.setVelocities(velocities)
     context.setDynamicalVariableValues([1 * urad, 0.1 * unm, 0.1 * unm])
-    context.setDynamicalVariableVelocities([1 * urad / ups, 1 * unm / ups, 1 * unm / ups])
+    context.setDynamicalVariableVelocities(
+        [1 * urad / ups, 1 * unm / ups, 1 * unm / ups]
+    )
 
     state = context.getState(  # pylint: disable=unexpected-keyword-arg
         getPositions=True, getVelocities=True
