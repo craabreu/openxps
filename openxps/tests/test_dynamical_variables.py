@@ -1,5 +1,5 @@
 """
-Unit tests for the ExtraDOF class.
+Unit tests for the DynamicalVariable class.
 """
 
 import cvpack
@@ -8,27 +8,25 @@ import yaml
 from openmm import unit as mmunit
 
 from openxps.bounds import Periodic, Reflective
-from openxps.extra_dof import ExtraDOF
+from openxps.dynamical_variable import DynamicalVariable
 
 
-def test_extra_dof_initialization():
-    """Test successful ExtraDOF initialization."""
+def test_dv_initialization():
+    """Test successful DynamicalVariable initialization."""
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
     bounds = Periodic(-180, 180, mmunit.degree)
-    extra_dof = ExtraDOF("phi", mmunit.radian, mass, bounds)
+    dv = DynamicalVariable("phi", mmunit.radian, mass, bounds)
 
-    assert extra_dof.name == "phi"
-    assert extra_dof.unit == mmunit.radian
-    assert (
-        extra_dof.mass.unit == mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    )
-    assert isinstance(extra_dof.bounds, Periodic)
+    assert dv.name == "phi"
+    assert dv.unit == mmunit.radian
+    assert dv.mass.unit == mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
+    assert isinstance(dv.bounds, Periodic)
 
 
-def test_extra_dof_invalid_unit():
-    """Test ExtraDOF initialization with an invalid unit."""
+def test_dv_invalid_unit():
+    """Test DynamicalVariable initialization with an invalid unit."""
     with pytest.raises(ValueError) as excinfo:
-        ExtraDOF(
+        DynamicalVariable(
             "phi",
             "not_a_unit",
             3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
@@ -37,33 +35,33 @@ def test_extra_dof_invalid_unit():
     assert "The unit must be a valid OpenMM unit." in str(excinfo.value)
 
 
-def test_extra_dof_not_md_unit_system():
-    """Test ExtraDOF initialization with an incompatible unit."""
+def test_dv_not_md_unit_system():
+    """Test DynamicalVariable initialization with an incompatible unit."""
     with pytest.raises(ValueError) as excinfo:
-        ExtraDOF("phi", mmunit.degree, 3 * mmunit.dalton, None)
+        DynamicalVariable("phi", mmunit.degree, 3 * mmunit.dalton, None)
     assert "Unit degree is incompatible with OpenMM's MD unit system." in str(
         excinfo.value
     )
 
 
-def test_extra_dof_mass_without_unit():
-    """Test ExtraDOF initialization with mass missing a unit."""
+def test_dv_mass_without_unit():
+    """Test DynamicalVariable initialization with mass missing a unit."""
     with pytest.raises(TypeError) as excinfo:
-        ExtraDOF("phi", mmunit.radian, 3, None)
+        DynamicalVariable("phi", mmunit.radian, 3, None)
     assert "Mass must be have units of measurement." in str(excinfo.value)
 
 
-def test_extra_dof_incompatible_mass_unit():
-    """Test ExtraDOF initialization with mass having incompatible units."""
+def test_dv_incompatible_mass_unit():
+    """Test DynamicalVariable initialization with mass having incompatible units."""
     with pytest.raises(TypeError):
-        ExtraDOF("phi", mmunit.radian, 3 * mmunit.meter, None)
+        DynamicalVariable("phi", mmunit.radian, 3 * mmunit.meter, None)
 
 
-def test_extra_dof_bounds_incompatible_units():
-    """Test ExtraDOF initialization with bounds having incompatible units."""
+def test_dv_bounds_incompatible_units():
+    """Test DynamicalVariable initialization with bounds having incompatible units."""
     bounds = Reflective(0, 10, mmunit.meter)  # Incompatible with radian
     with pytest.raises(ValueError):
-        ExtraDOF(
+        DynamicalVariable(
             "phi",
             mmunit.radian,
             3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
@@ -71,30 +69,30 @@ def test_extra_dof_bounds_incompatible_units():
         )
 
 
-def test_extra_dof_serialization():
-    """Test YAML serialization and deserialization of ExtraDOF."""
+def test_dv_serialization():
+    """Test YAML serialization and deserialization of DynamicalVariable."""
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
     bounds = Periodic(-180, 180, mmunit.degree)
-    extra_dof = ExtraDOF("phi", mmunit.radian, mass, bounds)
+    dv = DynamicalVariable("phi", mmunit.radian, mass, bounds)
 
-    serialized = yaml.safe_dump(extra_dof)
+    serialized = yaml.safe_dump(dv)
     deserialized = yaml.safe_load(serialized)
 
-    assert deserialized == extra_dof
+    assert deserialized == dv
 
 
-def test_extra_dof_without_bounds():
-    """Test ExtraDOF initialization without bounds."""
+def test_dv_without_bounds():
+    """Test DynamicalVariable initialization without bounds."""
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    extra_dof = ExtraDOF("phi", mmunit.radian, mass, None)
+    dv = DynamicalVariable("phi", mmunit.radian, mass, None)
 
-    assert extra_dof.bounds is None
+    assert dv.bounds is None
 
 
-def test_extra_dof_bounds_type_error():
-    """Test ExtraDOF initialization with incorrect bounds type."""
+def test_dv_bounds_type_error():
+    """Test DynamicalVariable initialization with incorrect bounds type."""
     with pytest.raises(TypeError):
-        ExtraDOF(
+        DynamicalVariable(
             "phi",
             mmunit.radian,
             3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
@@ -102,17 +100,17 @@ def test_extra_dof_bounds_type_error():
         )
 
 
-def test_extra_dof_distance_method():
+def test_dv_distance_method():
     """
-    Test the distanceTo method of ExtraDOF.
+    Test the distanceTo method of DynamicalVariable.
     """
-    psi0 = ExtraDOF(
+    psi0 = DynamicalVariable(
         "psi0",
         mmunit.radian,
         3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
         Periodic(-180, 180, mmunit.degree),
     )
-    phi0 = ExtraDOF(
+    phi0 = DynamicalVariable(
         "phi0",
         mmunit.radian,
         3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
@@ -137,10 +135,12 @@ def test_extra_dof_distance_method():
     assert "Incompatible boundary conditions." in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        psi0.distanceTo(ExtraDOF("x", mmunit.nanometer, 3 * mmunit.dalton, None))
+        psi0.distanceTo(
+            DynamicalVariable("x", mmunit.nanometer, 3 * mmunit.dalton, None)
+        )
     assert "Incompatible boundary conditions." in str(excinfo.value)
 
-    distance0 = ExtraDOF(
+    distance0 = DynamicalVariable(
         "distance0",
         mmunit.nanometer,
         3 * mmunit.dalton,
@@ -148,5 +148,7 @@ def test_extra_dof_distance_method():
     )
     assert distance0.distanceTo(cvpack.Distance(0, 1)) == "(distance-distance0)"
 
-    distance1 = ExtraDOF("distance1", mmunit.nanometer, 3 * mmunit.dalton, None)
+    distance1 = DynamicalVariable(
+        "distance1", mmunit.nanometer, 3 * mmunit.dalton, None
+    )
     assert distance1.distanceTo(distance0) == "(distance0-distance1)"

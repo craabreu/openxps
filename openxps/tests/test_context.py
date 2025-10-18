@@ -11,7 +11,7 @@ from openmmtools import testsystems
 
 from openxps.bounds import CIRCULAR, Reflective
 from openxps.context import ExtendedSpaceContext
-from openxps.extra_dof import ExtraDOF
+from openxps.dynamical_variable import DynamicalVariable
 
 
 def create_basic_context(model):
@@ -21,14 +21,16 @@ def create_basic_context(model):
     return mm.Context(model.system, integrator, platform)
 
 
-def create_extra_dofs():
-    """Helper function to create an ExtraDOF object."""
+def create_dvs():
+    """Helper function to create a DynamicalVariable object."""
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
     kwargs = {"unit": mmunit.nanometer, "mass": 1 * mmunit.dalton}
     return [
-        ExtraDOF(name="phi0", unit=mmunit.radian, mass=mass, bounds=CIRCULAR),
-        ExtraDOF(name="x0", bounds=None, **kwargs),
-        ExtraDOF(name="y0", bounds=Reflective(-1, 1, mmunit.nanometer), **kwargs),
+        DynamicalVariable(name="phi0", unit=mmunit.radian, mass=mass, bounds=CIRCULAR),
+        DynamicalVariable(name="x0", bounds=None, **kwargs),
+        DynamicalVariable(
+            name="y0", bounds=Reflective(-1, 1, mmunit.nanometer), **kwargs
+        ),
     ]
 
 
@@ -45,7 +47,7 @@ def create_coupling_potential(
     if phi0 is not None:
         kwargs["phi0"] = phi0
     return cvpack.MetaCollectiveVariable(
-        f"0.5*kappa*min(delta_phi,{2*np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
+        f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
         unit,
@@ -57,7 +59,7 @@ def create_extended_context(model, coupling_potential=None):
     """Helper function to create an ExtendedSpaceContext object."""
     return ExtendedSpaceContext(
         create_basic_context(model),
-        create_extra_dofs(),
+        create_dvs(),
         coupling_potential or create_coupling_potential(),
     )
 
@@ -68,7 +70,7 @@ def test_initialization():
 
 
 def test_set_positions_and_velocities():
-    """Test setting positions and velocities including extra DOFs."""
+    """Test setting positions and velocities including DVs."""
     model = testsystems.AlanineDipeptideVacuum()
     context = create_extended_context(model)
 
@@ -141,30 +143,30 @@ def test_validation():
     """Test the validation of extended space context."""
     model = testsystems.AlanineDipeptideVacuum()
     context = create_basic_context(model)
-    extra_dofs = create_extra_dofs()
+    dvs = create_dvs()
     coupling_potential = create_coupling_potential()
 
     with pytest.raises(TypeError) as e:
         ExtendedSpaceContext(context, [None], coupling_potential)
-    assert "extra degrees of freedom must be instances of ExtraDOF" in str(e.value)
+    assert "dynamical variables must be instances of DynamicalVariable" in str(e.value)
 
     with pytest.raises(TypeError) as e:
-        ExtendedSpaceContext(context, extra_dofs, None)
+        ExtendedSpaceContext(context, dvs, None)
     assert "must be an instance of MetaCollectiveVariable" in str(e.value)
 
     with pytest.raises(ValueError) as e:
-        ExtendedSpaceContext(context, extra_dofs, create_coupling_potential(phi0=None))
+        ExtendedSpaceContext(context, dvs, create_coupling_potential(phi0=None))
     assert "The coupling potential parameters do not include ['phi0']." in str(e.value)
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(
-            context, extra_dofs, create_coupling_potential(phi0=1 * mmunit.kelvin)
+            context, dvs, create_coupling_potential(phi0=1 * mmunit.kelvin)
         )
     assert "Unit mismatch for parameter 'phi0'." in str(e.value)
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(
-            context, extra_dofs, create_coupling_potential(unit=mmunit.radian)
+            context, dvs, create_coupling_potential(unit=mmunit.radian)
         )
     assert "The coupling potential must have units of molar energy." in str(e.value)
 
@@ -175,7 +177,7 @@ def test_validation():
         force.addGlobalParameter("y0", 1 * mmunit.nanometer)
         context.getSystem().addForce(force)
         context.reinitialize()
-        ExtendedSpaceContext(context, extra_dofs, coupling_potential)
+        ExtendedSpaceContext(context, dvs, coupling_potential)
     assert (
         "The context already contains ['phi0', 'x0', 'y0'] among its parameters."
         in str(e.value)
@@ -212,11 +214,11 @@ def test_consistency():
         positions = extension_state.getPositions()
         forces = extension_state.getForces()
         x1 = {}
-        for i, xdof in enumerate(context.getExtraDOFs()):
+        for i, dv in enumerate(context.getExtraDOFs()):
             force = forces[i].x
-            if xdof.bounds is not None:
-                _, force = xdof.bounds.wrap(positions[i].x, force)
-            x1[xdof.name] = -force
+            if dv.bounds is not None:
+                _, force = dv.bounds.wrap(positions[i].x, force)
+            x1[dv.name] = -force
         x2 = coupling.getParameterDerivatives(context)
-        for xdof in context.getExtraDOFs():
-            assert x1[xdof.name] == pytest.approx(x2[xdof.name] / x2[xdof.name].unit)
+        for dv in context.getExtraDOFs():
+            assert x1[dv.name] == pytest.approx(x2[dv.name] / x2[dv.name].unit)
