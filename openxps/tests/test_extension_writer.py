@@ -44,7 +44,7 @@ def test_extension_writer():
     )
     context.setPositions(model.positions)
     context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
-    context.setDynamicalVariables([180 * unit.degree])
+    context.setDynamicalVariableValues([180 * unit.degree])
     context.setDynamicalVariableVelocitiesToTemperature(300 * unit.kelvin, 1234)
     simulation.context = context
     simulation.integrator = context.getIntegrator()

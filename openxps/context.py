@@ -86,7 +86,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(temp, 1234)
-    >>> context.setDynamicalVariables([180 * unit.degree])
+    >>> context.setDynamicalVariableValues([180 * unit.degree])
     >>> context.setDynamicalVariableVelocitiesToTemperature(temp, 1234)
     >>> context.getIntegrator().step(100)
     >>> context.getDynamicalVariableValues()
@@ -210,6 +210,36 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         """
         return self._coupling_potential
 
+    def setParameter(self, name: str, value: mmunit.Quantity) -> None:
+        """
+        Set the value of a global parameter defined by a Force object in the System.
+
+        Notes
+        -----
+        If the parameter is a dynamical variable, the value will be wrapped to the
+        appropriate boundary condition if necessary.
+
+        Parameters
+        ----------
+        name
+            The name of the parameter to set.
+        value
+            The value of the parameter.
+        """
+        dv_names = [dv.name for dv in self._dvs]
+        if name in dv_names:
+            i = dv_names.index(name)
+            dv = self._dvs[i]
+            value = value.value_in_unit(dv.unit)
+            if dv.bounds is not None:
+                value, _ = dv.bounds.wrap(value, 0)
+            state = mmswig.Context_getState(self, mm.State.Positions)
+            positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
+            positions[i].x = value
+            self._extension_context.setPositions(positions)
+        else:
+            super().setParameter(name, value)
+
     def setPositions(self, positions: cvpack.units.MatrixQuantity) -> None:
         """
         Sets the positions of all particles in the physical system.
@@ -223,7 +253,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         for name, value in self._coupling_potential.getInnerValues(self).items():
             self._extension_context.setParameter(name, value / value.unit)
 
-    def setDynamicalVariables(self, values: t.Iterable[mmunit.Quantity]) -> None:
+    def setDynamicalVariableValues(self, values: t.Iterable[mmunit.Quantity]) -> None:
         """
         Set the values of the dynamical variables.
 
@@ -240,10 +270,8 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             positions.append(mm.Vec3(value, 0, 0))
             if dv.bounds is not None:
                 value, _ = dv.bounds.wrap(value, 0)
-            self.setParameter(dv.name, value)
+            super().setParameter(dv.name, value)
         self._extension_context.setPositions(positions)
-        for name, value in self._coupling_potential.getInnerValues(self).items():
-            self._extension_context.setParameter(name, value / value.unit)
 
     def getDynamicalVariableValues(self) -> t.Tuple[mmunit.Quantity]:
         """
@@ -304,13 +332,14 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         )
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
+        dv_velocities = []
         for i, dv in enumerate(self._dvs):
             value = positions[i].x
             rate = velocities[i].x
             if dv.bounds is not None:
                 value, rate = dv.bounds.wrap(value, rate)
-            velocities[i] = rate * dv.unit / mmunit.picosecond
-        return tuple(velocities)
+            dv_velocities.append(rate * dv.unit / mmunit.picosecond)
+        return tuple(dv_velocities)
 
     def getExtensionContext(self) -> mm.Context:
         """

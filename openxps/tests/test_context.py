@@ -85,7 +85,7 @@ def test_set_positions_and_velocities():
 
     context.setPositions(positions)
     context.setVelocities(velocities)
-    context.setDynamicalVariables([1 * urad, 0.1 * unm, 0.1 * unm])
+    context.setDynamicalVariableValues([1 * urad, 0.1 * unm, 0.1 * unm])
     context.setDynamicalVariableVelocities([1 * urad / ups, 1 * unm / ups, 1 * unm / ups])
 
     state = context.getState(  # pylint: disable=unexpected-keyword-arg
@@ -125,7 +125,7 @@ def test_raise_exceptions():
         context.getIntegrator().step(1)
     assert "Particle positions have not been set" in str(e.value)
 
-    context.setDynamicalVariables(
+    context.setDynamicalVariableValues(
         [1 * mmunit.radian, 0.1 * mmunit.nanometer, 0.1 * mmunit.nanometer]
     )
     context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin)
@@ -179,7 +179,7 @@ def test_consistency():
     context = create_extended_context(model, coupling)
     context.setPositions(model.positions)
     context.setVelocitiesToTemperature(300 * mmunit.kelvin)
-    context.setDynamicalVariables(
+    context.setDynamicalVariableValues(
         [1000 * mmunit.degrees, 1 * mmunit.nanometer, 1 * mmunit.nanometer]
     )
     context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin)
