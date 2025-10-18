@@ -1,7 +1,7 @@
 """
 .. module:: openxps.metadynamics
    :platform: Linux, Windows, macOS
-   :synopsis: Biasing potentials applied to extra degrees of freedom.
+   :synopsis: Biasing potentials applied to dynamical variables.
 
 .. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 
@@ -15,12 +15,12 @@ import openmm as mm
 from openmm import unit as mmunit
 
 from .biasing_potential import BiasingPotential
-from .extra_dof import ExtraDOF
+from .dynamical_variable import DynamicalVariable
 
 
 class MetadynamicsBias(BiasingPotential):
     r"""
-    A Metadynamics potential applied to extra degrees of freedom.
+    A Metadynamics potential applied to dynamical variables.
 
     .. math::
 
@@ -32,7 +32,7 @@ class MetadynamicsBias(BiasingPotential):
             \right)
         \right\}
 
-    where :math:`{\bf x}` is the vector of extra degrees of freedom, :math:`h_i` is
+    where :math:`{\bf x}` is the vector of dynamical variables, :math:`h_i` is
     the height of the Gaussian kernel, :math:`{\bf c}_i` is the center of the kernel,
     :math:`{\boldsymbol \sigma}_i` is the bandwidth vector of the kernel, and
     :math:`{\bf D}(\cdot)` builds a diagonal matrix from a vector.
@@ -45,11 +45,11 @@ class MetadynamicsBias(BiasingPotential):
 
     Parameters
     ----------
-    extra_dofs
-        The extra degrees of freedom subject to the bias potential.
+    dynamical_variables
+        The dynamical variables subject to the bias potential.
     bandwidth
         The bandwidth vector of the Gaussian kernel. Each element must have units of
-        the corresponding extra degree of freedom.
+        the corresponding dynamical variable.
     initial_height
         The initial height of the Gaussian kernels. It must have units of molar energy.
     temperature
@@ -70,7 +70,7 @@ class MetadynamicsBias(BiasingPotential):
 
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        extra_dofs: t.Sequence[ExtraDOF],
+        dynamical_variables: t.Sequence[DynamicalVariable],
         bandwidth: t.Sequence[mmunit.Quantity],
         initial_height: mmunit.Quantity,
         temperature: mmunit.Quantity,
@@ -80,8 +80,8 @@ class MetadynamicsBias(BiasingPotential):
         if bias_factor <= 1:
             raise ValueError("bias_factor must be a float larger than 1")
         self._bandwidth = [
-            quantity.value_in_unit(xdof.unit)
-            for quantity, xdof in zip(bandwidth, extra_dofs)
+            quantity.value_in_unit(dv.unit)
+            for quantity, dv in zip(bandwidth, dynamical_variables)
         ]
         self._initial_height, self._kb_delta_t = [
             quantity.value_in_unit(mmunit.kilojoules_per_mole)
@@ -93,30 +93,30 @@ class MetadynamicsBias(BiasingPotential):
         if grid_sizes is None:
             summands = []
             distances = []
-            for xdof, sigma in zip(extra_dofs, self._bandwidth):
-                distance = f"{xdof.name}-{xdof.name}_center"
-                if xdof.isPeriodic():
-                    length = xdof.bounds.period
+            for dv, sigma in zip(dynamical_variables, self._bandwidth):
+                distance = f"{dv.name}-{dv.name}_center"
+                if dv.isPeriodic():
+                    length = dv.bounds.period
                     distance = f"{length / np.pi}*sin({np.pi / length}*({distance}))"
                 distances.append(distance)
-                summands.append(f"({xdof.name}_dist/{sigma})^2")
+                summands.append(f"({dv.name}_dist/{sigma})^2")
             function = f"height*exp(-0.5*({'+'.join(summands)}))"
-            for xdof, distance in zip(extra_dofs, distances):
-                function += f";\n{xdof.name}_dist={distance}"
+            for dv, distance in zip(dynamical_variables, distances):
+                function += f";\n{dv.name}_dist={distance}"
         else:
-            function = f"bias({','.join(xdof.name for xdof in extra_dofs)})"
+            function = f"bias({','.join(dv.name for dv in dynamical_variables)})"
         super().__init__(
-            extra_dofs,
+            dynamical_variables,
             function,
-            functools.partial(mm.CustomCompoundBondForce, len(extra_dofs)),
+            functools.partial(mm.CustomCompoundBondForce, len(dynamical_variables)),
         )
         if grid_sizes is None:
             self._bias_grid = None
             self.addPerBondParameter("height")
-            for xdof in extra_dofs:
-                self.addPerBondParameter(f"{xdof.name}_center")
+            for dv in dynamical_variables:
+                self.addPerBondParameter(f"{dv.name}_center")
         else:
-            self._bias_grid = SplineGrid(extra_dofs, grid_sizes)
+            self._bias_grid = SplineGrid(dynamical_variables, grid_sizes)
             self.addTabulatedFunction("bias", self._bias_grid)
 
     def _performAddKernel(
@@ -124,29 +124,29 @@ class MetadynamicsBias(BiasingPotential):
     ) -> None:
         height = self._initial_height * np.exp(-potential / self._kb_delta_t)
         if self._bias_grid is None:
-            self.addBond(self._extra_dof_indices, [height, *center])
+            self.addBond(self._dv_indices, [height, *center])
             context.reinitialize(preserveState=True)
         else:
             exponents = []
-            for i, xdof in enumerate(self._extra_dofs):
+            for i, dv in enumerate(self._dvs):
                 distances = self._bias_grid.getGridPoints(i) - center[i]
-                if xdof.isPeriodic():
-                    length = xdof.bounds.upper - xdof.bounds.lower
+                if dv.isPeriodic():
+                    length = dv.bounds.upper - dv.bounds.lower
                     distances = (length / np.pi) * np.sin((np.pi / length) * distances)
                     distances[-1] = distances[0]
                 exponents.append(-0.5 * (distances / self._bandwidth[i]) ** 2)
             kernel = height * np.exp(
                 exponents[0]
-                if len(self._extra_dofs) == 1
+                if len(self._dvs) == 1
                 else functools.reduce(np.add.outer, reversed(exponents))
             )
             self._bias_grid.addBias(kernel)
             self.updateParametersInContext(context)
 
-    def initialize(self, context_extra_dofs: t.Sequence[ExtraDOF]) -> None:
-        super().initialize(context_extra_dofs)
+    def initialize(self, context_dvs: t.Sequence[DynamicalVariable]) -> None:
+        super().initialize(context_dvs)
         if self._bias_grid is not None:
-            self.addBond(self._extra_dof_indices, [])
+            self.addBond(self._dv_indices, [])
 
     def getBias(self) -> np.ndarray:
         """
@@ -162,12 +162,12 @@ class MetadynamicsBias(BiasingPotential):
 
 class SplineGrid(mm.TabulatedFunction):
     """
-    A grid used to interpolate a bias potential applied to extra degrees of freedom.
+    A grid used to interpolate a bias potential applied to dynamical variables.
 
     Parameters
     ----------
-    extra_dofs
-        The extra degrees of freedom subject to the bias potential.
+    dynamical_variables
+        The dynamical variables subject to the bias potential.
     grid_sizes
         The number of points in each dimension of the grid used to interpolate the bias
         potential.
@@ -175,8 +175,8 @@ class SplineGrid(mm.TabulatedFunction):
     Raises
     ------
     ValueError
-        If the length of ``extra_dofs`` is not between 1 and 3, if ``grid_sizes`` has
-        a different length than ``extra_dofs``, if any extra degree of freedom is not
+        If the length of ``dynamical_variables`` is not between 1 and 3, if ``grid_sizes`` has
+        a different length than ``dynamical_variables``, if any dynamical variable is not
         bounded, or if the dimensions of the grid are not all periodic or all
         non-periodic.
 
@@ -189,38 +189,40 @@ class SplineGrid(mm.TabulatedFunction):
     >>> import numpy as np
     >>> mass = 1.0 * unit.dalton
     >>> bounds = xps.bounds.Reflective(0, 1, unit.nanometers)
-    >>> extra_dof = xps.ExtraDOF("x", unit.nanometers, mass, bounds)
-    >>> grid = xps.metadynamics.SplineGrid([extra_dof], [10])
+    >>> dynamical_variable = xps.DynamicalVariable("x", unit.nanometers, mass, bounds)
+    >>> grid = xps.metadynamics.SplineGrid([dynamical_variable], [10])
     """
 
     def __init__(  # pylint: disable=super-init-not-called
-        self, extra_dofs: t.Sequence[ExtraDOF], grid_sizes: t.Sequence[int]
+        self,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+        grid_sizes: t.Sequence[int],
     ) -> None:
-        num_dims = len(extra_dofs)
+        num_dims = len(dynamical_variables)
         if not 1 <= num_dims <= 3:
             raise ValueError("Spline grid can only interpolate 1D, 2D, or 3D functions")
         if len(grid_sizes) != num_dims:
-            raise ValueError("Number of grid sizes must match number of extra DOFs")
-        if any(xdof.bounds is None for xdof in extra_dofs):
-            raise ValueError("Spline interpolation requires bounded extra DOFs")
+            raise ValueError("Number of grid sizes must match number of DVs")
+        if any(dv.bounds is None for dv in dynamical_variables):
+            raise ValueError("Spline interpolation requires bounded DVs")
 
         self._grid_sizes = np.array(grid_sizes)
         self._grid = [
-            np.linspace(xdof.bounds.lower, xdof.bounds.upper, num=grid_size)
-            for xdof, grid_size in zip(extra_dofs, grid_sizes)
+            np.linspace(dv.bounds.lower, dv.bounds.upper, num=grid_size)
+            for dv, grid_size in zip(dynamical_variables, grid_sizes)
         ]
 
-        num_periodics = sum(xdof.isPeriodic() for xdof in extra_dofs)
+        num_periodics = sum(dv.isPeriodic() for dv in dynamical_variables)
         if num_periodics not in [0, num_dims]:
             raise ValueError("Mixed periodic/non-periodic dimensions are not supported")
 
         self._widths = [] if num_dims == 1 else grid_sizes
         self._bias = np.zeros(grid_sizes)
         self._limits = []
-        for xdof in extra_dofs:
-            if xdof.bounds is None:
-                raise ValueError("Interpolation requires bounded extra DOFs")
-            self._limits.extend([xdof.bounds.lower, xdof.bounds.upper])
+        for dv in dynamical_variables:
+            if dv.bounds is None:
+                raise ValueError("Interpolation requires bounded DVs")
+            self._limits.extend([dv.bounds.lower, dv.bounds.upper])
         periodic = num_periodics == num_dims
         self._table = getattr(mm, f"Continuous{num_dims}DFunction")(
             *self._widths, self._bias.flatten(), *self._limits, periodic

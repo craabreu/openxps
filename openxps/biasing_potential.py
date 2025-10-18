@@ -1,7 +1,7 @@
 """
 .. module:: openxps.biasing_potential
    :platform: Linux, Windows, macOS
-   :synopsis: Abstract class for bias potentials applied to extra degrees of freedom.
+   :synopsis: Abstract class for bias potentials applied to dynamical variables.
 
 .. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 
@@ -14,17 +14,17 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .extra_dof import ExtraDOF
+from .dynamical_variable import DynamicalVariable
 
 
 class BiasingPotential(cvpack.OpenMMForceWrapper):
     """
-    Abstract class for bias potentials applied to extra degrees of freedom.
+    Abstract class for bias potentials applied to dynamical variables.
 
     Parameters
     ----------
-    extra_dofs
-        The extra degrees of freedom subject to the bias potential.
+    dynamical_variables
+        The dynamical variables subject to the bias potential.
     function
         The mathematical expression defining the bias potential.
     force_constructor
@@ -34,18 +34,18 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
 
     def __init__(
         self,
-        extra_dofs: t.Sequence[ExtraDOF],
+        dynamical_variables: t.Sequence[DynamicalVariable],
         function: str,
         force_constructor: t.Callable[[str], mm.Force],
     ) -> None:
-        self._extra_dofs = tuple(extra_dofs)
-        self._extra_dof_indices = self._get_state_args = None
+        self._dvs = tuple(dynamical_variables)
+        self._dv_indices = self._get_state_args = None
         expression = function
-        for index, xdof in enumerate(extra_dofs, start=1):
+        for index, dv in enumerate(dynamical_variables, start=1):
             variable = f"x{index}"
-            if xdof.bounds is not None:
-                variable = xdof.bounds.leptonExpression(variable)
-            expression += f";{xdof.name}={variable}"
+            if dv.bounds is not None:
+                variable = dv.bounds.leptonExpression(variable)
+            expression += f";{dv.name}={variable}"
         super().__init__(
             force_constructor(expression),
             mmunit.kilojoules_per_mole,
@@ -59,22 +59,20 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
             "Method _performAddKernel must be implemented by derived classes"
         )
 
-    def initialize(self, context_extra_dofs: t.Sequence[ExtraDOF]) -> None:
+    def initialize(self, context_dvs: t.Sequence[DynamicalVariable]) -> None:
         """
         Initialize the bias potential for a specific context.
 
         Parameters
         ----------
-        context_extra_dofs
-            All the extra degrees of freedom in the extension context.
+        context_dvs
+            All the dynamical variables in the extension context.
         """
         try:
-            self._extra_dof_indices = tuple(
-                map(context_extra_dofs.index, self._extra_dofs)
-            )
+            self._dv_indices = tuple(map(context_dvs.index, self._dvs))
         except ValueError as error:
             raise ValueError(
-                "Not all extra DOFs in the bias potential are present in the context"
+                "Not all DVs in the bias potential are present in the context"
             ) from error
         self._get_state_args = (
             mm.State.Positions | mm.State.Energy,
@@ -91,15 +89,15 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         context
             The OpenMM context object where the bias potential is applied.
         """
-        if self._extra_dof_indices is None:
+        if self._dv_indices is None:
             raise ValueError("Bias potential has not been initialized")
 
         state = mmswig.Context_getState(context, *self._get_state_args)
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         center = []
-        for xdof, index in zip(self._extra_dofs, self._extra_dof_indices):
+        for dv, index in zip(self._dvs, self._dv_indices):
             value = positions[index].x
-            if xdof.bounds is not None:
-                value, _ = xdof.bounds.wrap(value, 0)
+            if dv.bounds is not None:
+                value, _ = dv.bounds.wrap(value, 0)
             center.append(value)
         self._performAddKernel(context, center, mmswig.State_getPotentialEnergy(state))

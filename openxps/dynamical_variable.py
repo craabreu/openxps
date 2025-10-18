@@ -1,7 +1,7 @@
 """
-.. module:: openxps.extra_dof
+.. module:: openxps.dynamical_variable
    :platform: Linux, Windows, macOS
-   :synopsis: Extra degrees of freedom for XPS simulations
+   :synopsis: Dynamical variables for XPS simulations
 
 .. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 
@@ -21,9 +21,9 @@ from .utils import preprocess_args
 
 
 @dataclass(frozen=True)
-class ExtraDOF(Serializable):
+class DynamicalVariable(Serializable):
     """
-    Extra degree of freedom for extended phase-space simulations with OpenMM.
+    Dynamical variable for extended phase-space simulations with OpenMM.
 
     Parameters
     ----------
@@ -31,34 +31,34 @@ class ExtraDOF(Serializable):
         The name of the context parameter to be turned into an extra degree of
         freedom.
     unit
-        The unity of measurement of this extra degree of freedom. It must be
+        The unity of measurement of this dynamical variable. It must be
         compatible with OpenMM's MD unit system (mass in ``dalton``, distance in
         ``nanometer``, angle in ``radian``, time in ``picosecond``, temperature in
         ``kelvin``, energy in ``kilojoules_per_mol``). If the extra degree of
         freedom does not have a unit, use ``dimensionless``.
     mass
-        The mass assigned to this extra degree of freedom, whose unit of measurement
+        The mass assigned to this dynamical variable, whose unit of measurement
         must be compatible with ``dalton*(nanometer/unit)**2``, where ``unit`` is the
-        extra degree of freedom's own unit (see above).
+        dynamical variable's own unit (see above).
     bounds
-        The boundary condition to be applied to this extra degree of freedom. It must
+        The boundary condition to be applied to this dynamical variable. It must
         be an instance of ``openxps.bounds.Periodic``, ``openxps.bounds.Reflective``,
         or ``None`` (for unbounded variables). If it is not ``None``, its unit of
-        measurement must be compatible with the extra degree of freedom's own unit.
+        measurement must be compatible with the dynamical variable's own unit.
 
     Example
     -------
     >>> import openxps as xps
     >>> import yaml
     >>> from openmm import unit
-    >>> dv = xps.ExtraDOF(
+    >>> dv = xps.DynamicalVariable(
     ...     "psi",
     ...     unit.radian,
     ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
     ...     xps.bounds.Periodic(-180, 180, unit.degree)
     ... )
     >>> dv
-    ExtraDOF(name='psi', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)
+    DynamicalVariable(name='psi', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)
     >>> dv.bounds
     Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)
     >>> assert yaml.safe_load(yaml.safe_dump(dv)) == dv
@@ -104,18 +104,18 @@ class ExtraDOF(Serializable):
 
     def isPeriodic(self) -> bool:
         """
-        Returns whether this extra degree of freedom is periodic.
+        Returns whether this dynamical variable is periodic.
 
         Returns
         -------
         bool
-            ``True`` if this extra degree of freedom is periodic, ``False`` otherwise.
+            ``True`` if this dynamical variable is periodic, ``False`` otherwise.
 
         Example
         -------
         >>> import openxps as xps
         >>> from openmm import unit
-        >>> dv = xps.ExtraDOF(
+        >>> dv = xps.DynamicalVariable(
         ...     "psi",
         ...     unit.radian,
         ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
@@ -137,27 +137,27 @@ class ExtraDOF(Serializable):
         ----------
         particle
             The index of the particle whose x coordinate will be associated with this
-            extra degree of freedom.
+            dynamical variable.
         name
             The name of the context parameter to be used in the OpenMM system. If
-            ``None``, the name of the extra degree of freedom will be used.
+            ``None``, the name of the dynamical variable will be used.
 
         Returns
         -------
         cvpack.OpenMMForceWrapper
-            The collective variable object representing this extra degree of freedom.
+            The collective variable object representing this dynamical variable.
 
         Example
         -------
         >>> import openxps as xps
         >>> from openmm import unit
-        >>> xdof = xps.ExtraDOF(
+        >>> dv = xps.DynamicalVariable(
         ...     "psi",
         ...     unit.radian,
         ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
         ...     xps.bounds.Periodic(-180, 180, unit.degree)
         ... )
-        >>> cv = xdof.createCollectiveVariable(0)
+        >>> cv = dv.createCollectiveVariable(0)
         """
         bounds = self.bounds
         if bounds is None:
@@ -183,7 +183,7 @@ class ExtraDOF(Serializable):
             return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
         raise ValueError("Incompatible boundary conditions.")
 
-    def _distanceToExtraDOF(self, other: "ExtraDOF") -> str:
+    def _distanceToExtraDOF(self, other: "DynamicalVariable") -> str:
         diff = f"{other.name}-{self.name}"
         if not (self.isPeriodic() or other.isPeriodic()):
             return f"({diff})"
@@ -212,25 +212,25 @@ class ExtraDOF(Serializable):
         >>> import openxps as xps
         >>> import pytest
         >>> from openmm import unit
-        >>> xdof = xps.ExtraDOF(
+        >>> dv = xps.DynamicalVariable(
         ...     "psi0",
         ...     unit.radian,
         ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
         ...     xps.bounds.Periodic(-180, 180, unit.degree)
         ... )
         >>> psi = cvpack.Torsion(6, 8, 14, 16, name="psi")
-        >>> xdof.distanceTo(psi)
+        >>> dv.distanceTo(psi)
         '(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))'
         >>>
 
         """
         if isinstance(other, cvpack.CollectiveVariable):
             return self._distanceToCV(other)
-        if isinstance(other, ExtraDOF):
+        if isinstance(other, DynamicalVariable):
             return self._distanceToExtraDOF(other)
         raise TypeError(f"Method distanceTo not implemented for type {type(other)}.")
 
 
-ExtraDOF.__init__ = preprocess_args(ExtraDOF.__init__)
+DynamicalVariable.__init__ = preprocess_args(DynamicalVariable.__init__)
 
-ExtraDOF.registerTag("!openxps.ExtraDOF")
+DynamicalVariable.registerTag("!openxps.DynamicalVariable")

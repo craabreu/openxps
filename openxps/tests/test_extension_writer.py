@@ -22,7 +22,7 @@ def test_extension_writer():
 
     model = testsystems.AlanineDipeptideVacuum()
     umbrella_potential = cvpack.MetaCollectiveVariable(
-        f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
+        f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
         unit.kilojoule_per_mole,
         kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
@@ -35,7 +35,7 @@ def test_extension_writer():
     platform = openmm.Platform.getPlatformByName("Reference")
     simulation = app.Simulation(model.topology, model.system, integrator, platform)
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
-    phi0 = xps.ExtraDOF("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     context = xps.ExtendedSpaceContext(simulation.context, [phi0], umbrella_potential)
     context.setPositions(model.positions)
     context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)

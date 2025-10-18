@@ -61,7 +61,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     ...     model.topology, model.system, integrator, platform
     ... )
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
-    >>> phi0 = xps.ExtraDOF("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> context = xps.ExtendedSpaceContext(
     ...     simulation.context, [phi0], umbrella_potential
     ... )
@@ -139,8 +139,8 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
             kinetic_energy = mmswig.State_getKineticEnergy(state)
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
-            for xdof, velocity in zip(self._context.getExtraDOFs(), velocities):
-                mass = xdof.mass._value  # pylint: disable=protected-access
+            for dv, velocity in zip(self._context.getExtraDOFs(), velocities):
+                mass = dv.mass._value  # pylint: disable=protected-access
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
         values = []
         if self._potential:

@@ -18,36 +18,36 @@ from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from .biasing_potential import BiasingPotential
-from .extra_dof import ExtraDOF
+from .dynamical_variable import DynamicalVariable
 
 
 class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-attributes
     """
-    Wraps an :OpenMM:`Context` object to include extra degrees of freedom (DOFs) and
+    Wraps an :OpenMM:`Context` object to include dynamical variables (DVs) and
     allow for extended phase-space (XPS) simulations.
 
     **Note**: The system and integrator attached to the context are modified in-place.
 
     A provided :CVPack:`MetaCollectiveVariable` is added to the system to couple the
-    physical DOFs and the extra ones. The integrator's ``step`` method is replaced with
+    physical DVs and the extra ones. The integrator's ``step`` method is replaced with
     a custom function that advances the physical and extension systems in tandem.
 
     Parameters
     ----------
     context
         The original OpenMM context containing the physical system.
-    extra_dofs
-        A group of extra degrees of freedom to be included in the XPS simulation.
+    dynamical_variables
+        A group of dynamical variables to be included in the XPS simulation.
     coupling_potential
         A meta-collective variable defining the potential energy term that couples the
-        physical system to the extra DOFs. It must have units of ``kilojoules_per_mole``
+        physical system to the DVs. It must have units of ``kilojoules_per_mole``
         or equivalent.
     integrator_template
         An :OpenMM:`Integrator` object to be used as a template for the algorithm that
-        advances the extra DOFs. If not provided, the physical system's integrator is
+        advances the DVs. If not provided, the physical system's integrator is
         used as a template.
     biasing_potential
-        A bias potential applied to the extra DOFs. If not provided, no bias is applied.
+        A bias potential applied to the DVs. If not provided, no bias is applied.
 
     Example
     -------
@@ -72,7 +72,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     >>> integrator.setRandomNumberSeed(1234)
     >>> platform = openmm.Platform.getPlatformByName("Reference")
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
-    >>> phi0 = xps.ExtraDOF("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> height = 2 * unit.kilojoule_per_mole
     >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
@@ -99,7 +99,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     def __init__(  # pylint: disable=super-init-not-called,too-many-arguments
         self,
         context: mm.Context,
-        extra_dofs: t.Sequence[ExtraDOF],
+        dynamical_variables: t.Sequence[DynamicalVariable],
         coupling_potential: cvpack.MetaCollectiveVariable,
         integrator_template: t.Optional[mm.Integrator] = None,
         biasing_potential: t.Optional[BiasingPotential] = None,
@@ -107,7 +107,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         self.this = context.this
         self._system = context.getSystem()
         self._integrator = context.getIntegrator()
-        self._extra_dofs = tuple(extra_dofs)
+        self._dvs = tuple(dynamical_variables)
         self._coupling_potential = coupling_potential
         self._validate()
         self._coupling_potential.addToSystem(self._system)
@@ -118,7 +118,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         self._integrator.step = MethodType(
             partial(
                 integrate_extended_space,
-                extra_dofs=self._extra_dofs,
+                dynamical_variables=self._dvs,
                 extension_context=self._extension_context,
                 coupling_potential=coupling_potential,
             ),
@@ -126,9 +126,9 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         )
 
     def _validate(self) -> None:
-        if not all(isinstance(xdof, ExtraDOF) for xdof in self._extra_dofs):
+        if not all(isinstance(dv, DynamicalVariable) for dv in self._dvs):
             raise TypeError(
-                "All extra degrees of freedom must be instances of ExtraDOF."
+                "All dynamical variables must be instances of DynamicalVariable."
             )
         if not isinstance(self._coupling_potential, cvpack.MetaCollectiveVariable):
             raise TypeError(
@@ -147,12 +147,12 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             raise ValueError(
                 f"The context already contains {parameters} among its parameters."
             )
-        xdof_units = {xdof.name: xdof.unit for xdof in self._extra_dofs}
-        if parameters := sorted(set(xdof_units) - set(parameter_units)):
+        dv_units = {dv.name: dv.unit for dv in self._dvs}
+        if parameters := sorted(set(dv_units) - set(parameter_units)):
             raise ValueError(
                 f"The coupling potential parameters do not include {parameters}."
             )
-        for name, unit in xdof_units.items():
+        for name, unit in dv_units.items():
             if not unit.is_compatible(parameter_units[name]):
                 raise ValueError(f"Unit mismatch for parameter '{name}'.")
 
@@ -163,20 +163,19 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         extension_integrator.setStepSize(self._integrator.getStepSize())
 
         extension_system = mm.System()
-        for xdof in self._extra_dofs:
-            extension_system.addParticle(xdof.mass / xdof.mass.unit)
+        for dv in self._dvs:
+            extension_system.addParticle(dv.mass / dv.mass.unit)
 
         meta_cv = self._coupling_potential
         parameters = meta_cv.getParameterDefaultValues()
-        for xdof in self._extra_dofs:
-            parameters.pop(xdof.name)
+        for dv in self._dvs:
+            parameters.pop(dv.name)
         parameters.update(meta_cv.getInnerValues(self))
 
         flipped_potential = cvpack.MetaCollectiveVariable(
             function=meta_cv.getEnergyFunction(),
             variables=[
-                xdof.createCollectiveVariable(index)
-                for index, xdof in enumerate(self._extra_dofs)
+                dv.createCollectiveVariable(index) for index, dv in enumerate(self._dvs)
             ],
             unit=meta_cv.getUnit(),
             periodicBounds=meta_cv.getPeriodicBounds(),
@@ -186,7 +185,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         flipped_potential.addToSystem(extension_system)
 
         if self._biasing_potential is not None:
-            self._biasing_potential.initialize(self._extra_dofs)
+            self._biasing_potential.initialize(self._dvs)
             self._biasing_potential.addToSystem(extension_system)
 
         return mm.Context(
@@ -206,16 +205,16 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
                 "No biasing potential was provided when creating the context."
             ) from error
 
-    def getExtraDOFs(self) -> t.Tuple[ExtraDOF]:
+    def getExtraDOFs(self) -> t.Tuple[DynamicalVariable]:
         """
-        Get the extra degrees of freedom included in the extended phase-space system.
+        Get the dynamical variables included in the extended phase-space system.
 
         Returns
         -------
-        t.Tuple[ExtraDOF]
-            A tuple containing the extra degrees of freedom.
+        t.Tuple[DynamicalVariable]
+            A tuple containing the dynamical variables.
         """
-        return self._extra_dofs
+        return self._dvs
 
     def setPositions(self, positions: cvpack.units.MatrixQuantity) -> None:
         """
@@ -232,7 +231,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
 
     def setExtraValues(self, values: t.Iterable[mmunit.Quantity]) -> None:
         """
-        Set the values of the extra degrees of freedom.
+        Set the values of the dynamical variables.
 
         Parameters
         ----------
@@ -241,44 +240,42 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             degrees of freedom.
         """
         positions = []
-        for xdof, value in zip(self._extra_dofs, values):
+        for dv, value in zip(self._dvs, values):
             if mmunit.is_quantity(value):
-                value = value.value_in_unit(xdof.unit)
+                value = value.value_in_unit(dv.unit)
             positions.append(mm.Vec3(value, 0, 0))
-            if xdof.bounds is not None:
-                value, _ = xdof.bounds.wrap(value, 0)
-            self.setParameter(xdof.name, value)
+            if dv.bounds is not None:
+                value, _ = dv.bounds.wrap(value, 0)
+            self.setParameter(dv.name, value)
         self._extension_context.setPositions(positions)
         for name, value in self._coupling_potential.getInnerValues(self).items():
             self._extension_context.setParameter(name, value / value.unit)
 
     def getExtraValues(self) -> t.Tuple[mmunit.Quantity]:
         """
-        Get the values of the extra degrees of freedom.
+        Get the values of the dynamical variables.
 
         Returns
         -------
         t.Tuple[mmunit.Quantity]
-            A tuple containing the values of the extra degrees of freedom.
+            A tuple containing the values of the dynamical variables.
         """
-        return tuple(
-            self.getParameter(xdof.name) * xdof.unit for xdof in self._extra_dofs
-        )
+        return tuple(self.getParameter(dv.name) * dv.unit for dv in self._dvs)
 
     def setExtraVelocities(self, velocities: t.Iterable[mmunit.Quantity]) -> None:
         """
-        Set the velocities of the extra degrees of freedom.
+        Set the velocities of the dynamical variables.
 
         Parameters
         ----------
         velocities
-            A dictionary containing the velocities of the extra degrees of freedom.
+            A dictionary containing the velocities of the dynamical variables.
         """
         velocities = list(velocities)
-        for i, xdof in enumerate(self._extra_dofs):
+        for i, dv in enumerate(self._dvs):
             value = velocities[i]
             if mmunit.is_quantity(value):
-                value = value.value_in_unit(xdof.unit / mmunit.picosecond)
+                value = value.value_in_unit(dv.unit / mmunit.picosecond)
             velocities[i] = mm.Vec3(value, 0, 0)
         self._extension_context.setVelocities(velocities)
 
@@ -286,7 +283,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         self, temperature: mmunit.Quantity, seed: t.Optional[int] = None
     ) -> None:
         """
-        Set the velocities of the extra degrees of freedom to a temperature.
+        Set the velocities of the dynamical variables to a temperature.
 
         Parameters
         ----------
@@ -301,24 +298,24 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
 
     def getExtraVelocities(self) -> t.Tuple[mmunit.Quantity]:
         """
-        Get the velocities of the extra degrees of freedom.
+        Get the velocities of the dynamical variables.
 
         Returns
         -------
         t.Tuple[mmunit.Quantity]
-            A tuple containing the velocities of the extra degrees of freedom.
+            A tuple containing the velocities of the dynamical variables.
         """
         state = mmswig.Context_getState(
             self._extension_context, mm.State.Positions | mm.State.Velocities
         )
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
-        for i, xdof in enumerate(self._extra_dofs):
+        for i, dv in enumerate(self._dvs):
             value = positions[i].x
             rate = velocities[i].x
-            if xdof.bounds is not None:
-                value, rate = xdof.bounds.wrap(value, rate)
-            velocities[i] = rate * xdof.unit / mmunit.picosecond
+            if dv.bounds is not None:
+                value, rate = dv.bounds.wrap(value, rate)
+            velocities[i] = rate * dv.unit / mmunit.picosecond
         return tuple(velocities)
 
     def getExtensionContext(self) -> mm.Context:
@@ -336,7 +333,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
 def integrate_extended_space(
     physical_context: mm.Context,
     steps: int,
-    extra_dofs: t.Tuple[ExtraDOF],
+    dynamical_variables: t.Tuple[DynamicalVariable],
     extension_context: mm.Context,
     coupling_potential: cvpack.MetaCollectiveVariable,
 ) -> None:
@@ -350,17 +347,17 @@ def integrate_extended_space(
         The OpenMM context containing the physical system.
     steps
         The number of time steps to advance the simulation.
-    extra_dofs
-        The extra degrees of freedom included in the extended phase-space system.
+    dynamical_variables
+        The dynamical variables included in the extended phase-space system.
     extension_context : mm.Context
         The OpenMM context containing the extension system.
     coupling_potential
-        The potential that couples the physical and extra degrees of freedom.
+        The potential that couples the physical and dynamical variables.
 
     Raises
     ------
     mm.OpenMMException
-        If the particle positions or extra degrees of freedom have not been properly
+        If the particle positions or dynamical variables have not been properly
         initialized in the context.
     """
 
@@ -372,11 +369,11 @@ def integrate_extended_space(
 
         state = mmswig.Context_getState(extension_context, mm.State.Positions)
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-        for i, xdof in enumerate(extra_dofs):
+        for i, dv in enumerate(dynamical_variables):
             value = positions[i].x
-            if xdof.bounds is not None:
-                value, _ = xdof.bounds.wrap(value, 0)
-            mmswig.Context_setParameter(physical_context, xdof.name, value)
+            if dv.bounds is not None:
+                value, _ = dv.bounds.wrap(value, 0)
+            mmswig.Context_setParameter(physical_context, dv.name, value)
 
         collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
             coupling_potential,
