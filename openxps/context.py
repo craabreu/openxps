@@ -17,7 +17,7 @@ import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .biasing_potential import BiasingPotential
+from .bias_potential import BiasPotential
 from .dynamical_variable import DynamicalVariable
 
 
@@ -46,7 +46,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         An :OpenMM:`Integrator` object to be used as a template for the algorithm that
         advances the DVs. If not provided, the physical system's integrator is
         used as a template.
-    biasing_potential
+    bias_potential
         A bias potential applied to the DVs. If not provided, no bias is applied.
 
     Example
@@ -79,7 +79,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     openmm.Context(model.system, integrator, platform),
     ...     [phi0],
     ...     umbrella_potential,
-    ...     biasing_potential=xps.MetadynamicsBias(
+    ...     bias_potential=xps.MetadynamicsBias(
     ...         [phi0], [sigma], height, temp, 10, [100]
     ...     ),
     ... )
@@ -102,7 +102,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         dynamical_variables: t.Sequence[DynamicalVariable],
         coupling_potential: cvpack.MetaCollectiveVariable,
         integrator_template: t.Optional[mm.Integrator] = None,
-        biasing_potential: t.Optional[BiasingPotential] = None,
+        bias_potential: t.Optional[BiasPotential] = None,
     ) -> None:
         self.this = context.this
         self._system = context.getSystem()
@@ -112,7 +112,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         self._validate()
         self._coupling_potential.addToSystem(self._system)
         self.reinitialize(preserveState=True)
-        self._biasing_potential = biasing_potential
+        self._bias_potential = bias_potential
         self._extension_context = self._createExtensionContext(integrator_template)
 
         self._integrator.step = MethodType(
@@ -184,9 +184,9 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         )
         flipped_potential.addToSystem(extension_system)
 
-        if self._biasing_potential is not None:
-            self._biasing_potential.initialize(self._dvs)
-            self._biasing_potential.addToSystem(extension_system)
+        if self._bias_potential is not None:
+            self._bias_potential.initialize(self._dvs)
+            self._bias_potential.addToSystem(extension_system)
 
         return mm.Context(
             extension_system,
@@ -196,13 +196,13 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
 
     def addBiasKernel(self) -> None:
         """
-        Add a Gaussian kernel to the biasing potential.
+        Add a Gaussian kernel to the bias potential.
         """
         try:
-            self._biasing_potential.addKernel(self._extension_context)
+            self._bias_potential.addKernel(self._extension_context)
         except AttributeError as error:
             raise AttributeError(
-                "No biasing potential was provided when creating the context."
+                "No bias potential was provided when creating the context."
             ) from error
 
     def getExtraDOFs(self) -> t.Tuple[DynamicalVariable]:

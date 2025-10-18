@@ -1,5 +1,5 @@
 """
-.. module:: openxps.biasing_potential
+.. module:: openxps.bias_potential
    :platform: Linux, Windows, macOS
    :synopsis: Abstract class for bias potentials applied to dynamical variables.
 
@@ -17,7 +17,7 @@ from openmm import unit as mmunit
 from .dynamical_variable import DynamicalVariable
 
 
-class BiasingPotential(cvpack.OpenMMForceWrapper):
+class BiasPotential(cvpack.OpenMMForceWrapper):
     """
     Abstract class for bias potentials applied to dynamical variables.
 
@@ -49,7 +49,7 @@ class BiasingPotential(cvpack.OpenMMForceWrapper):
         super().__init__(
             force_constructor(expression),
             mmunit.kilojoules_per_mole,
-            name="biasing_potential",
+            name="bias_potential",
         )
 
     def _performAddKernel(

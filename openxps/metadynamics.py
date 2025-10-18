@@ -1,7 +1,7 @@
 """
 .. module:: openxps.metadynamics
    :platform: Linux, Windows, macOS
-   :synopsis: Biasing potentials applied to dynamical variables.
+   :synopsis: Bias potentials applied to dynamical variables.
 
 .. moduleauthor:: Charlles Abreu <craabreu@gmail.com>
 
@@ -14,11 +14,11 @@ import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
 
-from .biasing_potential import BiasingPotential
+from .bias_potential import BiasPotential
 from .dynamical_variable import DynamicalVariable
 
 
-class MetadynamicsBias(BiasingPotential):
+class MetadynamicsBias(BiasPotential):
     r"""
     A Metadynamics potential applied to dynamical variables.
 
