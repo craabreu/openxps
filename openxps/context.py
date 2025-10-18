@@ -69,6 +69,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     >>> integrator = openmm.LangevinMiddleIntegrator(
     ...     temp, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
+    >>> integrator.setRandomNumberSeed(1234)
     >>> platform = openmm.Platform.getPlatformByName("Reference")
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.ExtraDOF("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
@@ -83,16 +84,16 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     ),
     ... )
     >>> context.setPositions(model.positions)
-    >>> context.setVelocitiesToTemperature(temp)
+    >>> context.setVelocitiesToTemperature(temp, 1234)
     >>> context.setExtraValues([180 * unit.degree])
-    >>> context.setExtraVelocitiesToTemperature(temp)
+    >>> context.setExtraVelocitiesToTemperature(temp, 1234)
     >>> context.getIntegrator().step(100)
     >>> context.getExtraValues()
-    (Quantity(value=..., unit=radian),)
+    (... rad,)
     >>> context.addBiasKernel()
     >>> state = context.getExtensionContext().getState(getEnergy=True)
-    >>> state.getPotentialEnergy()
-    Quantity(value=..., unit=kilojoule/mole)
+    >>> state.getPotentialEnergy(), state.getKineticEnergy()
+    (... kJ/mol, ... kJ/mol)
     """
 
     def __init__(  # pylint: disable=super-init-not-called,too-many-arguments
