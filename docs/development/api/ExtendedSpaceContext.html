@@ -41,25 +41,25 @@
 <h1>ExtendedSpaceContext<a class="headerlink" href="#extendedspacecontext" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extra_dofs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling_potential</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">biasing_potential</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
-<dd><p>Wraps an <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> object to include extra degrees of freedom (DOFs) and
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling_potential</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_potential</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
+<dd><p>Wraps an <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> object to include dynamical variables (DVs) and
 allow for extended phase-space (XPS) simulations.</p>
 <p><strong>Note</strong>: The system and integrator attached to the context are modified in-place.</p>
 <p>A provided <a class="extlink-CVPack reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> is added to the system to couple the
-physical DOFs and the extra ones. The integrator’s <code class="docutils literal notranslate"><span class="pre">step</span></code> method is replaced with
+physical DVs and the extra ones. The integrator’s <code class="docutils literal notranslate"><span class="pre">step</span></code> method is replaced with
 a custom function that advances the physical and extension systems in tandem.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>context</strong> (<em>Context</em>) – The original OpenMM context containing the physical system.</p></li>
-<li><p><strong>extra_dofs</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><em>ExtraDOF</em></a><em>]</em>) – A group of extra degrees of freedom to be included in the XPS simulation.</p></li>
+<li><p><strong>dynamical_variables</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – A group of dynamical variables to be included in the XPS simulation.</p></li>
 <li><p><strong>coupling_potential</strong> (<em>MetaCollectiveVariable</em>) – A meta-collective variable defining the potential energy term that couples the
-physical system to the extra DOFs. It must have units of <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mole</span></code>
+physical system to the DVs. It must have units of <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mole</span></code>
 or equivalent.</p></li>
 <li><p><strong>integrator_template</strong> (<em>Integrator</em><em> | </em><em>None</em>) – An <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html">openmm.Integrator</a> object to be used as a template for the algorithm that
-advances the extra DOFs. If not provided, the physical system’s integrator is
+advances the DVs. If not provided, the physical system’s integrator is
 used as a template.</p></li>
-<li><p><strong>biasing_potential</strong> (<em>BiasingPotential</em><em> | </em><em>None</em>) – A bias potential applied to the extra DOFs. If not provided, no bias is applied.</p></li>
+<li><p><strong>bias_potential</strong> (<em>BiasPotential</em><em> | </em><em>None</em>) – A bias potential applied to the DVs. If not provided, no bias is applied.</p></li>
 </ul>
 </dd>
 </dl>
@@ -85,14 +85,14 @@ used as a template.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span><span class="o">.</span><span class="n">setRandomNumberSeed</span><span class="p">(</span><span class="mi">1234</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">platform</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">&quot;Reference&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtraDOF</span><span class="p">(</span><span class="s2">&quot;phi0&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;phi0&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">height</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">sigma</span> <span class="o">=</span> <span class="mi">18</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceContext</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">openmm</span><span class="o">.</span><span class="n">Context</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">platform</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
 <span class="gp">... </span>    <span class="n">umbrella_potential</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">biasing_potential</span><span class="o">=</span><span class="n">xps</span><span class="o">.</span><span class="n">MetadynamicsBias</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">bias_potential</span><span class="o">=</span><span class="n">xps</span><span class="o">.</span><span class="n">MetadynamicsBias</span><span class="p">(</span>
 <span class="gp">... </span>        <span class="p">[</span><span class="n">phi0</span><span class="p">],</span> <span class="p">[</span><span class="n">sigma</span><span class="p">],</span> <span class="n">height</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="p">[</span><span class="mi">100</span><span class="p">]</span>
 <span class="gp">... </span>    <span class="p">),</span>
 <span class="gp">... </span><span class="p">)</span>
@@ -113,7 +113,7 @@ used as a template.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.addBiasKernel">
 <span class="sig-name descname"><span class="pre">addBiasKernel</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.addBiasKernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.addBiasKernel" title="Link to this definition">¶</a></dt>
-<dd><p>Add a Gaussian kernel to the biasing potential.</p>
+<dd><p>Add a Gaussian kernel to the bias potential.</p>
 <dl class="field-list simple">
 </dl>
 </dd></dl>
@@ -135,13 +135,13 @@ used as a template.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtraDOFs">
 <span class="sig-name descname"><span class="pre">getExtraDOFs</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtraDOFs"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraDOFs" title="Link to this definition">¶</a></dt>
-<dd><p>Get the extra degrees of freedom included in the extended phase-space system.</p>
+<dd><p>Get the dynamical variables included in the extended phase-space system.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A tuple containing the extra degrees of freedom.</p>
+<dd class="field-odd"><p>A tuple containing the dynamical variables.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>t.Tuple[<a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.ExtraDOF">ExtraDOF</a>]</p>
+<dd class="field-even"><p>t.Tuple[<a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.DynamicalVariable">DynamicalVariable</a>]</p>
 </dd>
 </dl>
 </dd></dl>
@@ -149,10 +149,10 @@ used as a template.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtraValues">
 <span class="sig-name descname"><span class="pre">getExtraValues</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtraValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraValues" title="Link to this definition">¶</a></dt>
-<dd><p>Get the values of the extra degrees of freedom.</p>
+<dd><p>Get the values of the dynamical variables.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A tuple containing the values of the extra degrees of freedom.</p>
+<dd class="field-odd"><p>A tuple containing the values of the dynamical variables.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>t.Tuple[mmunit.Quantity]</p>
@@ -163,10 +163,10 @@ used as a template.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtraVelocities">
 <span class="sig-name descname"><span class="pre">getExtraVelocities</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtraVelocities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtraVelocities" title="Link to this definition">¶</a></dt>
-<dd><p>Get the velocities of the extra degrees of freedom.</p>
+<dd><p>Get the velocities of the dynamical variables.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A tuple containing the velocities of the extra degrees of freedom.</p>
+<dd class="field-odd"><p>A tuple containing the velocities of the dynamical variables.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>t.Tuple[mmunit.Quantity]</p>
@@ -177,7 +177,7 @@ used as a template.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setExtraValues">
 <span class="sig-name descname"><span class="pre">setExtraValues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setExtraValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setExtraValues" title="Link to this definition">¶</a></dt>
-<dd><p>Set the values of the extra degrees of freedom.</p>
+<dd><p>Set the values of the dynamical variables.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>values</strong> (<em>Iterable</em><em>[</em><em>Quantity</em><em>]</em>) – A sequence of quantities containing the values and units of all extra
@@ -189,10 +189,10 @@ degrees of freedom.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setExtraVelocities">
 <span class="sig-name descname"><span class="pre">setExtraVelocities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">velocities</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setExtraVelocities"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setExtraVelocities" title="Link to this definition">¶</a></dt>
-<dd><p>Set the velocities of the extra degrees of freedom.</p>
+<dd><p>Set the velocities of the dynamical variables.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>velocities</strong> (<em>Iterable</em><em>[</em><em>Quantity</em><em>]</em>) – A dictionary containing the velocities of the extra degrees of freedom.</p>
+<dd class="field-odd"><p><strong>velocities</strong> (<em>Iterable</em><em>[</em><em>Quantity</em><em>]</em>) – A dictionary containing the velocities of the dynamical variables.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -200,7 +200,7 @@ degrees of freedom.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setExtraVelocitiesToTemperature">
 <span class="sig-name descname"><span class="pre">setExtraVelocitiesToTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setExtraVelocitiesToTemperature"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setExtraVelocitiesToTemperature" title="Link to this definition">¶</a></dt>
-<dd><p>Set the velocities of the extra degrees of freedom to a temperature.</p>
+<dd><p>Set the velocities of the dynamical variables to a temperature.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature to set the velocities to.</p>
@@ -249,7 +249,7 @@ degrees of freedom.</p>
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">ExtendedSpaceContext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtraDOF.html">ExtraDOF</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MetadynamicsBias.html">MetadynamicsBias</a></li>
 </ul>
 </li>

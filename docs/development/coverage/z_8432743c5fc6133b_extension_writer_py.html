@@ -60,12 +60,12 @@
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
-            <a id="prevFileLink" class="nav" href="z_8432743c5fc6133b_context_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a id="prevFileLink" class="nav" href="z_8432743c5fc6133b_dynamical_variable_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="z_8432743c5fc6133b_extra_dof_py.html">&#xbb; next</a>
+            <a id="nextFileLink" class="nav" href="z_8432743c5fc6133b_metadynamics_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-10-18 13:17 +0000
+            created at 2025-10-18 14:33 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -143,7 +143,7 @@
     <p class="pln"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t"><span class="str">    ...     model.topology, model.system, integrator, platform</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t"><span class="str">    ... )</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t"><span class="str">    >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="str">    >>> phi0 = xps.ExtraDOF("phi0", unit.radian, mass, xps.bounds.CIRCULAR)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t"><span class="str">    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t"><span class="str">    >>> context = xps.ExtendedSpaceContext(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t"><span class="str">    ...     simulation.context, [phi0], umbrella_potential</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t"><span class="str">    ... )</span>&nbsp;</span><span class="r"></span></p>
@@ -221,8 +221,8 @@
     <p class="run"><span class="n"><a id="t139" href="#t139">139</a></span><span class="t">            <span class="nam">kinetic_energy</span> <span class="op">=</span> <span class="nam">mmswig</span><span class="op">.</span><span class="nam">State_getKineticEnergy</span><span class="op">(</span><span class="nam">state</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t140" href="#t140">140</a></span><span class="t">        <span class="key">if</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_needs_velocities</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t141" href="#t141">141</a></span><span class="t">            <span class="nam">velocities</span> <span class="op">=</span> <span class="nam">mmswig</span><span class="op">.</span><span class="nam">State__getVectorAsVec3</span><span class="op">(</span><span class="nam">state</span><span class="op">,</span> <span class="nam">mm</span><span class="op">.</span><span class="nam">State</span><span class="op">.</span><span class="nam">Velocities</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">            <span class="key">for</span> <span class="nam">xdof</span><span class="op">,</span> <span class="nam">velocity</span> <span class="key">in</span> <span class="nam">zip</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">_context</span><span class="op">.</span><span class="nam">getExtraDOFs</span><span class="op">(</span><span class="op">)</span><span class="op">,</span> <span class="nam">velocities</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">                <span class="nam">mass</span> <span class="op">=</span> <span class="nam">xdof</span><span class="op">.</span><span class="nam">mass</span><span class="op">.</span><span class="nam">_value</span>  <span class="com"># pylint: disable=protected-access</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t142" href="#t142">142</a></span><span class="t">            <span class="key">for</span> <span class="nam">dv</span><span class="op">,</span> <span class="nam">velocity</span> <span class="key">in</span> <span class="nam">zip</span><span class="op">(</span><span class="nam">self</span><span class="op">.</span><span class="nam">_context</span><span class="op">.</span><span class="nam">getExtraDOFs</span><span class="op">(</span><span class="op">)</span><span class="op">,</span> <span class="nam">velocities</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t143" href="#t143">143</a></span><span class="t">                <span class="nam">mass</span> <span class="op">=</span> <span class="nam">dv</span><span class="op">.</span><span class="nam">mass</span><span class="op">.</span><span class="nam">_value</span>  <span class="com"># pylint: disable=protected-access</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t144" href="#t144">144</a></span><span class="t">                <span class="nam">kinetic_energy</span> <span class="op">-=</span> <span class="num">0.5</span> <span class="op">*</span> <span class="nam">mass</span> <span class="op">*</span> <span class="op">(</span><span class="nam">velocity</span><span class="op">.</span><span class="nam">y</span><span class="op">**</span><span class="num">2</span> <span class="op">+</span> <span class="nam">velocity</span><span class="op">.</span><span class="nam">z</span><span class="op">**</span><span class="num">2</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t145" href="#t145">145</a></span><span class="t">        <span class="nam">values</span> <span class="op">=</span> <span class="op">[</span><span class="op">]</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t146" href="#t146">146</a></span><span class="t">        <span class="key">if</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_potential</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
@@ -238,12 +238,12 @@
 <footer>
     <div class="content">
         <p>
-            <a class="nav" href="z_8432743c5fc6133b_context_py.html">&#xab; prev</a> &nbsp; &nbsp;
+            <a class="nav" href="z_8432743c5fc6133b_dynamical_variable_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a class="nav" href="z_8432743c5fc6133b_extra_dof_py.html">&#xbb; next</a>
+            <a class="nav" href="z_8432743c5fc6133b_metadynamics_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-10-18 13:17 +0000
+            created at 2025-10-18 14:33 +0000
         </p>
     </div>
 </footer>

@@ -100,7 +100,7 @@
 <span class="sd">    ...     model.topology, model.system, integrator, platform</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
-<span class="sd">    &gt;&gt;&gt; phi0 = xps.ExtraDOF(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
 <span class="sd">    &gt;&gt;&gt; context = xps.ExtendedSpaceContext(</span>
 <span class="sd">    ...     simulation.context, [phi0], umbrella_potential</span>
 <span class="sd">    ... )</span>
@@ -186,8 +186,8 @@
             <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State_getKineticEnergy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span><span class="p">:</span>
             <span class="n">velocities</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Velocities</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">xdof</span><span class="p">,</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getExtraDOFs</span><span class="p">(),</span> <span class="n">velocities</span><span class="p">):</span>
-                <span class="n">mass</span> <span class="o">=</span> <span class="n">xdof</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">_value</span>  <span class="c1"># pylint: disable=protected-access</span>
+            <span class="k">for</span> <span class="n">dv</span><span class="p">,</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getExtraDOFs</span><span class="p">(),</span> <span class="n">velocities</span><span class="p">):</span>
+                <span class="n">mass</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">_value</span>  <span class="c1"># pylint: disable=protected-access</span>
                 <span class="n">kinetic_energy</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">mass</span> <span class="o">*</span> <span class="p">(</span><span class="n">velocity</span><span class="o">.</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">velocity</span><span class="o">.</span><span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_potential</span><span class="p">:</span>

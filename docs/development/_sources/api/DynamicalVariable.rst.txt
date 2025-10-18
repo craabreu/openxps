@@ -1,8 +1,8 @@
-ExtraDOF
-========
+DynamicalVariable
+=================
 
 .. currentmodule:: openxps
-.. autoclass:: ExtraDOF
+.. autoclass:: DynamicalVariable
     :member-order: alphabetical
 
     .. rubric:: Methods

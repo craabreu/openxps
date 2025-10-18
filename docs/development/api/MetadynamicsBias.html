@@ -20,7 +20,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Bibliography" href="../references.html" />
-    <link rel="prev" title="ExtraDOF" href="ExtraDOF.html" />
+    <link rel="prev" title="DynamicalVariable" href="DynamicalVariable.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -42,8 +42,8 @@
 <h1>MetadynamicsBias<a class="headerlink" href="#metadynamicsbias" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.MetadynamicsBias">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">MetadynamicsBias</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extra_dofs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bandwidth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_height</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_sizes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/metadynamics.html#MetadynamicsBias"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.MetadynamicsBias" title="Link to this definition">¶</a></dt>
-<dd><p>A Metadynamics potential applied to extra degrees of freedom.</p>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">MetadynamicsBias</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bandwidth</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_height</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bias_factor</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_sizes</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/metadynamics.html#MetadynamicsBias"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.MetadynamicsBias" title="Link to this definition">¶</a></dt>
+<dd><p>A Metadynamics potential applied to dynamical variables.</p>
 <div class="math notranslate nohighlight">
 \[V({\bf x}) = \sum_{i=1}^{N} h_i \exp\left\{
     -\frac{1}{2} \left(
@@ -52,7 +52,7 @@
         {\bf x} - {\bf c}_i
     \right)
 \right\}\]</div>
-<p>where <span class="math notranslate nohighlight">\({\bf x}\)</span> is the vector of extra degrees of freedom, <span class="math notranslate nohighlight">\(h_i\)</span> is
+<p>where <span class="math notranslate nohighlight">\({\bf x}\)</span> is the vector of dynamical variables, <span class="math notranslate nohighlight">\(h_i\)</span> is
 the height of the Gaussian kernel, <span class="math notranslate nohighlight">\({\bf c}_i\)</span> is the center of the kernel,
 <span class="math notranslate nohighlight">\({\boldsymbol \sigma}_i\)</span> is the bandwidth vector of the kernel, and
 <span class="math notranslate nohighlight">\({\bf D}(\cdot)\)</span> builds a diagonal matrix from a vector.</p>
@@ -64,9 +64,9 @@ kernels increases.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>extra_dofs</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><em>ExtraDOF</em></a><em>]</em>) – The extra degrees of freedom subject to the bias potential.</p></li>
+<li><p><strong>dynamical_variables</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – The dynamical variables subject to the bias potential.</p></li>
 <li><p><strong>bandwidth</strong> (<em>Sequence</em><em>[</em><em>Quantity</em><em>]</em>) – The bandwidth vector of the Gaussian kernel. Each element must have units of
-the corresponding extra degree of freedom.</p></li>
+the corresponding dynamical variable.</p></li>
 <li><p><strong>initial_height</strong> (<em>Quantity</em>) – The initial height of the Gaussian kernels. It must have units of molar energy.</p></li>
 <li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature of the system (with units).</p></li>
 <li><p><strong>bias_factor</strong> (<em>float</em>) – The bias factor that controls the equilibrium bias potential and the rate of
@@ -97,11 +97,11 @@ potential.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.MetadynamicsBias.initialize">
-<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_extra_dofs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/metadynamics.html#MetadynamicsBias.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.MetadynamicsBias.initialize" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">initialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context_dvs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/metadynamics.html#MetadynamicsBias.initialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.MetadynamicsBias.initialize" title="Link to this definition">¶</a></dt>
 <dd><p>Initialize the bias potential for a specific context.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>context_extra_dofs</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="ExtraDOF.html#openxps.ExtraDOF" title="openxps.extra_dof.ExtraDOF"><em>ExtraDOF</em></a><em>]</em>) – All the extra degrees of freedom in the extension context.</p>
+<dd class="field-odd"><p><strong>context_dvs</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – All the dynamical variables in the extension context.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -136,7 +136,7 @@ potential.</p></li>
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtraDOF.html">ExtraDOF</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">MetadynamicsBias</a></li>
 </ul>
 </li>
