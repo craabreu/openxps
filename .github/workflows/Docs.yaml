@@ -32,17 +32,14 @@ jobs:
           environment-file: devtools/conda-envs/docs_env.yaml
           environment-name: docs
           create-args: >-
-            python=3.13
-            openmm=8.3
+            python=3.13 openmm=8.3
+
       - name: Install package
         # conda setup requires this special shell
         shell: bash -l {0}
         run: |
           python -m pip install . --no-deps
           micromamba list
-        - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Additional info about the build
         shell: bash
@@ -50,14 +47,6 @@ jobs:
           uname -a
           df -h
           ulimit -a
-
-      - uses: mamba-org/setup-micromamba@v1
-        with:
-          environment-file: devtools/conda-envs/docs_env.yaml
-          environment-name: docs
-          create-args: >-
-            python=3.13
-            openmm=8.3
 
       - name: Install package
         shell: bash -l {0}
@@ -70,16 +59,16 @@ jobs:
         run: |
           pytest
 
-      - name: Build Documentation    
+      - name: Build Documentation
         shell: bash -l {0}
         run: |
           if [ "$GITHUB_EVENT_NAME" == "push" ] && [ "$GITHUB_REF_TYPE" == "tag" ]; then
             export OPENXPS_VERSION=${{ github.ref_name }}
-          else  
+          else
             export OPENXPS_VERSION=dev
-          fi  
+          fi
           sphinx-build ./docs ./html
-    
+
       - name: Get coverage report
         id:  coverage
         shell: bash -l {0}
