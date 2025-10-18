@@ -76,7 +76,9 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     >>> height = 2 * unit.kilojoule_per_mole
     >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
-    ...     openmm.Context(model.system, integrator, platform),
+    ...     model.system,
+    ...     integrator,
+    ...     platform,
     ...     [phi0],
     ...     umbrella_potential,
     ...     bias_potential=xps.MetadynamicsBias(
@@ -98,12 +100,15 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
 
     def __init__(  # pylint: disable=super-init-not-called,too-many-arguments
         self,
-        context: mm.Context,
+        system: mm.System,
+        integrator: mm.Integrator,
+        platform: mm.Platform,
         dynamical_variables: t.Sequence[DynamicalVariable],
         coupling_potential: cvpack.MetaCollectiveVariable,
         integrator_template: t.Optional[mm.Integrator] = None,
         bias_potential: t.Optional[BiasPotential] = None,
     ) -> None:
+        context = mm.Context(system, integrator, platform)
         self.this = context.this
         self._system = context.getSystem()
         self._integrator = context.getIntegrator()

@@ -38,6 +38,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     Example
     -------
     >>> import openxps as xps
+    >>> from copy import deepcopy
     >>> from math import pi
     >>> from sys import stdout
     >>> import cvpack
@@ -58,17 +59,19 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     >>> integrator.setRandomNumberSeed(1234)
     >>> platform = openmm.Platform.getPlatformByName("Reference")
     >>> simulation = app.Simulation(
-    ...     model.topology, model.system, integrator, platform
+    ...     model.topology, deepcopy(model.system), deepcopy(integrator), platform
     ... )
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> context = xps.ExtendedSpaceContext(
-    ...     simulation.context, [phi0], umbrella_potential
+    ...     model.system, integrator, platform, [phi0], umbrella_potential
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
     >>> context.setExtraValues([180 * unit.degree])
     >>> context.setExtraVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    >>> simulation.context = context
+    >>> simulation.integrator = context.getIntegrator()
     >>> reporter = cvpack.reporting.StateDataReporter(
     ...     stdout,
     ...     10,

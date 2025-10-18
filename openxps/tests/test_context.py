@@ -14,11 +14,11 @@ from openxps.context import ExtendedSpaceContext
 from openxps.dynamical_variable import DynamicalVariable
 
 
-def create_basic_context(model):
+def system_integrator_platform(model):
     """Helper function to create a basic OpenMM Context object."""
     integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
     platform = mm.Platform.getPlatformByName("Reference")
-    return mm.Context(model.system, integrator, platform)
+    return model.system, integrator, platform
 
 
 def create_dvs():
@@ -58,7 +58,7 @@ def create_coupling_potential(
 def create_extended_context(model, coupling_potential=None):
     """Helper function to create an ExtendedSpaceContext object."""
     return ExtendedSpaceContext(
-        create_basic_context(model),
+        *system_integrator_platform(model),
         create_dvs(),
         coupling_potential or create_coupling_potential(),
     )
@@ -142,31 +142,30 @@ def test_raise_exceptions():
 def test_validation():
     """Test the validation of extended space context."""
     model = testsystems.AlanineDipeptideVacuum()
-    context = create_basic_context(model)
     dvs = create_dvs()
     coupling_potential = create_coupling_potential()
 
     with pytest.raises(TypeError) as e:
-        ExtendedSpaceContext(context, [None], coupling_potential)
+        ExtendedSpaceContext(*system_integrator_platform(model), [None], coupling_potential)
     assert "dynamical variables must be instances of DynamicalVariable" in str(e.value)
 
     with pytest.raises(TypeError) as e:
-        ExtendedSpaceContext(context, dvs, None)
+        ExtendedSpaceContext(*system_integrator_platform(model), dvs, None)
     assert "must be an instance of MetaCollectiveVariable" in str(e.value)
 
     with pytest.raises(ValueError) as e:
-        ExtendedSpaceContext(context, dvs, create_coupling_potential(phi0=None))
+        ExtendedSpaceContext(*system_integrator_platform(model), dvs, create_coupling_potential(phi0=None))
     assert "The coupling potential parameters do not include ['phi0']." in str(e.value)
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(
-            context, dvs, create_coupling_potential(phi0=1 * mmunit.kelvin)
+            *system_integrator_platform(model), dvs, create_coupling_potential(phi0=1 * mmunit.kelvin)
         )
     assert "Unit mismatch for parameter 'phi0'." in str(e.value)
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(
-            context, dvs, create_coupling_potential(unit=mmunit.radian)
+            *system_integrator_platform(model), dvs, create_coupling_potential(unit=mmunit.radian)
         )
     assert "The coupling potential must have units of molar energy." in str(e.value)
 
@@ -175,9 +174,9 @@ def test_validation():
         force.addGlobalParameter("phi0", 180 * mmunit.degrees)
         force.addGlobalParameter("x0", 1 * mmunit.nanometer)
         force.addGlobalParameter("y0", 1 * mmunit.nanometer)
-        context.getSystem().addForce(force)
-        context.reinitialize()
-        ExtendedSpaceContext(context, dvs, coupling_potential)
+        system, integrator, platform = system_integrator_platform(model)
+        system.addForce(force)
+        ExtendedSpaceContext(system, integrator, platform, dvs, coupling_potential)
     assert (
         "The context already contains ['phi0', 'x0', 'y0'] among its parameters."
         in str(e.value)
