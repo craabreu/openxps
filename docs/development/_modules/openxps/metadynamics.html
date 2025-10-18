@@ -5,12 +5,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>openxps.metadynamics &#8212; OpenXPS dev  documentation</title>
-    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
-    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=12dfc556" />
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=572d9513" />
     <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=ccdb6887"></script>
@@ -43,20 +44,20 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">functools</span>
-<span class="kn">import</span> <span class="nn">typing</span> <span class="k">as</span> <span class="nn">t</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">openmm</span> <span class="k">as</span> <span class="nn">mm</span>
-<span class="kn">from</span> <span class="nn">openmm</span> <span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span> <span class="nn">.biasing_potential</span> <span class="kn">import</span> <span class="n">BiasingPotential</span>
-<span class="kn">from</span> <span class="nn">.extra_dof</span> <span class="kn">import</span> <span class="n">ExtraDOF</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.biasing_potential</span><span class="w"> </span><span class="kn">import</span> <span class="n">BiasingPotential</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.extra_dof</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtraDOF</span>
 
 
 <div class="viewcode-block" id="MetadynamicsBias">
 <a class="viewcode-back" href="../../api/MetadynamicsBias.html#openxps.MetadynamicsBias">[docs]</a>
-<span class="k">class</span> <span class="nc">MetadynamicsBias</span><span class="p">(</span><span class="n">BiasingPotential</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MetadynamicsBias</span><span class="p">(</span><span class="n">BiasingPotential</span><span class="p">):</span>
 <span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A Metadynamics potential applied to extra degrees of freedom.</span>
 
@@ -106,7 +107,7 @@
 <span class="sd">        units.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># pylint: disable=too-many-arguments</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># pylint: disable=too-many-arguments</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">extra_dofs</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">ExtraDOF</span><span class="p">],</span>
         <span class="n">bandwidth</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">],</span>
@@ -157,7 +158,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span> <span class="o">=</span> <span class="n">SplineGrid</span><span class="p">(</span><span class="n">extra_dofs</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addTabulatedFunction</span><span class="p">(</span><span class="s2">&quot;bias&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_performAddKernel</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_performAddKernel</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">center</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">potential</span><span class="p">:</span> <span class="nb">float</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initial_height</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">potential</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kb_delta_t</span><span class="p">)</span>
@@ -183,7 +184,7 @@
 
 <div class="viewcode-block" id="MetadynamicsBias.initialize">
 <a class="viewcode-back" href="../../api/MetadynamicsBias.html#openxps.MetadynamicsBias.initialize">[docs]</a>
-    <span class="k">def</span> <span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context_extra_dofs</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">ExtraDOF</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context_extra_dofs</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">ExtraDOF</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">context_extra_dofs</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addBond</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extra_dof_indices</span><span class="p">,</span> <span class="p">[])</span></div>
@@ -191,7 +192,7 @@
 
 <div class="viewcode-block" id="MetadynamicsBias.getBias">
 <a class="viewcode-back" href="../../api/MetadynamicsBias.html#openxps.MetadynamicsBias.getBias">[docs]</a>
-    <span class="k">def</span> <span class="nf">getBias</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getBias</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the bias values on a spline grid.</span>
 
@@ -205,7 +206,7 @@
 
 
 
-<span class="k">class</span> <span class="nc">SplineGrid</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">TabulatedFunction</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SplineGrid</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">TabulatedFunction</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A grid used to interpolate a bias potential applied to extra degrees of freedom.</span>
 
@@ -238,7 +239,7 @@
 <span class="sd">    &gt;&gt;&gt; grid = xps.metadynamics.SplineGrid([extra_dof], [10])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># pylint: disable=super-init-not-called</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># pylint: disable=super-init-not-called</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">extra_dofs</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">ExtraDOF</span><span class="p">],</span> <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">num_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">extra_dofs</span><span class="p">)</span>
@@ -272,7 +273,7 @@
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">this</span>
 
-    <span class="k">def</span> <span class="nf">getGridPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dimension</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getGridPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dimension</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the grid points along a specific dimension.</span>
 
@@ -288,7 +289,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grid</span><span class="p">[</span><span class="n">dimension</span><span class="p">]</span>
 
-    <span class="k">def</span> <span class="nf">getBias</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getBias</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the bias values on the spline grid.</span>
 
@@ -299,7 +300,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span>
 
-    <span class="k">def</span> <span class="nf">addBias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bias</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">addBias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bias</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Add bias values to the grid.</span>
 
@@ -318,7 +319,7 @@
           
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
         <div class="sphinxsidebarwrapper">
 <h1 class="logo"><a href="../../index.html">OpenXPS dev</a></h1>
 
@@ -357,8 +358,8 @@
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 7.3.7</a>
-      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 0.7.16</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>
 
