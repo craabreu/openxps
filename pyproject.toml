@@ -119,6 +119,7 @@ staticmethod-decorators = ["staticmethod"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+"**/tests/**/*.py" = ["PLR2004"]  # Allow magic values in tests
 
 [tool.ruff.format]
 quote-style = "double"
