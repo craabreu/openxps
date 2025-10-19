@@ -36,12 +36,11 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     Example
     -------
     >>> import openxps as xps
-    >>> from copy import deepcopy
     >>> from math import pi
     >>> from sys import stdout
     >>> import cvpack
     >>> import openmm
-    >>> from openmm import app, unit
+    >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> umbrella_potential = cvpack.MetaCollectiveVariable(
@@ -56,26 +55,24 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     ... )
     >>> integrator.setRandomNumberSeed(1234)
     >>> platform = openmm.Platform.getPlatformByName("Reference")
-    >>> simulation = app.Simulation(
-    ...     model.topology, deepcopy(model.system), deepcopy(integrator), platform
-    ... )
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
-    >>> context = xps.ExtendedSpaceContext(
-    ...     [phi0], umbrella_potential, model.system, integrator, platform
+    >>> simulation = xps.ExtendedSpaceSimulation(
+    ...     [phi0], umbrella_potential, model.topology, model.system, integrator,
+    ...     platform
     ... )
-    >>> context.setPositions(model.positions)
-    >>> context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
-    >>> context.setDynamicalVariableValues([180 * unit.degree])
-    >>> context.setDynamicalVariableVelocitiesToTemperature(300 * unit.kelvin, 1234)
-    >>> simulation.context = context
-    >>> simulation.integrator = context.getIntegrator()
+    >>> simulation.context.setPositions(model.positions)
+    >>> simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    >>> simulation.context.setDynamicalVariableValues([180 * unit.degree])
+    >>> simulation.context.setDynamicalVariableVelocitiesToTemperature(
+    ...     300 * unit.kelvin, 1234
+    ... )
     >>> reporter = cvpack.reporting.StateDataReporter(
     ...     stdout,
     ...     10,
     ...     step=True,
     ...     kineticEnergy=True,
-    ...     writers=[xps.ExtensionWriter(context, kinetic=True)],
+    ...     writers=[xps.ExtensionWriter(simulation.context, kinetic=True)],
     ... )
     >>> simulation.reporters.append(reporter)
     >>> simulation.step(100)  # doctest: +SKIP
