@@ -110,6 +110,7 @@ select = [
 
 [tool.ruff.lint.pylint]
 max-locals = 15
+max-args = 6  # Allow up to 6 arguments in function definitions
 
 [tool.ruff.lint.pep8-naming]
 # Allow camelCase method names for OpenMM compatibility

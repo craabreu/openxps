@@ -92,7 +92,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     100,60.94...,0.9695...
     """
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(  # noqa: PLR0913
         self,
         context: ExtendedSpaceContext,
         potential: bool = False,

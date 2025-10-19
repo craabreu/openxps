@@ -68,7 +68,7 @@ class MetadynamicsBias(BiasPotential):
         units.
     """
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(  # noqa: PLR0913
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
         bandwidth: t.Sequence[mmunit.Quantity],
