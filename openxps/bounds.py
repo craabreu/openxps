@@ -56,12 +56,38 @@ class Bounds(Serializable):
         self.__init__(**keywords)
 
     def __eq__(self, other: t.Any) -> bool:
-        if not isinstance(other, Bounds):
-            return False
         return (
-            self.lower * self.unit == other.lower * other.unit
+            isinstance(other, Bounds)
+            and self.lower * self.unit == other.lower * other.unit
             and self.upper * self.unit == other.upper * other.unit
         )
+
+    def __hash__(self) -> int:
+        unit, factor = self._md_unit_and_conversion_factor()
+        return hash((self.lower * factor, self.upper * factor, unit))
+
+    def _md_unit_and_conversion_factor(self) -> tuple[mmunit.Unit, float]:
+        """
+        Return the MD unit and conversion factor for the bounds.
+        """
+        unit = self.unit.in_unit_system(mmunit.md_unit_system)
+        factor = self.unit.conversion_factor_to(unit)
+        return unit, factor
+
+    def in_md_units(self) -> "Bounds":
+        """
+        Return the bounds in the MD unit system.
+
+        Example
+        -------
+        >>> import openxps as xps
+        >>> from openmm import unit
+        >>> bounds = xps.bounds.Periodic(-1.0, 1.0, unit.kilocalories_per_mole)
+        >>> bounds.in_md_units()
+        Periodic(lower=-4.184, upper=4.184, unit=nm**2 Da/(ps**2))
+        """
+        unit, factor = self._md_unit_and_conversion_factor()
+        return self.__class__(self.lower * factor, self.upper * factor, unit)
 
     def convert(self, unit: mmunit.Unit) -> "Bounds":
         """
