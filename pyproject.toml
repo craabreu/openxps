@@ -91,15 +91,41 @@ default-tag = "0.0.0"
 [tool.versioningit.write]
 file = "openxps/_version.py"
 
-[tool.isort]
-profile = "black"
+[tool.ruff]
+line-length = 88
+extend-exclude = ["_version.py"]
 
-[tool.flake8]
-max-line-length = 88
-ignore = "E203,W503"
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "PL",   # pylint
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+]
+ignore = [
+    "E203",   # whitespace before ':'
+    "W503",   # line break before binary operator
+]
 
-[tool.pylint]
-rcfile = ".pylintrc"
+[tool.ruff.lint.pylint]
+max-locals = 15
+
+[tool.ruff.lint.pep8-naming]
+# Allow camelCase method names for OpenMM compatibility
+classmethod-decorators = ["classmethod"]
+staticmethod-decorators = ["staticmethod"]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
 
 [tool.pytest.ini_options]
 minversion = "7.0"
