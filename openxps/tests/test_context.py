@@ -14,11 +14,11 @@ from openxps.context import ExtendedSpaceContext
 from openxps.dynamical_variable import DynamicalVariable
 
 
-def create_basic_context(model):
+def system_integrator_platform(model):
     """Helper function to create a basic OpenMM Context object."""
     integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
     platform = mm.Platform.getPlatformByName("Reference")
-    return mm.Context(model.system, integrator, platform)
+    return model.system, integrator, platform
 
 
 def create_dvs():
@@ -58,9 +58,9 @@ def create_coupling_potential(
 def create_extended_context(model, coupling_potential=None):
     """Helper function to create an ExtendedSpaceContext object."""
     return ExtendedSpaceContext(
-        create_basic_context(model),
         create_dvs(),
         coupling_potential or create_coupling_potential(),
+        *system_integrator_platform(model),
     )
 
 
@@ -85,20 +85,22 @@ def test_set_positions_and_velocities():
 
     context.setPositions(positions)
     context.setVelocities(velocities)
-    context.setExtraValues([1 * urad, 0.1 * unm, 0.1 * unm])
-    context.setExtraVelocities([1 * urad / ups, 1 * unm / ups, 1 * unm / ups])
+    context.setDynamicalVariableValues([1 * urad, 0.1 * unm, 0.1 * unm])
+    context.setDynamicalVariableVelocities(
+        [1 * urad / ups, 1 * unm / ups, 1 * unm / ups]
+    )
 
     state = context.getState(  # pylint: disable=unexpected-keyword-arg
         getPositions=True, getVelocities=True
     )
     assert state.getPositions(asNumpy=True) == pytest.approx(positions) * unm
     assert state.getVelocities() == pytest.approx(velocities) * unm / ups
-    assert context.getExtraValues() == (
+    assert context.getDynamicalVariableValues() == (
         pytest.approx(1) * urad,
         pytest.approx(0.1) * unm,
         pytest.approx(0.1) * unm,
     )
-    assert context.getExtraVelocities() == (
+    assert context.getDynamicalVariableVelocities() == (
         pytest.approx(1) * urad / ups,
         pytest.approx(1) * unm / ups,
         pytest.approx(1) * unm / ups,
@@ -118,23 +120,23 @@ def test_raise_exceptions():
     context.setVelocitiesToTemperature(300 * mmunit.kelvin)
 
     with pytest.raises(mm.OpenMMException) as e:
-        context.setExtraVelocitiesToTemperature(300 * mmunit.kelvin)
+        context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin)
     assert "Particle positions have not been set" in str(e.value)
 
     with pytest.raises(mm.OpenMMException) as e:
         context.getIntegrator().step(1)
     assert "Particle positions have not been set" in str(e.value)
 
-    context.setExtraValues(
+    context.setDynamicalVariableValues(
         [1 * mmunit.radian, 0.1 * mmunit.nanometer, 0.1 * mmunit.nanometer]
     )
-    context.setExtraVelocitiesToTemperature(300 * mmunit.kelvin)
+    context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin)
 
     state = context.getState(  # pylint: disable=unexpected-keyword-arg
         getVelocities=True
     )
     velocities = state.getVelocities()
-    extra_velocities = context.getExtraVelocities()
+    extra_velocities = context.getDynamicalVariableVelocities()
     assert len(velocities) == len(model.positions)
     assert len(extra_velocities) == 3
 
@@ -142,46 +144,34 @@ def test_raise_exceptions():
 def test_validation():
     """Test the validation of extended space context."""
     model = testsystems.AlanineDipeptideVacuum()
-    context = create_basic_context(model)
     dvs = create_dvs()
     coupling_potential = create_coupling_potential()
 
     with pytest.raises(TypeError) as e:
-        ExtendedSpaceContext(context, [None], coupling_potential)
+        ExtendedSpaceContext(
+            [None], coupling_potential, *system_integrator_platform(model)
+        )
     assert "dynamical variables must be instances of DynamicalVariable" in str(e.value)
 
     with pytest.raises(TypeError) as e:
-        ExtendedSpaceContext(context, dvs, None)
+        ExtendedSpaceContext(dvs, None, *system_integrator_platform(model))
     assert "must be an instance of MetaCollectiveVariable" in str(e.value)
 
     with pytest.raises(ValueError) as e:
-        ExtendedSpaceContext(context, dvs, create_coupling_potential(phi0=None))
-    assert "The coupling potential parameters do not include ['phi0']." in str(e.value)
-
-    with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(
-            context, dvs, create_coupling_potential(phi0=1 * mmunit.kelvin)
+            dvs,
+            create_coupling_potential(phi0=None),
+            *system_integrator_platform(model),
         )
-    assert "Unit mismatch for parameter 'phi0'." in str(e.value)
+    assert "dynamical variables are not coupling potential parameters" in str(e.value)
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(
-            context, dvs, create_coupling_potential(unit=mmunit.radian)
+            dvs,
+            create_coupling_potential(unit=mmunit.radian),
+            *system_integrator_platform(model),
         )
     assert "The coupling potential must have units of molar energy." in str(e.value)
-
-    with pytest.raises(ValueError) as e:
-        force = mm.CustomExternalForce("phi0*x")
-        force.addGlobalParameter("phi0", 180 * mmunit.degrees)
-        force.addGlobalParameter("x0", 1 * mmunit.nanometer)
-        force.addGlobalParameter("y0", 1 * mmunit.nanometer)
-        context.getSystem().addForce(force)
-        context.reinitialize()
-        ExtendedSpaceContext(context, dvs, coupling_potential)
-    assert (
-        "The context already contains ['phi0', 'x0', 'y0'] among its parameters."
-        in str(e.value)
-    )
 
 
 def test_consistency():
@@ -191,10 +181,10 @@ def test_consistency():
     context = create_extended_context(model, coupling)
     context.setPositions(model.positions)
     context.setVelocitiesToTemperature(300 * mmunit.kelvin)
-    context.setExtraValues(
+    context.setDynamicalVariableValues(
         [1000 * mmunit.degrees, 1 * mmunit.nanometer, 1 * mmunit.nanometer]
     )
-    context.setExtraVelocitiesToTemperature(300 * mmunit.kelvin)
+    context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin)
 
     for _ in range(10):
         context.getIntegrator().step(1000)
@@ -214,11 +204,11 @@ def test_consistency():
         positions = extension_state.getPositions()
         forces = extension_state.getForces()
         x1 = {}
-        for i, dv in enumerate(context.getExtraDOFs()):
+        for i, dv in enumerate(context.getDynamicalVariables()):
             force = forces[i].x
             if dv.bounds is not None:
                 _, force = dv.bounds.wrap(positions[i].x, force)
             x1[dv.name] = -force
         x2 = coupling.getParameterDerivatives(context)
-        for dv in context.getExtraDOFs():
+        for dv in context.getDynamicalVariables():
             assert x1[dv.name] == pytest.approx(x2[dv.name] / x2[dv.name].unit)

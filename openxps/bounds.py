@@ -88,7 +88,7 @@ class Bounds(Serializable):
         factor = 1.0 * self.unit / unit
         if not isinstance(factor, float):
             raise ValueError("The unit must be compatible with the bounds unit.")
-        return type(self)(factor * self.lower, factor * self.upper, unit)
+        return self.__class__(factor * self.lower, factor * self.upper, unit)
 
     def asQuantity(self) -> mmunit.Quantity:
         """

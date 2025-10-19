@@ -37,6 +37,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     Example
     -------
     >>> import openxps as xps
+    >>> from copy import deepcopy
     >>> from math import pi
     >>> from sys import stdout
     >>> import cvpack
@@ -57,17 +58,19 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     >>> integrator.setRandomNumberSeed(1234)
     >>> platform = openmm.Platform.getPlatformByName("Reference")
     >>> simulation = app.Simulation(
-    ...     model.topology, model.system, integrator, platform
+    ...     model.topology, deepcopy(model.system), deepcopy(integrator), platform
     ... )
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> context = xps.ExtendedSpaceContext(
-    ...     simulation.context, [phi0], umbrella_potential
+    ...     [phi0], umbrella_potential, model.system, integrator, platform
     ... )
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
-    >>> context.setExtraValues([180 * unit.degree])
-    >>> context.setExtraVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    >>> context.setDynamicalVariableValues([180 * unit.degree])
+    >>> context.setDynamicalVariableVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    >>> simulation.context = context
+    >>> simulation.integrator = context.getIntegrator()
     >>> reporter = cvpack.reporting.StateDataReporter(
     ...     stdout,
     ...     10,
@@ -111,7 +114,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
 
     def initialize(self, simulation: mmapp.Simulation) -> None:
         if self._temperature:
-            number = len(self._context.getExtraDOFs())
+            number = len(self._context.getDynamicalVariables())
             kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
                 mmunit.kilojoules_per_mole / mmunit.kelvin
             )
@@ -138,7 +141,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
             kinetic_energy = mmswig.State_getKineticEnergy(state)
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
-            for dv, velocity in zip(self._context.getExtraDOFs(), velocities):
+            for dv, velocity in zip(self._context.getDynamicalVariables(), velocities):
                 mass = dv.mass._value  # pylint: disable=protected-access
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
         values = []

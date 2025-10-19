@@ -10,6 +10,7 @@ dependencies:
   - numpy
   - cvpack
   - pyyaml
+  - typing-extensions
 
     # Testing
   - openmmtools
