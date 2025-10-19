@@ -77,6 +77,7 @@
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from copy import deepcopy</span>
 <span class="sd">    &gt;&gt;&gt; from math import pi</span>
 <span class="sd">    &gt;&gt;&gt; from sys import stdout</span>
 <span class="sd">    &gt;&gt;&gt; import cvpack</span>
@@ -97,17 +98,19 @@
 <span class="sd">    &gt;&gt;&gt; integrator.setRandomNumberSeed(1234)</span>
 <span class="sd">    &gt;&gt;&gt; platform = openmm.Platform.getPlatformByName(&quot;Reference&quot;)</span>
 <span class="sd">    &gt;&gt;&gt; simulation = app.Simulation(</span>
-<span class="sd">    ...     model.topology, model.system, integrator, platform</span>
+<span class="sd">    ...     model.topology, deepcopy(model.system), deepcopy(integrator), platform</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
 <span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
 <span class="sd">    &gt;&gt;&gt; context = xps.ExtendedSpaceContext(</span>
-<span class="sd">    ...     simulation.context, [phi0], umbrella_potential</span>
+<span class="sd">    ...     [phi0], umbrella_potential, model.system, integrator, platform</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; context.setPositions(model.positions)</span>
 <span class="sd">    &gt;&gt;&gt; context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)</span>
-<span class="sd">    &gt;&gt;&gt; context.setExtraValues([180 * unit.degree])</span>
-<span class="sd">    &gt;&gt;&gt; context.setExtraVelocitiesToTemperature(300 * unit.kelvin, 1234)</span>
+<span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableValues([180 * unit.degree])</span>
+<span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableVelocitiesToTemperature(300 * unit.kelvin, 1234)</span>
+<span class="sd">    &gt;&gt;&gt; simulation.context = context</span>
+<span class="sd">    &gt;&gt;&gt; simulation.integrator = context.getIntegrator()</span>
 <span class="sd">    &gt;&gt;&gt; reporter = cvpack.reporting.StateDataReporter(</span>
 <span class="sd">    ...     stdout,</span>
 <span class="sd">    ...     10,</span>
@@ -153,7 +156,7 @@
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.initialize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">mmapp</span><span class="o">.</span><span class="n">Simulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span><span class="p">:</span>
-            <span class="n">number</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getExtraDOFs</span><span class="p">())</span>
+            <span class="n">number</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">())</span>
             <span class="n">kb</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span>
                 <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">kelvin</span>
             <span class="p">)</span>
@@ -186,7 +189,7 @@
             <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State_getKineticEnergy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span><span class="p">:</span>
             <span class="n">velocities</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Velocities</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">dv</span><span class="p">,</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getExtraDOFs</span><span class="p">(),</span> <span class="n">velocities</span><span class="p">):</span>
+            <span class="k">for</span> <span class="n">dv</span><span class="p">,</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">(),</span> <span class="n">velocities</span><span class="p">):</span>
                 <span class="n">mass</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">_value</span>  <span class="c1"># pylint: disable=protected-access</span>
                 <span class="n">kinetic_energy</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">mass</span> <span class="o">*</span> <span class="p">(</span><span class="n">velocity</span><span class="o">.</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">velocity</span><span class="o">.</span><span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
         <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>

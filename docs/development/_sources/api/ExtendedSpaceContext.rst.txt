@@ -7,12 +7,13 @@ ExtendedSpaceContext
 
     .. rubric:: Methods
 
-    .. automethod:: addBiasKernel
+    .. automethod:: getCouplingPotential
+    .. automethod:: getDynamicalVariableValues
+    .. automethod:: getDynamicalVariableVelocities
+    .. automethod:: getDynamicalVariables
     .. automethod:: getExtensionContext
-    .. automethod:: getExtraDOFs
-    .. automethod:: getExtraValues
-    .. automethod:: getExtraVelocities
-    .. automethod:: setExtraValues
-    .. automethod:: setExtraVelocities
-    .. automethod:: setExtraVelocitiesToTemperature
+    .. automethod:: setDynamicalVariableValues
+    .. automethod:: setDynamicalVariableVelocities
+    .. automethod:: setDynamicalVariableVelocitiesToTemperature
+    .. automethod:: setParameter
     .. automethod:: setPositions
