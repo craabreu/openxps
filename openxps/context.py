@@ -188,7 +188,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             mm.Platform.getPlatformByName("Reference"),
         )
 
-    def getDynamicalVariables(self) -> t.Tuple[DynamicalVariable]:
+    def getDynamicalVariables(self) -> tuple[DynamicalVariable]:
         """
         Get the dynamical variables included in the extended phase-space system.
 
@@ -264,16 +264,18 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             degrees of freedom.
         """
         positions = []
-        for dv, value in zip(self._dvs, values):
-            if mmunit.is_quantity(value):
-                value = value.value_in_unit(dv.unit)
+        for dv, quantity in zip(self._dvs, values):
+            if mmunit.is_quantity(quantity):
+                value = quantity.value_in_unit(dv.unit)
+            else:
+                value = quantity
             positions.append(mm.Vec3(value, 0, 0))
             if dv.bounds is not None:
                 value, _ = dv.bounds.wrap(value, 0)
             super().setParameter(dv.name, value)
         self._extension_context.setPositions(positions)
 
-    def getDynamicalVariableValues(self) -> t.Tuple[mmunit.Quantity]:
+    def getDynamicalVariableValues(self) -> tuple[mmunit.Quantity]:
         """
         Get the values of the dynamical variables.
 
@@ -320,7 +322,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
         self._extension_context.setVelocities([mm.Vec3(v.x, 0, 0) for v in velocities])
 
-    def getDynamicalVariableVelocities(self) -> t.Tuple[mmunit.Quantity]:
+    def getDynamicalVariableVelocities(self) -> tuple[mmunit.Quantity]:
         """
         Get the velocities of the dynamical variables.
 
@@ -358,7 +360,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
 def integrate_extended_space(
     physical_context: mm.Context,
     steps: int,
-    dynamical_variables: t.Tuple[DynamicalVariable],
+    dynamical_variables: tuple[DynamicalVariable],
     extension_context: mm.Context,
     coupling_potential: cvpack.MetaCollectiveVariable,
 ) -> None:

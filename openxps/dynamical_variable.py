@@ -8,11 +8,11 @@
 """
 
 import typing as t
-import typing_extensions as te
 from dataclasses import dataclass
 
 import cvpack
 import openmm as mm
+import typing_extensions as te
 from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit
@@ -92,7 +92,7 @@ class DynamicalVariable(Serializable):
         elif self.bounds is not None:
             raise TypeError("The bounds must be an instance of Bounds or None.")
 
-    def __getstate__(self) -> t.Dict[str, t.Any]:
+    def __getstate__(self) -> dict[str, t.Any]:
         return {
             "name": self.name,
             "unit": self.unit,
@@ -100,7 +100,7 @@ class DynamicalVariable(Serializable):
             "bounds": self.bounds,
         }
 
-    def __setstate__(self, keywords: t.Dict[str, t.Any]) -> None:
+    def __setstate__(self, keywords: dict[str, t.Any]) -> None:
         self.__init__(**keywords)
 
     def isPeriodic(self) -> bool:
