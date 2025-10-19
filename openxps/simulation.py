@@ -140,4 +140,3 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         # Load state if provided
         if state is not None:
             self.context.setState(state)
-

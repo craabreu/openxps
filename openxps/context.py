@@ -21,7 +21,7 @@ from openmm import unit as mmunit
 from .dynamical_variable import DynamicalVariable
 
 
-class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-attributes
+class ExtendedSpaceContext(mm.Context):
     """An :OpenMM:`Context` object that includes extra dynamical variables (DVs) and
     allows for extended phase-space (XPS) simulations.
 
@@ -389,10 +389,8 @@ def integrate_extended_space(
     """
 
     for _ in range(steps):
-        # pylint: disable=protected-access
         mmswig.Integrator_step(physical_context._integrator, 1)
         mmswig.Integrator_step(extension_context._integrator, 1)
-        # pylint: enable=protected-access
 
         state = mmswig.Context_getState(extension_context, mm.State.Positions)
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)

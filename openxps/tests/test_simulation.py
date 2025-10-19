@@ -24,7 +24,7 @@ def create_test_system():
     model = testsystems.AlanineDipeptideVacuum()
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     umbrella_potential = cvpack.MetaCollectiveVariable(
-        f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
+        f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
         [phi],
         mmunit.kilojoule_per_mole,
         kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
@@ -283,9 +283,11 @@ def test_save_and_load_checkpoint():
 
     # DV values should be restored
     dv_values_restored = simulation.context.getDynamicalVariableValues()
-    assert dv_values_restored[0] == pytest.approx(
-        dv_values_before[0].value_in_unit(mmunit.radian)
-    ) * mmunit.radian
+    assert (
+        dv_values_restored[0]
+        == pytest.approx(dv_values_before[0].value_in_unit(mmunit.radian))
+        * mmunit.radian
+    )
 
     # Clean up
     os.unlink(checkpoint_file)
@@ -396,4 +398,3 @@ def test_simulation_with_state():
         assert p1.x == pytest.approx(p2.x)
         assert p1.y == pytest.approx(p2.y)
         assert p1.z == pytest.approx(p2.z)
-

@@ -195,7 +195,7 @@ class SplineGrid(mm.TabulatedFunction):
     >>> grid = xps.metadynamics.SplineGrid([dynamical_variable], [10])
     """
 
-    def __init__(  # pylint: disable=super-init-not-called
+    def __init__(
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
         grid_sizes: t.Sequence[int],
