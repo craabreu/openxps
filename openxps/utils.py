@@ -55,7 +55,7 @@ def preprocess_args(func: t.Callable) -> t.Callable:
             return Unit(data)
         if isinstance(data, t.Sequence) and not isinstance(data, str):
             return type(data)(map(convert, data))
-        if isinstance(data, t.Dict):
+        if isinstance(data, dict):
             return type(data)((key, convert(value)) for key, value in data.items())
         return data
 

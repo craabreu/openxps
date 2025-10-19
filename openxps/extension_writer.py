@@ -7,7 +7,6 @@
 
 """
 
-import typing as t
 
 import openmm as mm
 from cvpack.reporting.custom_writer import CustomWriter
@@ -118,7 +117,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
             )
             self._temp_factor = 2 / (number * kb)
 
-    def getHeaders(self) -> t.List[str]:
+    def getHeaders(self) -> list[str]:
         headers = []
         if self._potential:
             headers.append("Extension Potential Energy (kJ/mole)")
@@ -130,7 +129,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
             headers.append("Extension Temperature (K)")
         return headers
 
-    def getValues(self, simulation: mmapp.Simulation) -> t.List[float]:
+    def getValues(self, simulation: mmapp.Simulation) -> list[float]:
         state = self._context.getExtensionContext().getState(
             getEnergy=self._needs_energy, getVelocities=self._needs_velocities
         )

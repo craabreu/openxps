@@ -49,10 +49,10 @@ class Bounds(Serializable):
             raise TypeError("The unit must be a valid OpenMM unit.")
         object.__setattr__(self, "unit", cvpack.units.Unit(self.unit))
 
-    def __getstate__(self) -> t.Dict[str, t.Any]:
+    def __getstate__(self) -> dict[str, t.Any]:
         return {"lower": self.lower, "upper": self.upper, "unit": self.unit}
 
-    def __setstate__(self, keywords: t.Dict[str, t.Any]) -> None:
+    def __setstate__(self, keywords: dict[str, t.Any]) -> None:
         self.__init__(**keywords)
 
     def __eq__(self, other: t.Any) -> bool:
@@ -141,7 +141,7 @@ class Bounds(Serializable):
             "The method transformation must be implemented in subclasses."
         )
 
-    def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
+    def wrap(self, value: float, rate: float) -> tuple[float, float]:
         """
         Wrap a value around the bounds and adjust its rate of change.
 
@@ -212,7 +212,7 @@ class Periodic(Bounds):
             f";\n{scaled}=({variable}{shift})/{self.period}"
         )
 
-    def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
+    def wrap(self, value: float, rate: float) -> tuple[float, float]:
         return (value - self.lower) % self.period + self.lower, rate
 
 
@@ -266,7 +266,7 @@ class Reflective(Bounds):
             f";\n{scaled}=({variable}{shift})/{self.period}"
         )
 
-    def wrap(self, value: float, rate: float) -> t.Tuple[float, float]:
+    def wrap(self, value: float, rate: float) -> tuple[float, float]:
         x = (value - self.lower) % self.period
         if x < self.period - x:
             return x + self.lower, rate

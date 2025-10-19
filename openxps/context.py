@@ -205,7 +205,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
                 "No bias potential was provided when creating the context."
             ) from error
 
-    def getExtraDOFs(self) -> t.Tuple[DynamicalVariable]:
+    def getExtraDOFs(self) -> tuple[DynamicalVariable]:
         """
         Get the dynamical variables included in the extended phase-space system.
 
@@ -251,7 +251,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         for name, value in self._coupling_potential.getInnerValues(self).items():
             self._extension_context.setParameter(name, value / value.unit)
 
-    def getExtraValues(self) -> t.Tuple[mmunit.Quantity]:
+    def getExtraValues(self) -> tuple[mmunit.Quantity]:
         """
         Get the values of the dynamical variables.
 
@@ -296,7 +296,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
         self._extension_context.setVelocities([mm.Vec3(v.x, 0, 0) for v in velocities])
 
-    def getExtraVelocities(self) -> t.Tuple[mmunit.Quantity]:
+    def getExtraVelocities(self) -> tuple[mmunit.Quantity]:
         """
         Get the velocities of the dynamical variables.
 
@@ -333,7 +333,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
 def integrate_extended_space(
     physical_context: mm.Context,
     steps: int,
-    dynamical_variables: t.Tuple[DynamicalVariable],
+    dynamical_variables: tuple[DynamicalVariable],
     extension_context: mm.Context,
     coupling_potential: cvpack.MetaCollectiveVariable,
 ) -> None:
