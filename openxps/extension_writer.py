@@ -7,7 +7,6 @@
 
 """
 
-
 import openmm as mm
 from cvpack.reporting.custom_writer import CustomWriter
 from openmm import _openmm as mmswig

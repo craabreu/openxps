@@ -8,11 +8,11 @@
 """
 
 import typing as t
-import typing_extensions as te
 from dataclasses import dataclass
 
 import cvpack
 import openmm as mm
+import typing_extensions as te
 from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit

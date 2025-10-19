@@ -188,7 +188,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             mm.Platform.getPlatformByName("Reference"),
         )
 
-    def getDynamicalVariables(self) -> t.Tuple[DynamicalVariable]:
+    def getDynamicalVariables(self) -> tuple[DynamicalVariable]:
         """
         Get the dynamical variables included in the extended phase-space system.
 
@@ -273,7 +273,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             super().setParameter(dv.name, value)
         self._extension_context.setPositions(positions)
 
-    def getDynamicalVariableValues(self) -> t.Tuple[mmunit.Quantity]:
+    def getDynamicalVariableValues(self) -> tuple[mmunit.Quantity]:
         """
         Get the values of the dynamical variables.
 
@@ -320,7 +320,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
         self._extension_context.setVelocities([mm.Vec3(v.x, 0, 0) for v in velocities])
 
-    def getDynamicalVariableVelocities(self) -> t.Tuple[mmunit.Quantity]:
+    def getDynamicalVariableVelocities(self) -> tuple[mmunit.Quantity]:
         """
         Get the velocities of the dynamical variables.
 
