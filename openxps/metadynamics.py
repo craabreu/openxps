@@ -17,6 +17,8 @@ from openmm import unit as mmunit
 from .bias_potential import BiasPotential
 from .dynamical_variable import DynamicalVariable
 
+MAX_DIMENSIONS = 3
+
 
 class MetadynamicsBias(BiasPotential):
     r"""
@@ -175,10 +177,10 @@ class SplineGrid(mm.TabulatedFunction):
     Raises
     ------
     ValueError
-        If the length of ``dynamical_variables`` is not between 1 and 3, if ``grid_sizes`` has
-        a different length than ``dynamical_variables``, if any dynamical variable is not
-        bounded, or if the dimensions of the grid are not all periodic or all
-        non-periodic.
+        If the length of ``dynamical_variables`` is not between 1 and 3, if
+        ``grid_sizes`` has a different length than ``dynamical_variables``, if any
+        dynamical variable is not bounded, or if the dimensions of the grid are not
+        all periodic or all non-periodic.
 
     Examples
     --------
@@ -199,8 +201,10 @@ class SplineGrid(mm.TabulatedFunction):
         grid_sizes: t.Sequence[int],
     ) -> None:
         num_dims = len(dynamical_variables)
-        if not 1 <= num_dims <= 3:
-            raise ValueError("Spline grid can only interpolate 1D, 2D, or 3D functions")
+        if not 1 <= num_dims <= MAX_DIMENSIONS:
+            raise ValueError(
+                f"Spline grid can only interpolate up to {MAX_DIMENSIONS}D functions"
+            )
         if len(grid_sizes) != num_dims:
             raise ValueError("Number of grid sizes must match number of DVs")
         if any(dv.bounds is None for dv in dynamical_variables):

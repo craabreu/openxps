@@ -264,9 +264,11 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             degrees of freedom.
         """
         positions = []
-        for dv, value in zip(self._dvs, values):
-            if mmunit.is_quantity(value):
-                value = value.value_in_unit(dv.unit)
+        for dv, quantity in zip(self._dvs, values):
+            if mmunit.is_quantity(quantity):
+                value = quantity.value_in_unit(dv.unit)
+            else:
+                value = quantity
             positions.append(mm.Vec3(value, 0, 0))
             if dv.bounds is not None:
                 value, _ = dv.bounds.wrap(value, 0)
