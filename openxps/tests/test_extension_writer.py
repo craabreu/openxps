@@ -4,13 +4,12 @@ Test the extension writer
 
 import os
 import tempfile
-from copy import deepcopy
 from math import pi
 
 import cvpack
 import openmm
 import pytest
-from openmm import app, unit
+from openmm import unit
 from openmmtools import testsystems
 
 import openxps as xps
@@ -34,20 +33,17 @@ def test_extension_writer():
     )
     integrator.setRandomNumberSeed(1234)
     platform = openmm.Platform.getPlatformByName("Reference")
-    simulation = app.Simulation(
-        model.topology, deepcopy(model.system), deepcopy(integrator), platform
-    )
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
     phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
-    context = xps.ExtendedSpaceContext(
-        [phi0], umbrella_potential, model.system, integrator, platform
+    simulation = xps.ExtendedSpaceSimulation(
+        [phi0], umbrella_potential, model.topology, model.system, integrator, platform
     )
-    context.setPositions(model.positions)
-    context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
-    context.setDynamicalVariableValues([180 * unit.degree])
-    context.setDynamicalVariableVelocitiesToTemperature(300 * unit.kelvin, 1234)
-    simulation.context = context
-    simulation.integrator = context.getIntegrator()
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    simulation.context.setDynamicalVariableValues([180 * unit.degree])
+    simulation.context.setDynamicalVariableVelocitiesToTemperature(
+        300 * unit.kelvin, 1234
+    )
     with tempfile.TemporaryDirectory() as dirpath:
         with open(os.path.join(dirpath, "report.csv"), "w", encoding="utf-8") as file:
             reporter = cvpack.reporting.StateDataReporter(
@@ -56,7 +52,7 @@ def test_extension_writer():
                 step=True,
                 writers=[
                     xps.ExtensionWriter(
-                        context,
+                        simulation.context,
                         potential=True,
                         kinetic=True,
                         total=True,
