@@ -229,7 +229,7 @@
 
 <div class="viewcode-block" id="ExtendedSpaceContext.getDynamicalVariables">
 <a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getDynamicalVariables">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">getDynamicalVariables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getDynamicalVariables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the dynamical variables included in the extended phase-space system.</span>
 
@@ -317,9 +317,11 @@
 <span class="sd">            degrees of freedom.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">positions</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">dv</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
-                <span class="n">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">dv</span><span class="p">,</span> <span class="n">quantity</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">,</span> <span class="n">values</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="n">quantity</span><span class="p">):</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">quantity</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">value</span> <span class="o">=</span> <span class="n">quantity</span>
             <span class="n">positions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
             <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
@@ -329,7 +331,7 @@
 
 <div class="viewcode-block" id="ExtendedSpaceContext.getDynamicalVariableValues">
 <a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getDynamicalVariableValues">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">getDynamicalVariableValues</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getDynamicalVariableValues</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the values of the dynamical variables.</span>
 
@@ -385,7 +387,7 @@
 
 <div class="viewcode-block" id="ExtendedSpaceContext.getDynamicalVariableVelocities">
 <a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getDynamicalVariableVelocities">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">getDynamicalVariableVelocities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getDynamicalVariableVelocities</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Get the velocities of the dynamical variables.</span>
 
@@ -428,7 +430,7 @@
 <span class="k">def</span><span class="w"> </span><span class="nf">integrate_extended_space</span><span class="p">(</span>
     <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Tuple</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+    <span class="n">dynamical_variables</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
     <span class="n">extension_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>

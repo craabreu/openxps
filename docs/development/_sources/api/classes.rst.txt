@@ -5,8 +5,8 @@ Classes
     :titlesonly:
 
     ExtendedSpaceContext
-    ExtensionWriter
     DynamicalVariable
+    ExtensionWriter
     MetadynamicsBias
 
 .. testsetup::

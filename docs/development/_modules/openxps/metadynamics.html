@@ -54,6 +54,8 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.bias_potential</span><span class="w"> </span><span class="kn">import</span> <span class="n">BiasPotential</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
 
+<span class="n">MAX_DIMENSIONS</span> <span class="o">=</span> <span class="mi">3</span>
+
 
 <div class="viewcode-block" id="MetadynamicsBias">
 <a class="viewcode-back" href="../../api/MetadynamicsBias.html#openxps.MetadynamicsBias">[docs]</a>
@@ -107,7 +109,7 @@
 <span class="sd">        units.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># pylint: disable=too-many-arguments</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
         <span class="n">bandwidth</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">],</span>
@@ -221,10 +223,10 @@
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the length of ``dynamical_variables`` is not between 1 and 3, if ``grid_sizes`` has</span>
-<span class="sd">        a different length than ``dynamical_variables``, if any dynamical variable is not</span>
-<span class="sd">        bounded, or if the dimensions of the grid are not all periodic or all</span>
-<span class="sd">        non-periodic.</span>
+<span class="sd">        If the length of ``dynamical_variables`` is not between 1 and 3, if</span>
+<span class="sd">        ``grid_sizes`` has a different length than ``dynamical_variables``, if any</span>
+<span class="sd">        dynamical variable is not bounded, or if the dimensions of the grid are not</span>
+<span class="sd">        all periodic or all non-periodic.</span>
 
 <span class="sd">    Examples</span>
 <span class="sd">    --------</span>
@@ -245,8 +247,10 @@
         <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">num_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">num_dims</span> <span class="o">&lt;=</span> <span class="mi">3</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Spline grid can only interpolate 1D, 2D, or 3D functions&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">num_dims</span> <span class="o">&lt;=</span> <span class="n">MAX_DIMENSIONS</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Spline grid can only interpolate up to </span><span class="si">{</span><span class="n">MAX_DIMENSIONS</span><span class="si">}</span><span class="s2">D functions&quot;</span>
+            <span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span> <span class="o">!=</span> <span class="n">num_dims</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Number of grid sizes must match number of DVs&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">):</span>
