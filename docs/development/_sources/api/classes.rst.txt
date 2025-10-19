@@ -8,6 +8,7 @@ Classes
     DynamicalVariable
     ExtensionWriter
     MetadynamicsBias
+    ExtendedSpaceSimulation
 
 .. testsetup::
 

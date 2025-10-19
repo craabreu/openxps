@@ -75,12 +75,11 @@
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
-<span class="sd">    &gt;&gt;&gt; from copy import deepcopy</span>
 <span class="sd">    &gt;&gt;&gt; from math import pi</span>
 <span class="sd">    &gt;&gt;&gt; from sys import stdout</span>
 <span class="sd">    &gt;&gt;&gt; import cvpack</span>
 <span class="sd">    &gt;&gt;&gt; import openmm</span>
-<span class="sd">    &gt;&gt;&gt; from openmm import app, unit</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
 <span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
 <span class="sd">    &gt;&gt;&gt; umbrella_potential = cvpack.MetaCollectiveVariable(</span>
@@ -95,26 +94,24 @@
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator.setRandomNumberSeed(1234)</span>
 <span class="sd">    &gt;&gt;&gt; platform = openmm.Platform.getPlatformByName(&quot;Reference&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; simulation = app.Simulation(</span>
-<span class="sd">    ...     model.topology, deepcopy(model.system), deepcopy(integrator), platform</span>
-<span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
 <span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
-<span class="sd">    &gt;&gt;&gt; context = xps.ExtendedSpaceContext(</span>
-<span class="sd">    ...     [phi0], umbrella_potential, model.system, integrator, platform</span>
+<span class="sd">    &gt;&gt;&gt; simulation = xps.ExtendedSpaceSimulation(</span>
+<span class="sd">    ...     [phi0], umbrella_potential, model.topology, model.system, integrator,</span>
+<span class="sd">    ...     platform</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; context.setPositions(model.positions)</span>
-<span class="sd">    &gt;&gt;&gt; context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)</span>
-<span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableValues([180 * unit.degree])</span>
-<span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableVelocitiesToTemperature(300 * unit.kelvin, 1234)</span>
-<span class="sd">    &gt;&gt;&gt; simulation.context = context</span>
-<span class="sd">    &gt;&gt;&gt; simulation.integrator = context.getIntegrator()</span>
+<span class="sd">    &gt;&gt;&gt; simulation.context.setPositions(model.positions)</span>
+<span class="sd">    &gt;&gt;&gt; simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)</span>
+<span class="sd">    &gt;&gt;&gt; simulation.context.setDynamicalVariableValues([180 * unit.degree])</span>
+<span class="sd">    &gt;&gt;&gt; simulation.context.setDynamicalVariableVelocitiesToTemperature(</span>
+<span class="sd">    ...     300 * unit.kelvin, 1234</span>
+<span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; reporter = cvpack.reporting.StateDataReporter(</span>
 <span class="sd">    ...     stdout,</span>
 <span class="sd">    ...     10,</span>
 <span class="sd">    ...     step=True,</span>
 <span class="sd">    ...     kineticEnergy=True,</span>
-<span class="sd">    ...     writers=[xps.ExtensionWriter(context, kinetic=True)],</span>
+<span class="sd">    ...     writers=[xps.ExtensionWriter(simulation.context, kinetic=True)],</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; simulation.reporters.append(reporter)</span>
 <span class="sd">    &gt;&gt;&gt; simulation.step(100)  # doctest: +SKIP</span>
