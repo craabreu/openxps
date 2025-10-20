@@ -58,7 +58,11 @@ class ExtensionWriter(CustomWriter):
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> simulation = xps.ExtendedSpaceSimulation(
-    ...     [phi0], umbrella_potential, model.topology, model.system, integrator,
+    ...     [phi0],
+    ...     umbrella_potential,
+    ...     model.topology,
+    ...     model.system,
+    ...     xps.InTandemIntegrator(integrator),
     ...     platform
     ... )
     >>> simulation.context.setPositions(model.positions)

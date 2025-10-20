@@ -15,6 +15,7 @@ from openmm import app as mmapp
 
 from .context import ExtendedSpaceContext
 from .dynamical_variable import DynamicalVariable
+from .integrators import ExtendedSpaceIntegrator
 
 
 class ExtendedSpaceSimulation(mmapp.Simulation):
@@ -84,7 +85,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     ...     umbrella_potential,
     ...     model.topology,
     ...     model.system,
-    ...     integrator,
+    ...     xps.InTandemIntegrator(integrator),
     ... )
     >>> simulation.context.setPositions(model.positions)
     >>> simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
@@ -103,7 +104,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         coupling_potential: cvpack.MetaCollectiveVariable,
         topology: mmapp.Topology,
         system: mm.System,
-        integrator: mm.Integrator | tuple[mm.Integrator, mm.Integrator],
+        integrator: ExtendedSpaceIntegrator,
         platform: t.Optional[mm.Platform] = None,
         platformProperties: t.Optional[dict] = None,
         state: t.Optional[mm.State] = None,
