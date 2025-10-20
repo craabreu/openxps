@@ -58,6 +58,12 @@ class ExtendedSpaceIntegrator(mm.Integrator):
         self._physical_integrator = physical_integrator
         self._extension_integrator = extension_integrator
 
+    def __copy__(self):
+        return self.__class__(
+            self._physical_integrator.__copy__(),
+            self._extension_integrator.__copy__(),
+        )
+
     def getPhysicalIntegrator(self) -> mm.Integrator:
         return self._physical_integrator
 
@@ -82,7 +88,10 @@ class InTandemIntegrator(ExtendedSpaceIntegrator):
         extension_integrator: t.Optional[mm.Integrator] = None,
     ) -> None:
         super().__init__(
-            physical_integrator, extension_integrator or deepcopy(physical_integrator)
+            physical_integrator,
+            deepcopy(physical_integrator)
+            if extension_integrator is None
+            else extension_integrator,
         )
 
     @staticmethod

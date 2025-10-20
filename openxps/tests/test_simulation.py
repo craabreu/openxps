@@ -17,6 +17,7 @@ from openmmtools import testsystems
 import openxps as xps
 from openxps.context import ExtendedSpaceContext
 from openxps.simulation import ExtendedSpaceSimulation
+from openxps.integrators import InTandemIntegrator
 
 
 def create_test_system():
@@ -36,7 +37,7 @@ def create_test_system():
         300 * mmunit.kelvin, 1 / mmunit.picosecond, 4 * mmunit.femtosecond
     )
     integrator.setRandomNumberSeed(1234)
-    return model, [phi0], umbrella_potential, integrator
+    return model, [phi0], umbrella_potential, InTandemIntegrator(integrator)
 
 
 def test_basic_initialization():
@@ -59,13 +60,13 @@ def test_basic_initialization():
     assert simulation.reporters == []
 
 
-def test_with_tuple_integrators():
-    """Test initialization with tuple of two integrators."""
+def test_with_two_integrators():
+    """Test initialization with two integrators."""
     model, dvs, coupling_potential, integrator = create_test_system()
 
     # Create a second integrator for the extension system
     extension_integrator = mm.LangevinMiddleIntegrator(
-        300 * mmunit.kelvin, 1 / mmunit.picosecond, 4 * mmunit.femtosecond
+        300 * mmunit.kelvin, 1 / mmunit.picosecond, 1 * mmunit.femtosecond
     )
     extension_integrator.setRandomNumberSeed(5678)
 
@@ -74,13 +75,11 @@ def test_with_tuple_integrators():
         coupling_potential,
         model.topology,
         model.system,
-        (integrator, extension_integrator),
+        InTandemIntegrator(integrator.getPhysicalIntegrator(), extension_integrator),
     )
 
     assert simulation is not None
     assert simulation.context is not None
-    # The integrator should be the first one from the tuple
-    assert simulation.integrator.getStepSize() == integrator.getStepSize()
 
 
 def test_with_platform():
@@ -385,7 +384,7 @@ def test_simulation_with_state():
         deepcopy(coupling_potential),
         model.topology,
         deepcopy(model.system),
-        integrator2,
+        InTandemIntegrator(integrator2),
         state=state,
     )
 
