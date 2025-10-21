@@ -15,7 +15,7 @@ from openmm import app as mmapp
 
 from .context import ExtendedSpaceContext
 from .dynamical_variable import DynamicalVariable
-from .xpsintegrator import ExtendedSpaceIntegrator
+from .integrator import ExtendedSpaceIntegrator
 
 
 class ExtendedSpaceSimulation(mmapp.Simulation):

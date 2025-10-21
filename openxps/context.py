@@ -18,7 +18,7 @@ from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from .dynamical_variable import DynamicalVariable
-from .xpsintegrator import ExtendedSpaceIntegrator
+from .integrator import ExtendedSpaceIntegrator
 
 
 class ExtendedSpaceContext(mm.Context):
