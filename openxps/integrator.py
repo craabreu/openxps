@@ -16,6 +16,7 @@ import numpy as np
 import openmm as mm
 from openmm import _openmm as mmswig
 
+from . import integrators
 from .dynamical_variable import DynamicalVariable
 
 #: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the
@@ -25,6 +26,11 @@ KNOWN_KICK_FIRST_INTEGRATORS = (
     mm.LangevinIntegrator,
     mm.LangevinMiddleIntegrator,
     mm.NoseHooverIntegrator,
+)
+
+KNOWN_TIME_REVERSAL_SYMMETRIC_INTEGRATORS = (
+    integrators.VelocityVerletIntegrator,
+    integrators.BAOABIntegrator,
 )
 
 
