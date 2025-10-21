@@ -12,7 +12,6 @@ from abc import abstractmethod
 from copy import deepcopy
 
 import cvpack
-import numpy as np
 import openmm as mm
 from openmm import _openmm as mmswig
 
@@ -76,6 +75,71 @@ class ExtendedSpaceIntegrator(mm.Integrator):
             self._extension_integrator.__copy__(),
         )
 
+    @staticmethod
+    def _update_physical_context(
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+    ) -> None:
+        """
+        Update the physical context with current values from the extension system.
+
+        This function transfers the current positions of particles in the extension
+        context to the corresponding parameters in the physical context. If a dynamical
+        variable has bounds, the value is wrapped accordingly.
+
+        Parameters
+        ----------
+        physical_context
+            The OpenMM context containing the physical system.
+        extension_context
+            The OpenMM context containing the extension system.
+        dynamical_variables
+            The dynamical variables included in the extended phase-space system.
+
+        """
+        state = mmswig.Context_getState(extension_context, mm.State.Positions)
+        positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
+        for i, dv in enumerate(dynamical_variables):
+            value = positions[i].x
+            if dv.bounds is not None:
+                value, _ = dv.bounds.wrap(value, 0)
+            mmswig.Context_setParameter(physical_context, dv.name, value)
+
+    @staticmethod
+    def _update_extension_context(
+        extension_context: mm.Context,
+        physical_context: mm.Context,
+        coupling_potential: cvpack.MetaCollectiveVariable,
+    ) -> None:
+        """
+        Update the extension context with current collective variable values.
+
+        This function evaluates the collective variables that define the coupling
+        potential in the physical context and transfers their values to the
+        corresponding parameters in the extension context.
+
+        Parameters
+        ----------
+        extension_context
+            The OpenMM context containing the extension system.
+        physical_context
+            The OpenMM context containing the physical system.
+        coupling_potential
+            The potential that couples the physical and dynamical variables.
+
+        """
+        collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
+            coupling_potential,
+            physical_context,
+        )
+        for i, value in enumerate(collective_variables):
+            mmswig.Context_setParameter(
+                extension_context,
+                mmswig.CustomCVForce_getCollectiveVariableName(coupling_potential, i),
+                value,
+            )
+
     def getPhysicalIntegrator(self) -> mm.Integrator:
         """
         Get the integrator for the physical system.
@@ -133,18 +197,22 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     """
     An integrator that advances physical and extension systems in lockstep.
 
-    This integrator steps both the physical and extension systems simultaneously, then
-    synchronizes the contexts after each step. It assumes that both integrators evaluate
-    and apply all forces at the beginning of each time step (a kick-first scheme). If
-    either integrator does not follow this scheme, the integration will be incorrect.
+    This class integrates both the physical and extension systems simultaneously, then
+    synchronizes the contexts after each step. It assumes that both integrators apply
+    all forces at the beginning of each time step (a kick-first scheme). If either
+    integrator does not follow this scheme, the overall integration will be incorrect.
+
+    .. note::
+        The physical and extension integrators have their step sizes changed to the
+        specified value if necessary.
 
     Parameters
     ----------
     physical_integrator
         The integrator for the physical system.
     extension_integrator
-        The integrator for the extension system. If None, a deep copy of the
-        physical integrator is used.
+        The integrator for the extension system. If None, a copy of the physical
+        integrator is used.
     assume_kick_first
         If True, skip the validation that checks whether the integrators are known
         to follow a kick-first scheme. Use this at your own risk if you know your
@@ -160,13 +228,6 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     ) -> None:
         if extension_integrator is None:
             extension_integrator = deepcopy(physical_integrator)
-        elif not np.isclose(
-            mmswig.Integrator_getStepSize(extension_integrator),
-            mmswig.Integrator_getStepSize(physical_integrator),
-        ):
-            raise ValueError(
-                "The physical and extension integrators must have the same step size."
-            )
         elif not assume_kick_first and not all(
             isinstance(integrator, KNOWN_KICK_FIRST_INTEGRATORS)
             for integrator in (physical_integrator, extension_integrator)
@@ -207,74 +268,9 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
         for _ in range(steps):
             mmswig.Integrator_step(physical_context._integrator, 1)
             mmswig.Integrator_step(extension_context._integrator, 1)
-            _update_physical_context(
+            ExtendedSpaceIntegrator._update_physical_context(
                 physical_context, extension_context, dynamical_variables
             )
-            _update_extension_context(
+            ExtendedSpaceIntegrator._update_extension_context(
                 extension_context, physical_context, coupling_potential
             )
-
-
-def _update_physical_context(
-    physical_context: mm.Context,
-    extension_context: mm.Context,
-    dynamical_variables: t.Sequence[DynamicalVariable],
-) -> None:
-    """
-    Update the physical context with current values from the extension system.
-
-    This function transfers the current positions of particles in the extension context
-    to the corresponding parameters in the physical context. If a dynamical variable has
-    bounds, the value is wrapped accordingly.
-
-    Parameters
-    ----------
-    physical_context
-        The OpenMM context containing the physical system.
-    extension_context
-        The OpenMM context containing the extension system.
-    dynamical_variables
-        The dynamical variables included in the extended phase-space system.
-
-    """
-    state = mmswig.Context_getState(extension_context, mm.State.Positions)
-    positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-    for i, dv in enumerate(dynamical_variables):
-        value = positions[i].x
-        if dv.bounds is not None:
-            value, _ = dv.bounds.wrap(value, 0)
-        mmswig.Context_setParameter(physical_context, dv.name, value)
-
-
-def _update_extension_context(
-    extension_context: mm.Context,
-    physical_context: mm.Context,
-    coupling_potential: cvpack.MetaCollectiveVariable,
-) -> None:
-    """
-    Update the extension context with current collective variable values.
-
-    This function evaluates the collective variables that define the coupling potential
-    in the physical context and transfers their values to the corresponding parameters
-    in the extension context.
-
-    Parameters
-    ----------
-    extension_context
-        The OpenMM context containing the extension system.
-    physical_context
-        The OpenMM context containing the physical system.
-    coupling_potential
-        The potential that couples the physical and dynamical variables.
-
-    """
-    collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
-        coupling_potential,
-        physical_context,
-    )
-    for i, value in enumerate(collective_variables):
-        mmswig.Context_setParameter(
-            extension_context,
-            mmswig.CustomCVForce_getCollectiveVariableName(coupling_potential, i),
-            value,
-        )
