@@ -15,7 +15,7 @@ from openmm import app as mmapp
 
 from .context import ExtendedSpaceContext
 from .dynamical_variable import DynamicalVariable
-from .integrators import ExtendedSpaceIntegrator
+from .xpsintegrator import ExtendedSpaceIntegrator
 
 
 class ExtendedSpaceSimulation(mmapp.Simulation):
@@ -85,7 +85,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     ...     umbrella_potential,
     ...     model.topology,
     ...     model.system,
-    ...     xps.InTandemIntegrator(integrator),
+    ...     xps.LockstepIntegrator(integrator),
     ... )
     >>> simulation.context.setPositions(model.positions)
     >>> simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)

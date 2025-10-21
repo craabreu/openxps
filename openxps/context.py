@@ -18,7 +18,7 @@ from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from .dynamical_variable import DynamicalVariable
-from .integrators import ExtendedSpaceIntegrator
+from .xpsintegrator import ExtendedSpaceIntegrator
 
 
 class ExtendedSpaceContext(mm.Context):
@@ -81,7 +81,7 @@ class ExtendedSpaceContext(mm.Context):
     ...     [phi0],
     ...     umbrella_potential,
     ...     model.system,
-    ...     xps.InTandemIntegrator(integrator),
+    ...     xps.LockstepIntegrator(integrator),
     ...     platform,
     ... )
     >>> context.setPositions(model.positions)

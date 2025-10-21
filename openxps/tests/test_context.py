@@ -9,17 +9,15 @@ import pytest
 from openmm import unit as mmunit
 from openmmtools import testsystems
 
+from openxps import DynamicalVariable, ExtendedSpaceContext, LockstepIntegrator
 from openxps.bounds import CIRCULAR, Reflective
-from openxps.context import ExtendedSpaceContext
-from openxps.dynamical_variable import DynamicalVariable
-from openxps.integrators import InTandemIntegrator
 
 
 def system_integrator_platform(model):
     """Helper function to create a basic OpenMM Context object."""
     integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
     platform = mm.Platform.getPlatformByName("Reference")
-    return model.system, InTandemIntegrator(integrator), platform
+    return model.system, LockstepIntegrator(integrator), platform
 
 
 def create_dvs():

@@ -40,7 +40,7 @@ def test_extension_writer():
         umbrella_potential,
         model.topology,
         model.system,
-        xps.InTandemIntegrator(integrator),
+        xps.LockstepIntegrator(integrator),
         platform,
     )
     simulation.context.setPositions(model.positions)

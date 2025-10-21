@@ -62,7 +62,7 @@ class ExtensionWriter(CustomWriter):
     ...     umbrella_potential,
     ...     model.topology,
     ...     model.system,
-    ...     xps.InTandemIntegrator(integrator),
+    ...     xps.LockstepIntegrator(integrator),
     ...     platform
     ... )
     >>> simulation.context.setPositions(model.positions)
