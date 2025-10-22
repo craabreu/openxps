@@ -243,6 +243,8 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     all forces at the beginning of each time step (a kick-first scheme). If either
     integrator does not follow this scheme, the overall integration will be incorrect.
 
+    The step sizes of the physical and extension integrators must be equal.
+
     Parameters
     ----------
     physical_integrator
@@ -253,13 +255,13 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     assume_kick_first
         If True, skip the validation that checks whether the integrators are known
         to follow a kick-first scheme. Use this at your own risk if you know your
-        integrators are compatible but are not in the known list. Default is False.
+        integrators are compatible. Default is False.
 
     Raises
     ------
     ValueError
-        If the physical and extension integrators do not have the same step size or
-        do not follow a kick-first scheme.
+        If the physical and extension integrators do not follow a kick-first scheme or
+        do not have the same step size.
     """
 
     def __init__(
@@ -304,9 +306,23 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
 
 
 class SplitIntegrator(ExtendedSpaceIntegrator):
-    """
+    r"""
     An integrator that advances the physical and extension systems using an operator
     splitting scheme.
+
+    This integrator assumes that the physical and extension integrators are reversible
+    in terms of operator splitting, i.e., they can be represented as a palindromic
+    sequence of operations. If either integrator does not follow this scheme, the
+    overall integration scheme will be incorrect.
+
+    The step sizes of the physical and extension integrators must be related by an even
+    integer ratio, with either the physical or extension integrator having the larger
+    step size.
+
+    This class integrates the physical and extension systems in a :math:`B^n A B^n`
+    pattern, where :math:`n` is the number of substeps, :math:`A` is the integrator with
+    the larger step size :math:`\Delta t` (considered as the overall step size), and
+    :math:`B` is the integrator with the smaller step size :math:`\Delta t/(2n)`.
 
     Parameters
     ----------
@@ -314,12 +330,19 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         The integrator for the physical system.
     extension_integrator
         The integrator for the extension system. If None, a copy of the physical
-        integrator is used.
-    assume_kick_first
+        integrator is used with half the step size of the physical integrator.
+    assume_reversible
         If True, skip the validation that checks whether the integrators are known
         to be reversible in terms of operator splitting. Use this at your own risk if
         you know your integrators are compatible but are not in the known list.
         Default is False.
+
+    Raises
+    ------
+    ValueError
+        If the physical and extension integrators are not reversible in terms of
+        operator splitting, or do not have a step size ratio equal to an even integer
+        number.
     """
 
     def __init__(
@@ -344,16 +367,32 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             )
         else:
             extension_step_size = mmswig.Integrator_getStepSize(extension_integrator)
-        inner_step_size = max(physical_step_size, extension_step_size)
-        outer_step_size = min(physical_step_size, extension_step_size)
-        if not np.isclose(np.remainder(inner_step_size, 2 * outer_step_size), 0):
+        step_size = max(physical_step_size, extension_step_size)
+        substep_size = min(physical_step_size, extension_step_size)
+        if not np.isclose(np.remainder(step_size, 2 * substep_size), 0):
             raise ValueError(
                 "The physical and extension integrator step sizes must be related by "
-                "an even integer factor."
+                "an even integer ratio."
             )
-        self._inner_step_is_physical = physical_step_size > extension_step_size
-        self._num_inner_substeps = int(np.rint(inner_step_size / (2 * outer_step_size)))
-        super().__init__(physical_integrator, extension_integrator)
+        self._substeps = int(np.rint(step_size / (2 * substep_size)))
+
+    def _initialize(self) -> None:
+        super()._initialize()
+        physical_step_size = mmswig.Integrator_getStepSize(self._physical_integrator)
+        extension_step_size = mmswig.Integrator_getStepSize(self._extension_integrator)
+        if physical_step_size > extension_step_size:
+            self._middle_integrator = self._physical_integrator
+            self._update_middle_context = self._update_physical_context
+            self._end_integrator = self._extension_integrator
+            self._update_end_context = self._update_extension_context
+            ratio = physical_step_size / (2 * extension_step_size)
+        else:
+            self._middle_integrator = self._extension_integrator
+            self._update_middle_context = self._update_extension_context
+            self._end_integrator = self._physical_integrator
+            self._update_end_context = self._update_physical_context
+            ratio = extension_step_size / (2 * physical_step_size)
+        self._num_substeps = int(np.rint(ratio))
 
     def step(self, steps: int) -> None:
         """Advance the extended phase-space simulation by integrating the physical and
@@ -365,6 +404,9 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             The number of time steps to advance the simulation.
         """
         for _ in range(steps):
-            mmswig.Integrator_step(self._extension_integrator, self._num_inner_substeps)
-            self._update_physical_context()
-            self._update_extension_context()
+            mmswig.Integrator_step(self._end_integrator, self._num_substeps)
+            self._update_middle_context()
+            mmswig.Integrator_step(self._middle_integrator, 1)
+            self._update_end_context()
+            mmswig.Integrator_step(self._end_integrator, self._num_substeps)
+            self._update_middle_context()

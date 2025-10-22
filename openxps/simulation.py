@@ -43,10 +43,11 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     system
         The :OpenMM:`System` object to simulate.
     integrator
-        An :OpenMM:`Integrator` object or a tuple of two :OpenMM:`Integrator`
-        objects to be used in the XPS simulation. If a tuple is provided, the
-        first integrator is used for the physical system and the second one is
-        used for the DVs.
+        An :class:`ExtendedSpaceIntegrator` object to be used for advancing the XPS
+        simulation. Available implementations include :class:`LockstepIntegrator` for
+        systems where both integrators use the same step size, and
+        :class:`SplitIntegrator` for systems with different step sizes related by an
+        even integer ratio.
     platform
         The :OpenMM:`Platform` to use for calculations. If None, the default Platform
         will be used.
