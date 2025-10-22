@@ -282,9 +282,11 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
             raise ValueError(
                 "The physical and extension integrators must have the same step size."
             )
-        elif not assume_kick_first and not all(
-            isinstance(integrator, KNOWN_KICK_FIRST_INTEGRATORS)
-            for integrator in (physical_integrator, extension_integrator)
+        if not (
+            assume_kick_first or all(
+                isinstance(integrator, KNOWN_KICK_FIRST_INTEGRATORS)
+                for integrator in (physical_integrator, extension_integrator)
+            )
         ):
             raise ValueError(
                 "The physical and extension integrators must follow a kick-first "
@@ -359,17 +361,19 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             extension_integrator = deepcopy(physical_integrator)
             extension_step_size = physical_step_size / 2
             mmswig.Integrator_setStepSize(extension_integrator, extension_step_size)
-        elif not assume_reversible and not all(
-            isinstance(integrator, KNOWN_REVERSIBLE_INTEGRATORS)
-            for integrator in (physical_integrator, extension_integrator)
+        else:
+            extension_step_size = mmswig.Integrator_getStepSize(extension_integrator)
+        if not (
+            assume_reversible or all(
+                isinstance(integrator, KNOWN_REVERSIBLE_INTEGRATORS)
+                for integrator in (physical_integrator, extension_integrator)
+            )
         ):
             raise ValueError(
                 "The physical and extension integrators must be reversible in terms of "
                 "operator splitting. If you are certain your integrators are "
                 "reversible, set assume_reversible=True."
             )
-        else:
-            extension_step_size = mmswig.Integrator_getStepSize(extension_integrator)
         step_size = max(physical_step_size, extension_step_size)
         substep_size = min(physical_step_size, extension_step_size)
         if not np.isclose(np.remainder(step_size, 2 * substep_size), 0):

@@ -26,7 +26,7 @@ class VelocityVerletIntegrator(mm.CustomIntegrator):
 
     def __init__(self, stepSize: mmunit.Quantity):
         super().__init__(stepSize)
-        self.addGlobalVariable("x1", 0)
+        self.addPerDofVariable("x1", 0)
         self.addUpdateContextState()
         self.addComputePerDof("v", "v+0.5*dt*f/m")
         self.addComputePerDof("x", "x+dt*v")
