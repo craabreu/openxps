@@ -1,7 +1,7 @@
 """
-.. module:: openxps.serializable
+.. module:: openxps.utils
    :platform: Linux, MacOS, Windows
-   :synopsis:
+   :synopsis: Utility functions for OpenXPS.
 
 .. classauthor:: Charlles Abreu <craabreu@gmail.com>
 
@@ -13,6 +13,11 @@ import typing as t
 
 from cvpack.units import Quantity, Unit
 from openmm import unit as mmunit
+
+#: The separator used to split checkpoint and XML strings into physical and extension
+#: parts.
+STRING_SEPARATOR = "\f\f"
+BINARY_SEPARATOR = b"::SdXN3dO::"
 
 
 def preprocess_args(func: t.Callable) -> t.Callable:
