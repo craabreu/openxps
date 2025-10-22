@@ -9,6 +9,7 @@ from copy import deepcopy
 from math import pi
 
 import cvpack
+import numpy as np
 import openmm as mm
 import pytest
 from openmm import unit as mmunit
@@ -396,3 +397,124 @@ def test_simulation_with_state():
         assert p1.x == pytest.approx(p2.x)
         assert p1.y == pytest.approx(p2.y)
         assert p1.z == pytest.approx(p2.z)
+
+
+def test_loadcheckpoint_comprehensive():
+    """Test loadCheckpoint method comprehensively restores all state components."""
+    model, dvs, coupling_potential, integrator = create_test_system()
+
+    simulation = xps.ExtendedSpaceSimulation(
+        dvs,
+        coupling_potential,
+        model.topology,
+        model.system,
+        integrator,
+    )
+
+    # Set initial conditions
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * mmunit.kelvin, 1234)
+    simulation.context.setDynamicalVariableValues([180 * mmunit.degree])
+    simulation.context.setDynamicalVariableVelocitiesToTemperature(
+        300 * mmunit.kelvin, 5678
+    )
+
+    # Run a few steps to evolve the system
+    simulation.step(10)
+
+    # Get complete state before checkpoint
+    state_before = simulation.context.getState(
+        getPositions=True,
+        getVelocities=True,
+        getEnergy=True,
+        getForces=True,
+    )
+    positions_before = state_before.getPositions(asNumpy=True)
+    velocities_before = state_before.getVelocities(asNumpy=True)
+    energy_before = state_before.getPotentialEnergy()
+    kinetic_before = state_before.getKineticEnergy()
+    dv_values_before = simulation.context.getDynamicalVariableValues()
+    dv_velocities_before = simulation.context.getDynamicalVariableVelocities()
+    current_step_before = simulation.currentStep
+
+    # Save checkpoint
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".xml") as f:
+        checkpoint_file = f.name
+        simulation.saveCheckpoint(checkpoint_file)
+
+    # Significantly modify the state
+    simulation.step(100)
+    new_dv_values = [90 * mmunit.degree]
+    simulation.context.setDynamicalVariableValues(new_dv_values)
+    simulation.context.setVelocitiesToTemperature(500 * mmunit.kelvin, 9999)
+
+    # Verify state has changed
+    state_changed = simulation.context.getState(getPositions=True, getEnergy=True)
+    positions_changed = state_changed.getPositions(asNumpy=True)
+    dv_values_changed = simulation.context.getDynamicalVariableValues()
+
+    # Check that positions have changed significantly
+    assert not np.allclose(
+        positions_before.value_in_unit(mmunit.nanometer),
+        positions_changed.value_in_unit(mmunit.nanometer),
+        rtol=1e-8,
+        atol=1e-10,
+    )
+    assert dv_values_before[0] != dv_values_changed[0]
+
+    # Load checkpoint
+    simulation.loadCheckpoint(checkpoint_file)
+
+    # Get state after loading checkpoint
+    state_after = simulation.context.getState(
+        getPositions=True,
+        getVelocities=True,
+        getEnergy=True,
+        getForces=True,
+    )
+    positions_after = state_after.getPositions(asNumpy=True)
+    velocities_after = state_after.getVelocities(asNumpy=True)
+    energy_after = state_after.getPotentialEnergy()
+    kinetic_after = state_after.getKineticEnergy()
+    dv_values_after = simulation.context.getDynamicalVariableValues()
+    dv_velocities_after = simulation.context.getDynamicalVariableVelocities()
+    current_step_after = simulation.currentStep
+
+    # Assert physical system state is restored
+    np.testing.assert_allclose(
+        positions_before.value_in_unit(mmunit.nanometer),
+        positions_after.value_in_unit(mmunit.nanometer),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        velocities_before.value_in_unit(mmunit.nanometer / mmunit.picosecond),
+        velocities_after.value_in_unit(mmunit.nanometer / mmunit.picosecond),
+        rtol=1e-10,
+        atol=1e-12,
+    )
+
+    # Assert energies are restored
+    assert energy_before.value_in_unit(mmunit.kilojoule_per_mole) == pytest.approx(
+        energy_after.value_in_unit(mmunit.kilojoule_per_mole), rel=1e-9
+    )
+    assert kinetic_before.value_in_unit(mmunit.kilojoule_per_mole) == pytest.approx(
+        kinetic_after.value_in_unit(mmunit.kilojoule_per_mole), rel=1e-9
+    )
+
+    # Assert dynamical variables are restored
+    for val_before, val_after in zip(dv_values_before, dv_values_after):
+        assert val_before.value_in_unit(val_before.unit) == pytest.approx(
+            val_after.value_in_unit(val_after.unit), rel=1e-10
+        )
+
+    for vel_before, vel_after in zip(dv_velocities_before, dv_velocities_after):
+        assert vel_before.value_in_unit(vel_before.unit) == pytest.approx(
+            vel_after.value_in_unit(vel_after.unit), rel=1e-10
+        )
+
+    # Assert current step is restored
+    assert current_step_after == current_step_before
+
+    # Clean up
+    os.unlink(checkpoint_file)
