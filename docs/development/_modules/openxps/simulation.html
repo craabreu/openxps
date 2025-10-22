@@ -46,13 +46,12 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span> <span class="k">as</span> <span class="n">mmapp</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceContext</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.integrator</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceIntegrator</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.system</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceSystem</span>
 
 
 <div class="viewcode-block" id="ExtendedSpaceSimulation">
@@ -70,17 +69,10 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    dynamical_variables</span>
-<span class="sd">        A collection of dynamical variables (DVs) to be included in the XPS simulation.</span>
-<span class="sd">    coupling_potential</span>
-<span class="sd">        A :CVPack:`MetaCollectiveVariable` defining the potential energy term that</span>
-<span class="sd">        couples the DVs to the physical coordinates. It must have units</span>
-<span class="sd">        of ``kilojoules_per_mole``. All DVs must be included as parameters in the</span>
-<span class="sd">        coupling potential.</span>
 <span class="sd">    topology</span>
 <span class="sd">        The :OpenMM:`Topology` describing the system to be simulated.</span>
 <span class="sd">    system</span>
-<span class="sd">        The :OpenMM:`System` object to simulate.</span>
+<span class="sd">        The :class:`ExtendedSpaceSystem` object to simulate.</span>
 <span class="sd">    integrator</span>
 <span class="sd">        An :class:`ExtendedSpaceIntegrator` object to be used for advancing the XPS</span>
 <span class="sd">        simulation. Available implementations include :class:`LockstepIntegrator` for</span>
@@ -121,11 +113,10 @@
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator.setRandomNumberSeed(1234)</span>
 <span class="sd">    &gt;&gt;&gt; simulation = xps.ExtendedSpaceSimulation(</span>
-<span class="sd">    ...     [phi0],</span>
-<span class="sd">    ...     umbrella_potential,</span>
 <span class="sd">    ...     model.topology,</span>
-<span class="sd">    ...     model.system,</span>
+<span class="sd">    ...     xps.ExtendedSpaceSystem([phi0], umbrella_potential, model.system),</span>
 <span class="sd">    ...     xps.LockstepIntegrator(integrator),</span>
+<span class="sd">    ...     openmm.Platform.getPlatformByName(&quot;Reference&quot;),</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; simulation.context.setPositions(model.positions)</span>
 <span class="sd">    &gt;&gt;&gt; simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)</span>
@@ -140,10 +131,8 @@
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913 pylint: disable=super-init-not-called</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
-        <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
         <span class="n">topology</span><span class="p">:</span> <span class="n">mmapp</span><span class="o">.</span><span class="n">Topology</span><span class="p">,</span>
-        <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">,</span>
+        <span class="n">system</span><span class="p">:</span> <span class="n">ExtendedSpaceSystem</span><span class="p">,</span>
         <span class="n">integrator</span><span class="p">:</span> <span class="n">ExtendedSpaceIntegrator</span><span class="p">,</span>
         <span class="n">platform</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Platform</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">platformProperties</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -162,7 +151,7 @@
                     <span class="k">break</span>
 
         <span class="c1"># Create the ExtendedSpaceContext</span>
-        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">coupling_potential</span><span class="p">,</span> <span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">]</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">platform</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">platform</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">platformProperties</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>

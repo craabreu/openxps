@@ -8,11 +8,11 @@ ExtendedSpaceContext
     .. rubric:: Methods
 
     .. automethod:: createCheckpoint
-    .. automethod:: getCouplingPotential
     .. automethod:: getDynamicalVariableValues
     .. automethod:: getDynamicalVariableVelocities
-    .. automethod:: getDynamicalVariables
     .. automethod:: getExtensionContext
+    .. automethod:: getIntegrator
+    .. automethod:: getSystem
     .. automethod:: loadCheckpoint
     .. automethod:: setDynamicalVariableValues
     .. automethod:: setDynamicalVariableVelocities

@@ -41,22 +41,17 @@
 <h1>ExtendedSpaceContext<a class="headerlink" href="#extendedspacecontext" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling_potential</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
 <dd><p>An <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> object that includes extra dynamical variables (DVs) and
 allows for extended phase-space (XPS) simulations.</p>
 <p><strong>Note</strong>: The system and integrator provided as arguments are modified in place.</p>
 <p>A given <a class="extlink-CVPack reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> is added to the system to couple the
 physical coordinates and the DVs. The integrator’s <code class="docutils literal notranslate"><span class="pre">step</span></code> method is replaced with
-a custom function that advances both the physical and extension systems in tandem.</p>
+a custom function that advances both the physical and extension systems in  tandem.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>dynamical_variables</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – A collection of dynamical variables (DVs) to be included in the XPS simulation.</p></li>
-<li><p><strong>coupling_potential</strong> (<em>MetaCollectiveVariable</em>) – A <a class="extlink-CVPack reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> defining the potential energy term that
-couples the DVs to the physical coordinates. It must have units
-of <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mole</span></code>. All DVs must be included as parameters in the
-coupling potential.</p></li>
-<li><p><strong>system</strong> (<em>System</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> to be used in the XPS simulation.</p></li>
+<li><p><strong>system</strong> (<a class="reference internal" href="ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem" title="openxps.system.ExtendedSpaceSystem"><em>ExtendedSpaceSystem</em></a>) – The <a class="reference internal" href="ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem" title="openxps.ExtendedSpaceSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceSystem</span></code></a> to be used in the XPS simulation.</p></li>
 <li><p><strong>integrator</strong> (<em>ExtendedSpaceIntegrator</em>) – An <code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceIntegrator</span></code> object to be used for advancing the XPS
 simulation. Available implementations include <a class="reference internal" href="LockstepIntegrator.html#openxps.LockstepIntegrator" title="openxps.LockstepIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">LockstepIntegrator</span></code></a> for
 systems where both integrators use the same step size, and
@@ -93,9 +88,11 @@ even integer ratio.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">height</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">sigma</span> <span class="o">=</span> <span class="mi">18</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceContext</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
-<span class="gp">... </span>    <span class="n">umbrella_potential</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSystem</span><span class="p">(</span>
+<span class="gp">... </span>        <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
+<span class="gp">... </span>        <span class="n">umbrella_potential</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="p">),</span>
 <span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">LockstepIntegrator</span><span class="p">(</span><span class="n">integrator</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="n">platform</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
@@ -129,20 +126,6 @@ even integer ratio.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getCouplingPotential">
-<span class="sig-name descname"><span class="pre">getCouplingPotential</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getCouplingPotential"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getCouplingPotential" title="Link to this definition">¶</a></dt>
-<dd><p>Get the coupling potential included in the extended phase-space system.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>The coupling potential.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>cvpack.MetaCollectiveVariable</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getDynamicalVariableValues">
 <span class="sig-name descname"><span class="pre">getDynamicalVariableValues</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getDynamicalVariableValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getDynamicalVariableValues" title="Link to this definition">¶</a></dt>
 <dd><p>Get the values of the dynamical variables.</p>
@@ -171,20 +154,6 @@ even integer ratio.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getDynamicalVariables">
-<span class="sig-name descname"><span class="pre">getDynamicalVariables</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getDynamicalVariables"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getDynamicalVariables" title="Link to this definition">¶</a></dt>
-<dd><p>Get the dynamical variables included in the extended phase-space system.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A tuple containing the dynamical variables.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>t.Tuple[<a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.DynamicalVariable">DynamicalVariable</a>]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getExtensionContext">
 <span class="sig-name descname"><span class="pre">getExtensionContext</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getExtensionContext" title="Link to this definition">¶</a></dt>
 <dd><p>Get a reference to the OpenMM context containing the extension system.</p>
@@ -194,6 +163,34 @@ even integer ratio.</p></li>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>mm.Context</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getIntegrator">
+<span class="sig-name descname"><span class="pre">getIntegrator</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getIntegrator" title="Link to this definition">¶</a></dt>
+<dd><p>Get the integrator included in the extended phase-space context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The integrator.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>ExtendedSpaceIntegrator</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getSystem">
+<span class="sig-name descname"><span class="pre">getSystem</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getSystem" title="Link to this definition">¶</a></dt>
+<dd><p>Get the system included in the extended phase-space context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The system.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem" title="openxps.ExtendedSpaceSystem">ExtendedSpaceSystem</a></p>
 </dd>
 </dl>
 </dd></dl>
@@ -267,7 +264,7 @@ appropriate boundary condition if necessary.</p>
 <dd><p>Sets the positions of all particles in the physical system.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>positions</strong> (<em>Quantity</em><em> | </em><em>ndarray</em><em> | </em><em>Sequence</em><em>[</em><em>Vec3</em><em>] </em><em>| </em><em>Sequence</em><em>[</em><em>ndarray</em><em>]</em>) – The positions for each particle in the system.</p>
+<dd class="field-odd"><p><strong>positions</strong> (<em>Quantity</em>) – The positions for each particle in the system.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -307,6 +304,7 @@ appropriate boundary condition if necessary.</p>
 <li class="toctree-l3"><a class="reference internal" href="SplitIntegrator.html">SplitIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MetadynamicsBias.html">MetadynamicsBias</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSimulation.html">ExtendedSpaceSimulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
 </ul>
 </li>
 </ul>

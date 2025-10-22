@@ -1,0 +1,12 @@
+ExtendedSpaceSystem
+===================
+
+.. currentmodule:: openxps
+.. autoclass:: ExtendedSpaceSystem
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getCouplingPotential
+    .. automethod:: getDynamicalVariables
+    .. automethod:: getExtensionSystem

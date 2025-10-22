@@ -18,7 +18,7 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Bibliography" href="../references.html" />
+    <link rel="next" title="ExtendedSpaceSystem" href="ExtendedSpaceSystem.html" />
     <link rel="prev" title="MetadynamicsBias" href="MetadynamicsBias.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -41,7 +41,7 @@
 <h1>ExtendedSpaceSimulation<a class="headerlink" href="#extendedspacesimulation" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceSimulation">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceSimulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling_potential</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platformProperties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/simulation.html#ExtendedSpaceSimulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSimulation" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceSimulation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">topology</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platformProperties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/simulation.html#ExtendedSpaceSimulation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSimulation" title="Link to this definition">¶</a></dt>
 <dd><p>A <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Simulation.html">openmm.Simulation</a> object that uses an <a class="reference internal" href="ExtendedSpaceContext.html#openxps.ExtendedSpaceContext" title="openxps.ExtendedSpaceContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceContext</span></code></a> to enable
 extended phase-space (XPS) simulations with dynamical variables.</p>
 <p>This class extends <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Simulation.html">openmm.Simulation</a> to seamlessly integrate extended phase-space
@@ -51,13 +51,8 @@ capabilities by creating an <a class="reference internal" href="ExtendedSpaceCon
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>dynamical_variables</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – A collection of dynamical variables (DVs) to be included in the XPS simulation.</p></li>
-<li><p><strong>coupling_potential</strong> (<em>MetaCollectiveVariable</em>) – A <a class="extlink-CVPack reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> defining the potential energy term that
-couples the DVs to the physical coordinates. It must have units
-of <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mole</span></code>. All DVs must be included as parameters in the
-coupling potential.</p></li>
 <li><p><strong>topology</strong> (<em>Topology</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Topology.html">openmm.Topology</a> describing the system to be simulated.</p></li>
-<li><p><strong>system</strong> (<em>System</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> object to simulate.</p></li>
+<li><p><strong>system</strong> (<a class="reference internal" href="ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem" title="openxps.system.ExtendedSpaceSystem"><em>ExtendedSpaceSystem</em></a>) – The <a class="reference internal" href="ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem" title="openxps.ExtendedSpaceSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceSystem</span></code></a> object to simulate.</p></li>
 <li><p><strong>integrator</strong> (<em>ExtendedSpaceIntegrator</em>) – An <code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceIntegrator</span></code> object to be used for advancing the XPS
 simulation. Available implementations include <a class="reference internal" href="LockstepIntegrator.html#openxps.LockstepIntegrator" title="openxps.LockstepIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">LockstepIntegrator</span></code></a> for
 systems where both integrators use the same step size, and
@@ -95,11 +90,10 @@ after initialization.</p></li>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span><span class="o">.</span><span class="n">setRandomNumberSeed</span><span class="p">(</span><span class="mi">1234</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">simulation</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSimulation</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
-<span class="gp">... </span>    <span class="n">umbrella_potential</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">model</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSystem</span><span class="p">([</span><span class="n">phi0</span><span class="p">],</span> <span class="n">umbrella_potential</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">LockstepIntegrator</span><span class="p">(</span><span class="n">integrator</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">&quot;Reference&quot;</span><span class="p">),</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">setVelocitiesToTemperature</span><span class="p">(</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
@@ -147,6 +141,7 @@ after initialization.</p></li>
 <li class="toctree-l3"><a class="reference internal" href="SplitIntegrator.html">SplitIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MetadynamicsBias.html">MetadynamicsBias</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">ExtendedSpaceSimulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
 </ul>
 </li>
 </ul>

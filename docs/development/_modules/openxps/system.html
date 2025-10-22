@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>openxps.system &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=572d9513" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for openxps.system</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.. module:: openxps.system</span>
+<span class="sd">   :platform: Linux, MacOS, Windows</span>
+<span class="sd">   :synopsis: System for extended phase-space simulations with OpenMM.</span>
+
+<span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
+
+
+<div class="viewcode-block" id="ExtendedSpaceSystem">
+<a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExtendedSpaceSystem</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;An :OpenMM:`System` object that includes extra dynamical variables (DVs) and</span>
+<span class="sd">    allows for extended phase-space (XPS) simulations.</span>
+
+<span class="sd">    A given :CVPack:`MetaCollectiveVariable` is added to the system to couple the</span>
+<span class="sd">    physical coordinates and the DVs.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dynamical_variables</span>
+<span class="sd">        A collection of dynamical variables (DVs) to be included in the XPS simulation.</span>
+<span class="sd">    coupling_potential</span>
+<span class="sd">        A :CVPack:`MetaCollectiveVariable` defining the potential energy term that</span>
+<span class="sd">        couples the DVs to the physical coordinates. It must have units</span>
+<span class="sd">        of ``kilojoules_per_mole``. All DVs must be included as parameters in the</span>
+<span class="sd">        coupling potential.</span>
+<span class="sd">    system</span>
+<span class="sd">        The :OpenMM:`System` to be used in the XPS simulation.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from math import pi</span>
+<span class="sd">    &gt;&gt;&gt; import cvpack</span>
+<span class="sd">    &gt;&gt;&gt; import openmm</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
+<span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
+<span class="sd">    &gt;&gt;&gt; umbrella_potential = cvpack.MetaCollectiveVariable(</span>
+<span class="sd">    ...     f&quot;0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)&quot;,</span>
+<span class="sd">    ...     [cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)],</span>
+<span class="sd">    ...     unit.kilojoule_per_mole,</span>
+<span class="sd">    ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,</span>
+<span class="sd">    ...     phi0=pi*unit.radian,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
+<span class="sd">    &gt;&gt;&gt; system = xps.ExtendedSpaceSystem(</span>
+<span class="sd">    ...     [phi0],</span>
+<span class="sd">    ...     umbrella_potential,</span>
+<span class="sd">    ...     model.system,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; system.getDynamicalVariables()</span>
+<span class="sd">    (DynamicalVariable(name=&#39;phi0&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...),)</span>
+<span class="sd">    &gt;&gt;&gt; system.getExtensionSystem().getNumParticles()</span>
+<span class="sd">    1</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+        <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
+        <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dynamical_variables</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">coupling_potential</span><span class="p">)</span>
+        <span class="n">coupling_potential</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="n">system</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_createExtensionSystem</span><span class="p">(</span>
+            <span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">coupling_potential</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span> <span class="o">=</span> <span class="n">dynamical_variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span> <span class="o">=</span> <span class="n">coupling_potential</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+        <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">dv</span><span class="p">,</span> <span class="n">DynamicalVariable</span><span class="p">)</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;All dynamical variables must be instances of DynamicalVariable.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coupling_potential</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;The coupling potential must be an instance of MetaCollectiveVariable.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">coupling_potential</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The coupling potential must have units of molar energy.&quot;</span><span class="p">)</span>
+        <span class="n">missing_parameters</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">dv</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span>
+            <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">coupling_potential</span><span class="o">.</span><span class="n">getParameterDefaultValues</span><span class="p">()</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing_parameters</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;These dynamical variables are not coupling potential parameters: &quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_parameters</span><span class="p">)</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_createExtensionSystem</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+        <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">:</span>
+        <span class="n">extension_system</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">:</span>
+            <span class="n">extension_system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
+
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">coupling_potential</span><span class="o">.</span><span class="n">getParameterDefaultValues</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">parameters</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">():</span> <span class="mf">0.0</span> <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">coupling_potential</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">()}</span>
+        <span class="p">)</span>
+
+        <span class="n">flipped_potential</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">(</span>
+            <span class="n">function</span><span class="o">=</span><span class="n">coupling_potential</span><span class="o">.</span><span class="n">getEnergyFunction</span><span class="p">(),</span>
+            <span class="n">variables</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
+            <span class="p">],</span>
+            <span class="n">unit</span><span class="o">=</span><span class="n">coupling_potential</span><span class="o">.</span><span class="n">getUnit</span><span class="p">(),</span>
+            <span class="n">periodicBounds</span><span class="o">=</span><span class="n">coupling_potential</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">(),</span>
+            <span class="n">name</span><span class="o">=</span><span class="n">coupling_potential</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span>
+            <span class="o">**</span><span class="n">parameters</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">flipped_potential</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">extension_system</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">extension_system</span>
+
+<div class="viewcode-block" id="ExtendedSpaceSystem.getDynamicalVariables">
+<a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getDynamicalVariables">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getDynamicalVariables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the dynamical variables included in the extended phase-space system.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        t.Tuple[DynamicalVariable]</span>
+<span class="sd">            A tuple containing the dynamical variables.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceSystem.getCouplingPotential">
+<a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getCouplingPotential">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getCouplingPotential</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the coupling potential included in the extended phase-space system.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        cvpack.MetaCollectiveVariable</span>
+<span class="sd">            The coupling potential.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span></div>
+
+
+<div class="viewcode-block" id="ExtendedSpaceSystem.getExtensionSystem">
+<a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getExtensionSystem">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getExtensionSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Get the extension system included in the extended phase-space system.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        mm.System</span>
+<span class="sd">            The extension system.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
