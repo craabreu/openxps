@@ -8,7 +8,7 @@
 """
 
 import typing as t
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from copy import deepcopy
 
 import cvpack
@@ -38,7 +38,7 @@ KNOWN_REVERSIBLE_INTEGRATORS = (
 )
 
 
-class ExtendedSpaceIntegrator(mm.Integrator):
+class ExtendedSpaceIntegrator(mm.Integrator, ABC):
     """Base class for integrators that advance extended phase-space simulations.
 
     An extended phase-space integrator manages two separate OpenMM integrators: one for
