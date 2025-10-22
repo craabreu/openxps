@@ -38,9 +38,7 @@ def create_non_kick_first_integrator(step_size):
 
 def create_non_reversible_integrator(step_size):
     """Create a LangevinIntegrator that is not in KNOWN_REVERSIBLE_INTEGRATORS."""
-    return mm.LangevinIntegrator(
-        300 * mmunit.kelvin, 1 / mmunit.picosecond, step_size
-    )
+    return mm.LangevinIntegrator(300 * mmunit.kelvin, 1 / mmunit.picosecond, step_size)
 
 
 # LockstepIntegrator Tests
@@ -214,9 +212,7 @@ def test_set_step_size_with_quantity():
     extension_dt = mmswig.Integrator_getStepSize(integrator.getExtensionIntegrator())
 
     assert physical_dt == pytest.approx(new_step_size.value_in_unit(mmunit.picosecond))
-    assert extension_dt == pytest.approx(
-        new_step_size.value_in_unit(mmunit.picosecond)
-    )
+    assert extension_dt == pytest.approx(new_step_size.value_in_unit(mmunit.picosecond))
     result_step_size = integrator.getStepSize().value_in_unit(mmunit.picosecond)
     assert result_step_size == pytest.approx(
         new_step_size.value_in_unit(mmunit.picosecond)
@@ -299,9 +295,9 @@ def test_copy_split_integrator():
     assert copy._num_substeps == original._num_substeps
 
     # Check step sizes match
-    assert mmswig.Integrator_getStepSize(
-        copy.getPhysicalIntegrator()
-    ) == pytest.approx(mmswig.Integrator_getStepSize(original.getPhysicalIntegrator()))
+    assert mmswig.Integrator_getStepSize(copy.getPhysicalIntegrator()) == pytest.approx(
+        mmswig.Integrator_getStepSize(original.getPhysicalIntegrator())
+    )
 
 
 def test_getstate_setstate_lockstep():
@@ -323,9 +319,7 @@ def test_getstate_setstate_lockstep():
     ) == pytest.approx(mmswig.Integrator_getStepSize(original.getPhysicalIntegrator()))
     assert mmswig.Integrator_getStepSize(
         new_integrator.getExtensionIntegrator()
-    ) == pytest.approx(
-        mmswig.Integrator_getStepSize(original.getExtensionIntegrator())
-    )
+    ) == pytest.approx(mmswig.Integrator_getStepSize(original.getExtensionIntegrator()))
 
     # Check that _physical_context and other None attributes reset properly
     assert new_integrator._physical_context is None
@@ -356,6 +350,4 @@ def test_getstate_setstate_split():
     ) == pytest.approx(mmswig.Integrator_getStepSize(original.getPhysicalIntegrator()))
     assert mmswig.Integrator_getStepSize(
         new_integrator.getExtensionIntegrator()
-    ) == pytest.approx(
-        mmswig.Integrator_getStepSize(original.getExtensionIntegrator())
-    )
+    ) == pytest.approx(mmswig.Integrator_getStepSize(original.getExtensionIntegrator()))

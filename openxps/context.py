@@ -240,9 +240,7 @@ class ExtendedSpaceContext(mm.Context):
             value = value.value_in_unit(dv.unit)
             if dv.bounds is not None:
                 value, _ = dv.bounds.wrap(value, 0)
-            state = mmswig.Context_getState(
-                self._extension_context, mm.State.Positions
-            )
+            state = mmswig.Context_getState(self._extension_context, mm.State.Positions)
             positions = list(mmswig.State__getVectorAsVec3(state, mm.State.Positions))
             positions[i] = mm.Vec3(value, 0, 0)
             self._extension_context.setPositions(positions)
