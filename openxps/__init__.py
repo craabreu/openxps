@@ -10,10 +10,12 @@ from .extension_writer import ExtensionWriter  # noqa: F401
 from .integrator import LockstepIntegrator, SplitIntegrator  # noqa: F401
 from .metadynamics import MetadynamicsBias  # noqa: F401
 from .simulation import ExtendedSpaceSimulation  # noqa: F401
+from .system import ExtendedSpaceSystem  # noqa: F401
 
 __all__ = [
     "bounds",
     "ExtendedSpaceContext",
+    "ExtendedSpaceSystem",
     "ExtensionWriter",
     "DynamicalVariable",
     "MetadynamicsBias",

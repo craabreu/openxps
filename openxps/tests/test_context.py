@@ -9,16 +9,25 @@ import pytest
 from openmm import unit as mmunit
 from openmmtools import testsystems
 
-from openxps import DynamicalVariable, ExtendedSpaceContext, LockstepIntegrator
+from openxps import (
+    DynamicalVariable,
+    ExtendedSpaceContext,
+    ExtendedSpaceSystem,
+    LockstepIntegrator,
+)
 from openxps.bounds import CIRCULAR, Reflective
 from openxps.utils import BINARY_SEPARATOR
 
 
-def system_integrator_platform(model):
+def system_integrator_platform(dvs, coupling_potential, model):
     """Helper function to create a basic OpenMM Context object."""
     integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
     platform = mm.Platform.getPlatformByName("Reference")
-    return model.system, LockstepIntegrator(integrator), platform
+    return (
+        ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        LockstepIntegrator(integrator),
+        platform,
+    )
 
 
 def create_dvs():
@@ -58,9 +67,13 @@ def create_coupling_potential(
 def create_extended_context(model, coupling_potential=None):
     """Helper function to create an ExtendedSpaceContext object."""
     return ExtendedSpaceContext(
-        create_dvs(),
-        coupling_potential or create_coupling_potential(),
-        *system_integrator_platform(model),
+        ExtendedSpaceSystem(
+            create_dvs(),
+            coupling_potential or create_coupling_potential(),
+            model.system,
+        ),
+        LockstepIntegrator(mm.VerletIntegrator(1.0 * mmunit.femtosecond)),
+        mm.Platform.getPlatformByName("Reference"),
     )
 
 
@@ -145,27 +158,27 @@ def test_validation():
 
     with pytest.raises(TypeError) as e:
         ExtendedSpaceContext(
-            [None], coupling_potential, *system_integrator_platform(model)
+            *system_integrator_platform([None], coupling_potential, model)
         )
     assert "dynamical variables must be instances of DynamicalVariable" in str(e.value)
 
     with pytest.raises(TypeError) as e:
-        ExtendedSpaceContext(dvs, None, *system_integrator_platform(model))
+        ExtendedSpaceContext(*system_integrator_platform(dvs, None, model))
     assert "must be an instance of MetaCollectiveVariable" in str(e.value)
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(
-            dvs,
-            create_coupling_potential(phi0=None),
-            *system_integrator_platform(model),
+            *system_integrator_platform(
+                dvs, create_coupling_potential(phi0=None), model
+            ),
         )
     assert "dynamical variables are not coupling potential parameters" in str(e.value)
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(
-            dvs,
-            create_coupling_potential(unit=mmunit.radian),
-            *system_integrator_platform(model),
+            *system_integrator_platform(
+                dvs, create_coupling_potential(unit=mmunit.radian), model
+            ),
         )
     assert "The coupling potential must have units of molar energy." in str(e.value)
 
@@ -198,13 +211,13 @@ def test_consistency():
         positions = extension_state.getPositions()
         forces = extension_state.getForces()
         x1 = {}
-        for i, dv in enumerate(context.getDynamicalVariables()):
+        for i, dv in enumerate(context.getSystem().getDynamicalVariables()):
             force = forces[i].x
             if dv.bounds is not None:
                 _, force = dv.bounds.wrap(positions[i].x, force)
             x1[dv.name] = -force
         x2 = coupling.getParameterDerivatives(context)
-        for dv in context.getDynamicalVariables():
+        for dv in context.getSystem().getDynamicalVariables():
             assert x1[dv.name] == pytest.approx(x2[dv.name] / x2[dv.name].unit)
 
 
@@ -350,9 +363,7 @@ def test_context_with_platform_properties():
     integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
 
     context = ExtendedSpaceContext(
-        dvs,
-        coupling_potential,
-        model.system,
+        ExtendedSpaceSystem(dvs, coupling_potential, model.system),
         LockstepIntegrator(integrator),
         platform,
         properties,
@@ -373,25 +384,9 @@ def test_invalid_integrator_type():
         TypeError, match="The integrator must be an instance of ExtendedSpaceIntegrator"
     ):
         ExtendedSpaceContext(
-            dvs,
-            coupling_potential,
-            model.system,
+            ExtendedSpaceSystem(dvs, coupling_potential, model.system),
             integrator,  # Wrong type - not wrapped in ExtendedSpaceIntegrator
         )
-
-
-def test_get_coupling_potential():
-    """Test getCouplingPotential returns the correct potential."""
-    model = testsystems.AlanineDipeptideVacuum()
-    coupling_potential = create_coupling_potential()
-    context = create_extended_context(model, coupling_potential)
-
-    retrieved_potential = context.getCouplingPotential()
-    assert retrieved_potential is coupling_potential
-    assert (
-        retrieved_potential.getEnergyFunction()
-        == coupling_potential.getEnergyFunction()
-    )
 
 
 def test_set_parameter_for_dv():

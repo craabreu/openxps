@@ -58,10 +58,8 @@ class ExtensionWriter(CustomWriter):
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> simulation = xps.ExtendedSpaceSimulation(
-    ...     [phi0],
-    ...     umbrella_potential,
     ...     model.topology,
-    ...     model.system,
+    ...     xps.ExtendedSpaceSystem([phi0], umbrella_potential, model.system),
     ...     xps.LockstepIntegrator(integrator),
     ...     platform
     ... )
@@ -114,7 +112,7 @@ class ExtensionWriter(CustomWriter):
 
     def initialize(self, simulation: mmapp.Simulation) -> None:
         if self._temperature:
-            number = len(self._context.getDynamicalVariables())
+            number = len(self._context.getSystem().getDynamicalVariables())
             kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
                 mmunit.kilojoules_per_mole / mmunit.kelvin
             )
@@ -141,7 +139,9 @@ class ExtensionWriter(CustomWriter):
             kinetic_energy = mmswig.State_getKineticEnergy(state)
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
-            for dv, velocity in zip(self._context.getDynamicalVariables(), velocities):
+            for dv, velocity in zip(
+                self._context.getSystem().getDynamicalVariables(), velocities
+            ):
                 mass = dv.mass._value
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
         values = []

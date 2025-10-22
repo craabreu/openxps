@@ -9,13 +9,12 @@
 
 import typing as t
 
-import cvpack
 import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from .dynamical_variable import DynamicalVariable
 from .integrator import ExtendedSpaceIntegrator
+from .system import ExtendedSpaceSystem
 from .utils import BINARY_SEPARATOR
 
 
@@ -27,19 +26,12 @@ class ExtendedSpaceContext(mm.Context):
 
     A given :CVPack:`MetaCollectiveVariable` is added to the system to couple the
     physical coordinates and the DVs. The integrator's ``step`` method is replaced with
-    a custom function that advances both the physical and extension systems in tandem.
+    a custom function that advances both the physical and extension systems in  tandem.
 
     Parameters
     ----------
-    dynamical_variables
-        A collection of dynamical variables (DVs) to be included in the XPS simulation.
-    coupling_potential
-        A :CVPack:`MetaCollectiveVariable` defining the potential energy term that
-        couples the DVs to the physical coordinates. It must have units
-        of ``kilojoules_per_mole``. All DVs must be included as parameters in the
-        coupling potential.
     system
-        The :OpenMM:`System` to be used in the XPS simulation.
+        The :class:`ExtendedSpaceSystem` to be used in the XPS simulation.
     integrator
         An :class:`ExtendedSpaceIntegrator` object to be used for advancing the XPS
         simulation. Available implementations include :class:`LockstepIntegrator` for
@@ -78,9 +70,11 @@ class ExtendedSpaceContext(mm.Context):
     >>> height = 2 * unit.kilojoule_per_mole
     >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
-    ...     [phi0],
-    ...     umbrella_potential,
-    ...     model.system,
+    ...     xps.ExtendedSpaceSystem(
+    ...         [phi0],
+    ...         umbrella_potential,
+    ...         model.system,
+    ...     ),
     ...     xps.LockstepIntegrator(integrator),
     ...     platform,
     ... )
@@ -98,124 +92,68 @@ class ExtendedSpaceContext(mm.Context):
 
     def __init__(
         self,
-        dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_potential: cvpack.MetaCollectiveVariable,
-        system: mm.System,
+        system: ExtendedSpaceSystem,
         integrator: ExtendedSpaceIntegrator,
         platform: t.Optional[mm.Platform] = None,
         properties: t.Optional[dict] = None,
     ) -> None:
-        dynamical_variables = tuple(dynamical_variables)
-        self._validate(dynamical_variables, coupling_potential, integrator)
-        coupling_potential.addToSystem(system)
+        self._validate(system, integrator)
         args = [system, integrator.getPhysicalIntegrator()]
         if platform is not None:
             args.append(platform)
             if properties is not None:
                 args.append(properties)
         super().__init__(*args)
-        extension_context = self._createExtensionContext(
-            dynamical_variables, coupling_potential, integrator.getExtensionIntegrator()
+        extension_context = mm.Context(
+            system.getExtensionSystem(),
+            integrator.getExtensionIntegrator(),
+            mm.Platform.getPlatformByName("Reference"),
         )
         integrator.configure(
             physical_context=self,
             extension_context=extension_context,
-            dynamical_variables=dynamical_variables,
-            coupling_potential=coupling_potential,
+            dynamical_variables=system.getDynamicalVariables(),
+            coupling_potential=system.getCouplingPotential(),
         )
-        self._dvs = dynamical_variables
-        self._coupling_potential = coupling_potential
+        self._system = system
+        self._dvs = system.getDynamicalVariables()
+        self._coupling_potential = system.getCouplingPotential()
         self._integrator = integrator
         self._extension_context = extension_context
 
     def _validate(
         self,
-        dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_potential: cvpack.MetaCollectiveVariable,
+        system: ExtendedSpaceSystem,
         integrator: ExtendedSpaceIntegrator,
     ) -> None:
-        if not all(isinstance(dv, DynamicalVariable) for dv in dynamical_variables):
-            raise TypeError(
-                "All dynamical variables must be instances of DynamicalVariable."
-            )
-        if not isinstance(coupling_potential, cvpack.MetaCollectiveVariable):
-            raise TypeError(
-                "The coupling potential must be an instance of MetaCollectiveVariable."
-            )
-        if not coupling_potential.getUnit().is_compatible(mmunit.kilojoule_per_mole):
-            raise ValueError("The coupling potential must have units of molar energy.")
-        missing_parameters = [
-            dv.name
-            for dv in dynamical_variables
-            if dv.name not in coupling_potential.getParameterDefaultValues()
-        ]
-        if missing_parameters:
-            raise ValueError(
-                "These dynamical variables are not coupling potential parameters: "
-                + ", ".join(missing_parameters)
-            )
-
+        if not isinstance(system, ExtendedSpaceSystem):
+            raise TypeError("The system must be an instance of ExtendedSpaceSystem.")
         if not isinstance(integrator, ExtendedSpaceIntegrator):
             raise TypeError(
                 "The integrator must be an instance of ExtendedSpaceIntegrator."
             )
 
-    def _createExtensionContext(
-        self,
-        dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_potential: cvpack.MetaCollectiveVariable,
-        extension_integrator: mm.Integrator,
-    ) -> mm.Context:
-        extension_system = mm.System()
-        for dv in dynamical_variables:
-            extension_system.addParticle(dv.mass / dv.mass.unit)
-
-        meta_cv = coupling_potential
-        parameters = meta_cv.getParameterDefaultValues()
-        for dv in dynamical_variables:
-            parameters.pop(dv.name)
-        parameters.update(meta_cv.getInnerValues(self))
-
-        flipped_potential = cvpack.MetaCollectiveVariable(
-            function=meta_cv.getEnergyFunction(),
-            variables=[
-                dv.createCollectiveVariable(index)
-                for index, dv in enumerate(dynamical_variables)
-            ],
-            unit=meta_cv.getUnit(),
-            periodicBounds=meta_cv.getPeriodicBounds(),
-            name=meta_cv.getName(),
-            **parameters,
-        )
-        flipped_potential.addToSystem(extension_system)
-
-        return mm.Context(
-            extension_system,
-            extension_integrator,
-            mm.Platform.getPlatformByName("Reference"),
-        )
-
-    def getDynamicalVariables(self) -> tuple[DynamicalVariable]:
+    def getSystem(self) -> ExtendedSpaceSystem:
         """
-        Get the dynamical variables included in the extended phase-space system.
+        Get the system included in the extended phase-space context.
 
         Returns
         -------
-        t.Tuple[DynamicalVariable]
-            A tuple containing the dynamical variables.
+        ExtendedSpaceSystem
+            The system.
         """
-        return self._dvs
+        return self._system
 
-    def getCouplingPotential(self) -> cvpack.MetaCollectiveVariable:
+    def getIntegrator(self) -> ExtendedSpaceIntegrator:
         """
-        Get the coupling potential included in the extended phase-space system.
+        Get the integrator included in the extended phase-space context.
 
         Returns
         -------
-        cvpack.MetaCollectiveVariable
-            The coupling potential.
+        ExtendedSpaceIntegrator
+            The integrator.
         """
-        return self._coupling_potential
+        return self._integrator
 
     def setParameter(self, name: str, value: mmunit.Quantity) -> None:
         """
@@ -248,7 +186,7 @@ class ExtendedSpaceContext(mm.Context):
         else:
             super().setParameter(name, value)
 
-    def setPositions(self, positions: cvpack.units.MatrixQuantity) -> None:
+    def setPositions(self, positions: mmunit.Quantity) -> None:
         """
         Sets the positions of all particles in the physical system.
 
