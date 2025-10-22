@@ -11,6 +11,7 @@ from openmmtools import testsystems
 
 from openxps import DynamicalVariable, ExtendedSpaceContext, LockstepIntegrator
 from openxps.bounds import CIRCULAR, Reflective
+from openxps.utils import BINARY_SEPARATOR
 
 
 def system_integrator_platform(model):
@@ -205,3 +206,245 @@ def test_consistency():
         x2 = coupling.getParameterDerivatives(context)
         for dv in context.getDynamicalVariables():
             assert x1[dv.name] == pytest.approx(x2[dv.name] / x2[dv.name].unit)
+
+
+def test_checkpoint_creation_and_loading():
+    """Test creating and loading checkpoints preserves context state."""
+    model = testsystems.AlanineDipeptideVacuum()
+    context = create_extended_context(model)
+
+    # Set up initial state
+    context.setPositions(model.positions)
+    context.setVelocitiesToTemperature(300 * mmunit.kelvin, 1234)
+    initial_dv_values = [
+        1 * mmunit.radian,
+        0.5 * mmunit.nanometer,
+        -0.3 * mmunit.nanometer,
+    ]
+    context.setDynamicalVariableValues(initial_dv_values)
+    context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin, 5678)
+
+    # Run a few steps to evolve the system
+    context.getIntegrator().step(10)
+
+    # Get state before checkpoint
+    state_before = context.getState(
+        getPositions=True, getVelocities=True, getEnergy=True
+    )
+    positions_before = state_before.getPositions(asNumpy=True)
+    velocities_before = state_before.getVelocities(asNumpy=True)
+    dv_values_before = context.getDynamicalVariableValues()
+    dv_velocities_before = context.getDynamicalVariableVelocities()
+    energy_before = state_before.getPotentialEnergy()
+
+    # Create checkpoint
+    checkpoint = context.createCheckpoint()
+    assert isinstance(checkpoint, bytes)
+    assert BINARY_SEPARATOR in checkpoint
+
+    # Modify the state significantly
+    context.getIntegrator().step(100)
+    new_positions = positions_before + 0.1 * mmunit.nanometer
+    context.setPositions(new_positions)
+    context.setDynamicalVariableValues(
+        [2 * mmunit.radian, 1.0 * mmunit.nanometer, 0.5 * mmunit.nanometer]
+    )
+
+    # Verify state has changed
+    state_after_change = context.getState(getPositions=True, getEnergy=True)
+    positions_after_change = state_after_change.getPositions(asNumpy=True)
+    assert not np.allclose(
+        positions_before.value_in_unit(mmunit.nanometer),
+        positions_after_change.value_in_unit(mmunit.nanometer),
+    )
+
+    # Load checkpoint
+    context.loadCheckpoint(checkpoint)
+
+    # Get state after loading checkpoint
+    state_after = context.getState(
+        getPositions=True, getVelocities=True, getEnergy=True
+    )
+    positions_after = state_after.getPositions(asNumpy=True)
+    velocities_after = state_after.getVelocities(asNumpy=True)
+    dv_values_after = context.getDynamicalVariableValues()
+    dv_velocities_after = context.getDynamicalVariableVelocities()
+    energy_after = state_after.getPotentialEnergy()
+
+    # Assert that state is restored
+    np.testing.assert_allclose(positions_before, positions_after, rtol=1e-10)
+    np.testing.assert_allclose(velocities_before, velocities_after, rtol=1e-10)
+    assert energy_before.value_in_unit(mmunit.kilojoule_per_mole) == pytest.approx(
+        energy_after.value_in_unit(mmunit.kilojoule_per_mole)
+    )
+
+    # Check dynamical variables
+    for val_before, val_after in zip(dv_values_before, dv_values_after):
+        assert val_before.value_in_unit(val_before.unit) == pytest.approx(
+            val_after.value_in_unit(val_after.unit)
+        )
+
+    for vel_before, vel_after in zip(dv_velocities_before, dv_velocities_after):
+        assert vel_before.value_in_unit(vel_before.unit) == pytest.approx(
+            vel_after.value_in_unit(vel_after.unit)
+        )
+
+
+def test_checkpoint_file_save_load(tmp_path):
+    """Test saving checkpoint to file and loading from file."""
+    model = testsystems.AlanineDipeptideVacuum()
+    context = create_extended_context(model)
+
+    # Set up initial state
+    context.setPositions(model.positions)
+    context.setVelocitiesToTemperature(300 * mmunit.kelvin, 1234)
+    context.setDynamicalVariableValues(
+        [1 * mmunit.radian, 0.5 * mmunit.nanometer, -0.3 * mmunit.nanometer]
+    )
+    context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin, 5678)
+    context.getIntegrator().step(10)
+
+    # Get state before checkpoint
+    state_before = context.getState(getPositions=True, getVelocities=True)
+    positions_before = state_before.getPositions(asNumpy=True)
+    dv_values_before = context.getDynamicalVariableValues()
+
+    # Create checkpoint and save to file
+    checkpoint = context.createCheckpoint()
+    checkpoint_file = tmp_path / "test_checkpoint.chk"
+    with open(checkpoint_file, "wb") as f:
+        f.write(checkpoint)
+
+    # Verify file exists and has content
+    assert checkpoint_file.exists()
+    assert checkpoint_file.stat().st_size > 0
+
+    # Modify state
+    context.getIntegrator().step(100)
+
+    # Load checkpoint from file
+    with open(checkpoint_file, "rb") as f:
+        loaded_checkpoint = f.read()
+    context.loadCheckpoint(loaded_checkpoint)
+
+    # Verify state is restored
+    state_after = context.getState(getPositions=True, getVelocities=True)
+    positions_after = state_after.getPositions(asNumpy=True)
+    dv_values_after = context.getDynamicalVariableValues()
+
+    np.testing.assert_allclose(positions_before, positions_after, rtol=1e-10)
+    for val_before, val_after in zip(dv_values_before, dv_values_after):
+        assert val_before.value_in_unit(val_before.unit) == pytest.approx(
+            val_after.value_in_unit(val_after.unit)
+        )
+
+
+def test_context_with_platform_properties():
+    """Test ExtendedSpaceContext with platform and properties."""
+    model = testsystems.AlanineDipeptideVacuum()
+    platform = mm.Platform.getPlatformByName("CPU")
+    properties = {"Threads": "1"}
+
+    dvs = create_dvs()
+    coupling_potential = create_coupling_potential()
+    integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+
+    context = ExtendedSpaceContext(
+        dvs,
+        coupling_potential,
+        model.system,
+        LockstepIntegrator(integrator),
+        platform,
+        properties,
+    )
+
+    assert context is not None
+    assert context.getPlatform().getName() == "CPU"
+
+
+def test_invalid_integrator_type():
+    """Test that non-ExtendedSpaceIntegrator raises TypeError."""
+    model = testsystems.AlanineDipeptideVacuum()
+    dvs = create_dvs()
+    coupling_potential = create_coupling_potential()
+    integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+
+    with pytest.raises(
+        TypeError, match="The integrator must be an instance of ExtendedSpaceIntegrator"
+    ):
+        ExtendedSpaceContext(
+            dvs,
+            coupling_potential,
+            model.system,
+            integrator,  # Wrong type - not wrapped in ExtendedSpaceIntegrator
+        )
+
+
+def test_get_coupling_potential():
+    """Test getCouplingPotential returns the correct potential."""
+    model = testsystems.AlanineDipeptideVacuum()
+    coupling_potential = create_coupling_potential()
+    context = create_extended_context(model, coupling_potential)
+
+    retrieved_potential = context.getCouplingPotential()
+    assert retrieved_potential is coupling_potential
+    assert (
+        retrieved_potential.getEnergyFunction()
+        == coupling_potential.getEnergyFunction()
+    )
+
+
+def test_set_parameter_for_dv():
+    """Test setParameter for dynamical variables."""
+    model = testsystems.AlanineDipeptideVacuum()
+    context = create_extended_context(model)
+
+    # Initialize context
+    context.setPositions(model.positions)
+    context.setDynamicalVariableValues(
+        [1.0 * mmunit.radian, 0.5 * mmunit.nanometer, -0.3 * mmunit.nanometer]
+    )
+
+    # Set a dynamical variable parameter
+    context.setParameter("phi0", 2.0 * mmunit.radian)
+    assert context.getParameter("phi0") == pytest.approx(2.0)
+
+    # Verify it updated the DV value
+    dv_values = context.getDynamicalVariableValues()
+    assert dv_values[0].value_in_unit(mmunit.radian) == pytest.approx(2.0)
+
+
+def test_set_parameter_for_regular_param():
+    """Test setParameter for non-DV parameters."""
+    model = testsystems.AlanineDipeptideVacuum()
+    context = create_extended_context(model)
+
+    # Initialize context
+    context.setPositions(model.positions)
+
+    # Set a regular (non-DV) parameter
+    original_kappa = context.getParameter("kappa")
+    new_kappa = 2000.0
+    context.setParameter("kappa", new_kappa)
+    assert context.getParameter("kappa") == pytest.approx(new_kappa)
+    assert context.getParameter("kappa") != pytest.approx(original_kappa)
+
+
+def test_set_dv_values_without_units():
+    """Test setDynamicalVariableValues with raw floats."""
+    model = testsystems.AlanineDipeptideVacuum()
+    context = create_extended_context(model)
+
+    # Initialize context
+    context.setPositions(model.positions)
+
+    # Set DV values without units (raw floats)
+    dv_values_raw = [1.5, 0.3, -0.2]
+    context.setDynamicalVariableValues(dv_values_raw)
+
+    # Retrieve and verify
+    dv_values = context.getDynamicalVariableValues()
+    dvs = create_dvs()
+
+    for i, (val, dv) in enumerate(zip(dv_values, dvs)):
+        assert val.value_in_unit(dv.unit) == pytest.approx(dv_values_raw[i])

@@ -16,6 +16,7 @@ from openmm import unit as mmunit
 
 from .dynamical_variable import DynamicalVariable
 from .integrator import ExtendedSpaceIntegrator
+from .utils import BINARY_SEPARATOR
 
 
 class ExtendedSpaceContext(mm.Context):
@@ -239,10 +240,11 @@ class ExtendedSpaceContext(mm.Context):
             value = value.value_in_unit(dv.unit)
             if dv.bounds is not None:
                 value, _ = dv.bounds.wrap(value, 0)
-            state = mmswig.Context_getState(self, mm.State.Positions)
-            positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-            positions[i].x = value
+            state = mmswig.Context_getState(self._extension_context, mm.State.Positions)
+            positions = list(mmswig.State__getVectorAsVec3(state, mm.State.Positions))
+            positions[i] = mm.Vec3(value, 0, 0)
             self._extension_context.setPositions(positions)
+            super().setParameter(name, value)
         else:
             super().setParameter(name, value)
 
@@ -361,3 +363,35 @@ class ExtendedSpaceContext(mm.Context):
             The context containing the extension system.
         """
         return self._extension_context
+
+    def createCheckpoint(self) -> str:
+        r"""Create a checkpoint recording the current state of the Context.
+
+        This should be treated as an opaque block of binary data. See
+        :meth:`loadCheckpoint` for more details.
+
+        Returns
+        -------
+        str
+            A string containing the checkpoint data
+
+        """
+        return (
+            mmswig.Context_createCheckpoint(self)
+            + BINARY_SEPARATOR
+            + mmswig.Context_createCheckpoint(self._extension_context)
+        )
+
+    def loadCheckpoint(self, checkpoint):
+        r"""Load a checkpoint that was written by :meth:`createCheckpoint`.
+
+        See :OpenMM:`Context` for more details.
+
+        Parameters
+        ----------
+        checkpoint
+            The checkpoint data to load.
+        """
+        physical_checkpoint, extension_checkpoint = checkpoint.split(BINARY_SEPARATOR)
+        mmswig.Context_loadCheckpoint(self, physical_checkpoint)
+        mmswig.Context_loadCheckpoint(self._extension_context, extension_checkpoint)
