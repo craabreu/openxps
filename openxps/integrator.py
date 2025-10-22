@@ -19,6 +19,7 @@ from openmm import unit as mmunit
 
 from . import integrators
 from .dynamical_variable import DynamicalVariable
+from .utils import STRING_SEPARATOR
 
 #: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the
 #: beginning of each time step (kick-first or leapfrog schemes).
@@ -79,14 +80,13 @@ class ExtendedSpaceIntegrator(mm.Integrator):
         """Get the state of the integrator as a string."""
         return (
             self._physical_integrator.__getstate__()
-            + "\f"
+            + STRING_SEPARATOR
             + self._extension_integrator.__getstate__()
         )
 
     def __setstate__(self, state: str) -> None:
         """Set the state of the integrator from a string."""
-        physical_state, extension_state = state.split("\f")
-        # Deserialize integrators from XML strings
+        physical_state, extension_state = state.split(STRING_SEPARATOR)
         self._physical_integrator = mm.XmlSerializer.deserialize(physical_state)
         self._extension_integrator = mm.XmlSerializer.deserialize(extension_state)
         self._initialize()
