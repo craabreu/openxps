@@ -86,8 +86,9 @@ class ExtendedSpaceIntegrator(mm.Integrator):
     def __setstate__(self, state: str) -> None:
         """Set the state of the integrator from a string."""
         physical_state, extension_state = state.split("\f")
-        self._physical_integrator.__setstate__(physical_state)
-        self._extension_integrator.__setstate__(extension_state)
+        # Deserialize integrators from XML strings
+        self._physical_integrator = mm.XmlSerializer.deserialize(physical_state)
+        self._extension_integrator = mm.XmlSerializer.deserialize(extension_state)
         self._initialize()
 
     def _initialize(self) -> None:
@@ -215,9 +216,11 @@ class ExtendedSpaceIntegrator(mm.Integrator):
             size = size.value_in_unit(mmunit.picosecond)
         factor = size / self._step_size
         mmswig.Integrator_setStepSize(
+            self._physical_integrator,
             factor * mmswig.Integrator_getStepSize(self._physical_integrator),
         )
         mmswig.Integrator_setStepSize(
+            self._extension_integrator,
             factor * mmswig.Integrator_getStepSize(self._extension_integrator),
         )
         self._step_size = size
@@ -374,7 +377,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
                 "The physical and extension integrator step sizes must be related by "
                 "an even integer ratio."
             )
-        self._substeps = int(np.rint(step_size / (2 * substep_size)))
+        super().__init__(physical_integrator, extension_integrator)
 
     def _initialize(self) -> None:
         super()._initialize()
