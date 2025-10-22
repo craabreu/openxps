@@ -73,7 +73,7 @@ class ExtendedSpaceSystem(mm.System):
         dynamical_variables = tuple(dynamical_variables)
         self._validate(dynamical_variables, coupling_potential)
         coupling_potential.addToSystem(system)
-        super().__init__()
+        self.this = system
         self._extension_system = self._createExtensionSystem(
             dynamical_variables, coupling_potential
         )

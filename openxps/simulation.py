@@ -9,13 +9,12 @@
 
 import typing as t
 
-import cvpack
 import openmm as mm
 from openmm import app as mmapp
 
 from .context import ExtendedSpaceContext
-from .dynamical_variable import DynamicalVariable
 from .integrator import ExtendedSpaceIntegrator
+from .system import ExtendedSpaceSystem
 
 
 class ExtendedSpaceSimulation(mmapp.Simulation):
@@ -31,17 +30,10 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
 
     Parameters
     ----------
-    dynamical_variables
-        A collection of dynamical variables (DVs) to be included in the XPS simulation.
-    coupling_potential
-        A :CVPack:`MetaCollectiveVariable` defining the potential energy term that
-        couples the DVs to the physical coordinates. It must have units
-        of ``kilojoules_per_mole``. All DVs must be included as parameters in the
-        coupling potential.
     topology
         The :OpenMM:`Topology` describing the system to be simulated.
     system
-        The :OpenMM:`System` object to simulate.
+        The :class:`ExtendedSpaceSystem` object to simulate.
     integrator
         An :class:`ExtendedSpaceIntegrator` object to be used for advancing the XPS
         simulation. Available implementations include :class:`LockstepIntegrator` for
@@ -82,11 +74,10 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     ... )
     >>> integrator.setRandomNumberSeed(1234)
     >>> simulation = xps.ExtendedSpaceSimulation(
-    ...     [phi0],
-    ...     umbrella_potential,
     ...     model.topology,
-    ...     model.system,
+    ...     xps.ExtendedSpaceSystem([phi0], umbrella_potential, model.system),
     ...     xps.LockstepIntegrator(integrator),
+    ...     openmm.Platform.getPlatformByName("Reference"),
     ... )
     >>> simulation.context.setPositions(model.positions)
     >>> simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
@@ -101,10 +92,8 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
 
     def __init__(  # noqa: PLR0913 pylint: disable=super-init-not-called
         self,
-        dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_potential: cvpack.MetaCollectiveVariable,
         topology: mmapp.Topology,
-        system: mm.System,
+        system: ExtendedSpaceSystem,
         integrator: ExtendedSpaceIntegrator,
         platform: t.Optional[mm.Platform] = None,
         platformProperties: t.Optional[dict] = None,
@@ -123,7 +112,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
                     break
 
         # Create the ExtendedSpaceContext
-        args = [dynamical_variables, coupling_potential, system, integrator]
+        args = [system, integrator]
         if platform is not None:
             args.append(platform)
             if platformProperties is not None:

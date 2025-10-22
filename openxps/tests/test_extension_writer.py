@@ -36,10 +36,8 @@ def test_extension_writer():
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
     phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     simulation = xps.ExtendedSpaceSimulation(
-        [phi0],
-        umbrella_potential,
         model.topology,
-        model.system,
+        xps.ExtendedSpaceSystem([phi0], umbrella_potential, model.system),
         xps.LockstepIntegrator(integrator),
         platform,
     )
