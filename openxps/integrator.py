@@ -30,7 +30,7 @@ KNOWN_KICK_FIRST_INTEGRATORS = (
 )
 
 #: Tuple of OpenMM integrator classes known to be reversible in the sense of operator
-#: splitting, i.e. they can be represented as a palindromic sequence of operations.
+#: splitting, i.e., they can be represented as a palindromic sequence of operations.
 KNOWN_REVERSIBLE_INTEGRATORS = (
     integrators.VelocityVerletIntegrator,
     integrators.BAOABIntegrator,
@@ -38,14 +38,17 @@ KNOWN_REVERSIBLE_INTEGRATORS = (
 
 
 class ExtendedSpaceIntegrator(mm.Integrator):
-    """
-    Base class for integrators that advance extended phase-space simulations.
+    """Base class for integrators that advance extended phase-space simulations.
 
     An extended phase-space integrator manages two separate OpenMM integrators: one for
     the physical system and one for the extension system containing dynamical variables.
 
     The step size of this integrator is the maximum of the step sizes of the physical
     and extension integrators.
+
+    All :OpenMM:`Integrator` methods are applied to the physical system integrator,
+    except for ``step``, ``getStepSize``, and ``setStepSize``, which are applied to
+    both the physical and extension system integrators.
 
     Parameters
     ----------
@@ -65,41 +68,30 @@ class ExtendedSpaceIntegrator(mm.Integrator):
         self._extension_integrator = extension_integrator
         self._initialize()
 
-    def __copy__(self):
-        """
-        Create a shallow copy of the integrator.
-
-        Returns
-        -------
-        ExtendedSpaceIntegrator
-            A copy of this integrator with copies of the physical and extension
-            integrators.
-
-        """
+    def __copy__(self) -> "ExtendedSpaceIntegrator":
+        """Return an unconfigured copy of the integrator."""
         return self.__class__(
             self._physical_integrator.__copy__(),
             self._extension_integrator.__copy__(),
         )
 
     def __getstate__(self) -> str:
-        """
-        Get the state of the integrator.
-        """
-        return "\f".join(
-            integrator.__getstate__()
-            for integrator in (self._physical_integrator, self._extension_integrator)
+        """Get the state of the integrator as a string."""
+        return (
+            self._physical_integrator.__getstate__()
+            + "\f"
+            + self._extension_integrator.__getstate__()
         )
 
     def __setstate__(self, state: str) -> None:
-        """
-        Set the state of the integrator.
-        """
+        """Set the state of the integrator from a string."""
         physical_state, extension_state = state.split("\f")
         self._physical_integrator.__setstate__(physical_state)
         self._extension_integrator.__setstate__(extension_state)
         self._initialize()
 
     def _initialize(self) -> None:
+        """Initialize the integrator."""
         self.this = self._physical_integrator.this
         self._step_size = max(
             mmswig.Integrator_getStepSize(self._physical_integrator),
@@ -111,8 +103,7 @@ class ExtendedSpaceIntegrator(mm.Integrator):
         self._coupling_potential = None
 
     def _update_physical_context(self) -> None:
-        """
-        Update the physical context with current values from the extension system.
+        """Update the physical context with the current state of the extension system.
 
         This function transfers the current positions of particles in the extension
         context to the corresponding parameters in the physical context. If a dynamical
@@ -128,8 +119,7 @@ class ExtendedSpaceIntegrator(mm.Integrator):
             mmswig.Context_setParameter(self._physical_context, dv.name, value)
 
     def _update_extension_context(self) -> None:
-        """
-        Update the extension context with current collective variable values.
+        """Update the extension context with the current collective variable values.
 
         This function evaluates the collective variables that define the coupling
         potential in the physical context and transfers their values to the
@@ -156,60 +146,85 @@ class ExtendedSpaceIntegrator(mm.Integrator):
         dynamical_variables: t.Sequence[DynamicalVariable],
         coupling_potential: cvpack.MetaCollectiveVariable,
     ) -> None:
+        """Configure the integrator.
+
+        Store pointers to the given contexts, dynamical variables, and coupling
+        potential in the integrator. This allows the integrator to update the contexts
+        during the simulation.
+
+        Parameters
+        ----------
+        physical_context
+            The OpenMM context containing the physical system.
+        extension_context
+            The OpenMM context containing the extension system.
+        dynamical_variables
+            The dynamical variables included in the extended phase-space system.
+        coupling_potential
+            The potential that couples the physical and dynamical variables.
+        """
         self._physical_context = physical_context
         self._extension_context = extension_context
         self._dynamical_variables = dynamical_variables
         self._coupling_potential = coupling_potential
 
     def getPhysicalIntegrator(self) -> mm.Integrator:
-        """
-        Get the integrator for the physical system.
+        """Get the integrator for the physical system.
 
         Returns
         -------
         mm.Integrator
-            The physical system integrator.
-
+            The integrator for the physical system.
         """
         return self._physical_integrator
 
     def getExtensionIntegrator(self) -> mm.Integrator:
-        """
-        Get the integrator for the extension system.
+        """Get the integrator for the extension system.
 
         Returns
         -------
         mm.Integrator
-            The extension system integrator.
-
+            The integrator for the extension system.
         """
         return self._extension_integrator
 
     def getStepSize(self) -> mmunit.Quantity:
-        """
-        Get the step size for the integrator.
+        """Get the step size for the integrator.
+
+        This is the maximum of the step sizes of the physical and extension integrators.
+
+        Returns
+        -------
+        mmunit.Quantity
+            The step size for the integrator.
         """
         return self._step_size * mmunit.picosecond
 
-    def setStepSize(self, step_size: mmunit.Quantity | float) -> None:
+    def setStepSize(self, size: mmunit.Quantity | float) -> None:
+        """Set the step size for the extended phase-space integrator.
+
+        This scales the step size of the physical and extension integrators by a factor
+        defined by the ratio of the given step size to the largest current step size.
+
+        Parameters
+        ----------
+        size
+            The step size for the extended phase-space integrator.
         """
-        Set the step size for the integrator.
-        """
-        if mmunit.is_quantity(step_size):
-            step_size = step_size.value_in_unit(mmunit.picosecond)
-        factor = step_size / self._step_size
+        if mmunit.is_quantity(size):
+            size = size.value_in_unit(mmunit.picosecond)
+        factor = size / self._step_size
         mmswig.Integrator_setStepSize(
             factor * mmswig.Integrator_getStepSize(self._physical_integrator),
         )
         mmswig.Integrator_setStepSize(
             factor * mmswig.Integrator_getStepSize(self._extension_integrator),
         )
-        self._step_size = step_size
+        self._step_size = size
 
     @abstractmethod
     def step(self, steps: int) -> None:
-        """
-        Advance the extended phase-space simulation by a specified number of steps.
+        """Advance the extended phase-space simulation by a specified number of steps.
 
         Parameters
         ----------
@@ -221,7 +236,7 @@ class ExtendedSpaceIntegrator(mm.Integrator):
 
 class LockstepIntegrator(ExtendedSpaceIntegrator):
     """
-    An integrator that advances physical and extension systems in lockstep.
+    An integrator that advances the physical and extension systems in lockstep.
 
     This class integrates both the physical and extension systems simultaneously, then
     synchronizes the contexts after each step. It assumes that both integrators apply
@@ -245,7 +260,6 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     ValueError
         If the physical and extension integrators do not have the same step size or
         do not follow a kick-first scheme.
-
     """
 
     def __init__(
@@ -269,14 +283,13 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
         ):
             raise ValueError(
                 "The physical and extension integrators must follow a kick-first "
-                "scheme. If you are certain your integrators do follow such scheme, "
+                "scheme. If you are certain your integrators do follow such a scheme, "
                 "set assume_kick_first=True."
             )
         super().__init__(physical_integrator, extension_integrator)
 
     def step(self, steps: int) -> None:
-        """
-        Advance the extended phase-space simulation by a specified number of steps.
+        """Advance the extended phase-space simulation by a specified number of steps.
 
         Parameters
         ----------
@@ -292,7 +305,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
 
 class SplitIntegrator(ExtendedSpaceIntegrator):
     """
-    An integrator that advances physical and extension systems using an operator
+    An integrator that advances the physical and extension systems using an operator
     splitting scheme.
 
     Parameters
@@ -304,9 +317,9 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         integrator is used.
     assume_kick_first
         If True, skip the validation that checks whether the integrators are known
-        to follow a kick-first scheme. Use this at your own risk if you know your
-        integrators are compatible but are not in the known list. Default is False.
-
+        to be reversible in terms of operator splitting. Use this at your own risk if
+        you know your integrators are compatible but are not in the known list.
+        Default is False.
     """
 
     def __init__(
@@ -343,13 +356,12 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         super().__init__(physical_integrator, extension_integrator)
 
     def step(self, steps: int) -> None:
-        """
-        Advances the extended phase-space simulation by integrating the physical and
+        """Advance the extended phase-space simulation by integrating the physical and
         extension systems in lockstep over a specified number of time steps.
 
         Parameters
         ----------
-        steps
+        steps : int
             The number of time steps to advance the simulation.
         """
         for _ in range(steps):
