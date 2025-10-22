@@ -16,6 +16,8 @@ class BAOABIntegrator(mm.CustomIntegrator):
     """
     A BAOAB integrator.
 
+    This is a reversible integrator.
+
     Parameters
     ----------
     temperature

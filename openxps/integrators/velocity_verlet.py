@@ -15,6 +15,8 @@ class VelocityVerletIntegrator(mm.CustomIntegrator):
     """
     A velocity Verlet integrator.
 
+    This is a reversible integrator.
+
     Parameters
     ----------
     stepSize

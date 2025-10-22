@@ -8,9 +8,6 @@
 """
 
 import typing as t
-from copy import copy
-from functools import partial
-from types import MethodType
 
 import cvpack
 import openmm as mm
@@ -105,10 +102,8 @@ class ExtendedSpaceContext(mm.Context):
         platform: t.Optional[mm.Platform] = None,
         properties: t.Optional[dict] = None,
     ) -> None:
-        self._dvs = tuple(dynamical_variables)
-        self._coupling_potential = coupling_potential
-        self._xps_integrator = integrator
-        self._validate()
+        dynamical_variables = tuple(dynamical_variables)
+        self._validate(dynamical_variables, coupling_potential, integrator)
         coupling_potential.addToSystem(system)
         args = [system, integrator.getPhysicalIntegrator()]
         if platform is not None:
@@ -116,36 +111,50 @@ class ExtendedSpaceContext(mm.Context):
             if properties is not None:
                 args.append(properties)
         super().__init__(*args)
-        self._extension_context = self._createExtensionContext(
-            integrator.getExtensionIntegrator()
+        extension_context = self._createExtensionContext(
+            dynamical_variables, coupling_potential, integrator.getExtensionIntegrator()
         )
-        self._integrator.step = MethodType(
-            partial(
-                integrator.integrate,
-                dynamical_variables=self._dvs,
-                extension_context=self._extension_context,
-                coupling_potential=coupling_potential,
-            ),
-            self,
+        integrator.configure(
+            physical_context=self,
+            extension_context=extension_context,
+            dynamical_variables=dynamical_variables,
+            coupling_potential=coupling_potential,
         )
+        self._dvs = dynamical_variables
+        self._coupling_potential = coupling_potential
+        self._integrator = integrator
+        self._extension_context = extension_context
+        # self._integrator = integrator
+        # self._integrator.step = MethodType(
+        #     partial(
+        #         integrator.integrate,
+        #         dynamical_variables=self._dvs,
+        #         extension_context=self._extension_context,
+        #         coupling_potential=coupling_potential,
+        #     ),
+        #     self,
+        # )
 
-    def _validate(self) -> None:
-        if not all(isinstance(dv, DynamicalVariable) for dv in self._dvs):
+    def _validate(
+        self,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+        coupling_potential: cvpack.MetaCollectiveVariable,
+        integrator: ExtendedSpaceIntegrator,
+    ) -> None:
+        if not all(isinstance(dv, DynamicalVariable) for dv in dynamical_variables):
             raise TypeError(
                 "All dynamical variables must be instances of DynamicalVariable."
             )
-        if not isinstance(self._coupling_potential, cvpack.MetaCollectiveVariable):
+        if not isinstance(coupling_potential, cvpack.MetaCollectiveVariable):
             raise TypeError(
                 "The coupling potential must be an instance of MetaCollectiveVariable."
             )
-        if not self._coupling_potential.getUnit().is_compatible(
-            mmunit.kilojoule_per_mole
-        ):
+        if not coupling_potential.getUnit().is_compatible(mmunit.kilojoule_per_mole):
             raise ValueError("The coupling potential must have units of molar energy.")
         missing_parameters = [
             dv.name
-            for dv in self._dvs
-            if dv.name not in self._coupling_potential.getParameterDefaultValues()
+            for dv in dynamical_variables
+            if dv.name not in coupling_potential.getParameterDefaultValues()
         ]
         if missing_parameters:
             raise ValueError(
@@ -153,31 +162,32 @@ class ExtendedSpaceContext(mm.Context):
                 + ", ".join(missing_parameters)
             )
 
-        if not isinstance(self._xps_integrator, ExtendedSpaceIntegrator):
+        if not isinstance(integrator, ExtendedSpaceIntegrator):
             raise TypeError(
                 "The integrator must be an instance of ExtendedSpaceIntegrator."
             )
 
     def _createExtensionContext(
-        self, integrator_template: t.Union[mm.Integrator, None]
+        self,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+        coupling_potential: cvpack.MetaCollectiveVariable,
+        extension_integrator: mm.Integrator,
     ) -> mm.Context:
-        extension_integrator = copy(integrator_template or self._integrator)
-        extension_integrator.setStepSize(self._integrator.getStepSize())
-
         extension_system = mm.System()
-        for dv in self._dvs:
+        for dv in dynamical_variables:
             extension_system.addParticle(dv.mass / dv.mass.unit)
 
-        meta_cv = self._coupling_potential
+        meta_cv = coupling_potential
         parameters = meta_cv.getParameterDefaultValues()
-        for dv in self._dvs:
+        for dv in dynamical_variables:
             parameters.pop(dv.name)
         parameters.update(meta_cv.getInnerValues(self))
 
         flipped_potential = cvpack.MetaCollectiveVariable(
             function=meta_cv.getEnergyFunction(),
             variables=[
-                dv.createCollectiveVariable(index) for index, dv in enumerate(self._dvs)
+                dv.createCollectiveVariable(index)
+                for index, dv in enumerate(dynamical_variables)
             ],
             unit=meta_cv.getUnit(),
             periodicBounds=meta_cv.getPeriodicBounds(),
