@@ -283,7 +283,8 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
                 "The physical and extension integrators must have the same step size."
             )
         if not (
-            assume_kick_first or all(
+            assume_kick_first
+            or all(
                 isinstance(integrator, KNOWN_KICK_FIRST_INTEGRATORS)
                 for integrator in (physical_integrator, extension_integrator)
             )
@@ -364,7 +365,8 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         else:
             extension_step_size = mmswig.Integrator_getStepSize(extension_integrator)
         if not (
-            assume_reversible or all(
+            assume_reversible
+            or all(
                 isinstance(integrator, KNOWN_REVERSIBLE_INTEGRATORS)
                 for integrator in (physical_integrator, extension_integrator)
             )
