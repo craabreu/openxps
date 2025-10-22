@@ -15,6 +15,7 @@ from openmm import app as mmapp
 
 from .context import ExtendedSpaceContext
 from .dynamical_variable import DynamicalVariable
+from .integrator import ExtendedSpaceIntegrator
 
 
 class ExtendedSpaceSimulation(mmapp.Simulation):
@@ -42,10 +43,11 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     system
         The :OpenMM:`System` object to simulate.
     integrator
-        An :OpenMM:`Integrator` object or a tuple of two :OpenMM:`Integrator`
-        objects to be used in the XPS simulation. If a tuple is provided, the
-        first integrator is used for the physical system and the second one is
-        used for the DVs.
+        An :class:`ExtendedSpaceIntegrator` object to be used for advancing the XPS
+        simulation. Available implementations include :class:`LockstepIntegrator` for
+        systems where both integrators use the same step size, and
+        :class:`SplitIntegrator` for systems with different step sizes related by an
+        even integer ratio.
     platform
         The :OpenMM:`Platform` to use for calculations. If None, the default Platform
         will be used.
@@ -84,7 +86,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     ...     umbrella_potential,
     ...     model.topology,
     ...     model.system,
-    ...     integrator,
+    ...     xps.LockstepIntegrator(integrator),
     ... )
     >>> simulation.context.setPositions(model.positions)
     >>> simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
@@ -103,7 +105,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         coupling_potential: cvpack.MetaCollectiveVariable,
         topology: mmapp.Topology,
         system: mm.System,
-        integrator: mm.Integrator | tuple[mm.Integrator, mm.Integrator],
+        integrator: ExtendedSpaceIntegrator,
         platform: t.Optional[mm.Platform] = None,
         platformProperties: t.Optional[dict] = None,
         state: t.Optional[mm.State] = None,
@@ -140,4 +142,3 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         # Load state if provided
         if state is not None:
             self.context.setState(state)
-

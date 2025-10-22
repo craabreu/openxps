@@ -16,7 +16,7 @@ from openmm import unit as mmunit
 from .context import ExtendedSpaceContext
 
 
-class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attributes
+class ExtensionWriter(CustomWriter):
     """
     A custom writer for reporting state data from an extension context.
 
@@ -58,7 +58,11 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> simulation = xps.ExtendedSpaceSimulation(
-    ...     [phi0], umbrella_potential, model.topology, model.system, integrator,
+    ...     [phi0],
+    ...     umbrella_potential,
+    ...     model.topology,
+    ...     model.system,
+    ...     xps.LockstepIntegrator(integrator),
     ...     platform
     ... )
     >>> simulation.context.setPositions(model.positions)
@@ -138,7 +142,7 @@ class ExtensionWriter(CustomWriter):  # pylint: disable=too-many-instance-attrib
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
             for dv, velocity in zip(self._context.getDynamicalVariables(), velocities):
-                mass = dv.mass._value  # pylint: disable=protected-access
+                mass = dv.mass._value
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
         values = []
         if self._potential:

@@ -8,20 +8,17 @@
 """
 
 import typing as t
-from copy import copy
-from functools import partial
-from types import MethodType
 
 import cvpack
 import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-# from .bias_potential import BiasPotential
 from .dynamical_variable import DynamicalVariable
+from .integrator import ExtendedSpaceIntegrator
 
 
-class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-attributes
+class ExtendedSpaceContext(mm.Context):
     """An :OpenMM:`Context` object that includes extra dynamical variables (DVs) and
     allows for extended phase-space (XPS) simulations.
 
@@ -43,9 +40,11 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     system
         The :OpenMM:`System` to be used in the XPS simulation.
     integrator
-        An :OpenMM:`Integrator` object or a tuple of two :OpenMM:`Integrator` objects
-        to be used in the XPS simulation. If a tuple is provided, the first integrator
-        is used for the physical system and the second one is used for the DVs.
+        An :class:`ExtendedSpaceIntegrator` object to be used for advancing the XPS
+        simulation. Available implementations include :class:`LockstepIntegrator` for
+        systems where both integrators use the same step size, and
+        :class:`SplitIntegrator` for systems with different step sizes related by an
+        even integer ratio.
     platform
         The :OpenMM:`Platform` to use for calculations.
     properties
@@ -81,7 +80,7 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
     ...     [phi0],
     ...     umbrella_potential,
     ...     model.system,
-    ...     integrator,
+    ...     xps.LockstepIntegrator(integrator),
     ...     platform,
     ... )
     >>> context.setPositions(model.positions)
@@ -101,52 +100,53 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
         dynamical_variables: t.Sequence[DynamicalVariable],
         coupling_potential: cvpack.MetaCollectiveVariable,
         system: mm.System,
-        integrator: mm.Integrator | tuple[mm.Integrator, mm.Integrator],
+        integrator: ExtendedSpaceIntegrator,
         platform: t.Optional[mm.Platform] = None,
         properties: t.Optional[dict] = None,
     ) -> None:
-        self._dvs = tuple(dynamical_variables)
-        self._coupling_potential = coupling_potential
-        self._validate()
-        if isinstance(integrator, mm.Integrator):
-            integrator_template = integrator
-        else:
-            integrator, integrator_template = integrator
+        dynamical_variables = tuple(dynamical_variables)
+        self._validate(dynamical_variables, coupling_potential, integrator)
         coupling_potential.addToSystem(system)
-        args = [system, integrator]
+        args = [system, integrator.getPhysicalIntegrator()]
         if platform is not None:
             args.append(platform)
             if properties is not None:
                 args.append(properties)
         super().__init__(*args)
-        self._extension_context = self._createExtensionContext(integrator_template)
-        self._integrator.step = MethodType(
-            partial(
-                integrate_extended_space,
-                dynamical_variables=self._dvs,
-                extension_context=self._extension_context,
-                coupling_potential=coupling_potential,
-            ),
-            self,
+        extension_context = self._createExtensionContext(
+            dynamical_variables, coupling_potential, integrator.getExtensionIntegrator()
         )
+        integrator.configure(
+            physical_context=self,
+            extension_context=extension_context,
+            dynamical_variables=dynamical_variables,
+            coupling_potential=coupling_potential,
+        )
+        self._dvs = dynamical_variables
+        self._coupling_potential = coupling_potential
+        self._integrator = integrator
+        self._extension_context = extension_context
 
-    def _validate(self) -> None:
-        if not all(isinstance(dv, DynamicalVariable) for dv in self._dvs):
+    def _validate(
+        self,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+        coupling_potential: cvpack.MetaCollectiveVariable,
+        integrator: ExtendedSpaceIntegrator,
+    ) -> None:
+        if not all(isinstance(dv, DynamicalVariable) for dv in dynamical_variables):
             raise TypeError(
                 "All dynamical variables must be instances of DynamicalVariable."
             )
-        if not isinstance(self._coupling_potential, cvpack.MetaCollectiveVariable):
+        if not isinstance(coupling_potential, cvpack.MetaCollectiveVariable):
             raise TypeError(
                 "The coupling potential must be an instance of MetaCollectiveVariable."
             )
-        if not self._coupling_potential.getUnit().is_compatible(
-            mmunit.kilojoule_per_mole
-        ):
+        if not coupling_potential.getUnit().is_compatible(mmunit.kilojoule_per_mole):
             raise ValueError("The coupling potential must have units of molar energy.")
         missing_parameters = [
             dv.name
-            for dv in self._dvs
-            if dv.name not in self._coupling_potential.getParameterDefaultValues()
+            for dv in dynamical_variables
+            if dv.name not in coupling_potential.getParameterDefaultValues()
         ]
         if missing_parameters:
             raise ValueError(
@@ -154,26 +154,32 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
                 + ", ".join(missing_parameters)
             )
 
-    def _createExtensionContext(
-        self, integrator_template: t.Union[mm.Integrator, None]
-    ) -> mm.Context:
-        extension_integrator = copy(integrator_template or self._integrator)
-        extension_integrator.setStepSize(self._integrator.getStepSize())
+        if not isinstance(integrator, ExtendedSpaceIntegrator):
+            raise TypeError(
+                "The integrator must be an instance of ExtendedSpaceIntegrator."
+            )
 
+    def _createExtensionContext(
+        self,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+        coupling_potential: cvpack.MetaCollectiveVariable,
+        extension_integrator: mm.Integrator,
+    ) -> mm.Context:
         extension_system = mm.System()
-        for dv in self._dvs:
+        for dv in dynamical_variables:
             extension_system.addParticle(dv.mass / dv.mass.unit)
 
-        meta_cv = self._coupling_potential
+        meta_cv = coupling_potential
         parameters = meta_cv.getParameterDefaultValues()
-        for dv in self._dvs:
+        for dv in dynamical_variables:
             parameters.pop(dv.name)
         parameters.update(meta_cv.getInnerValues(self))
 
         flipped_potential = cvpack.MetaCollectiveVariable(
             function=meta_cv.getEnergyFunction(),
             variables=[
-                dv.createCollectiveVariable(index) for index, dv in enumerate(self._dvs)
+                dv.createCollectiveVariable(index)
+                for index, dv in enumerate(dynamical_variables)
             ],
             unit=meta_cv.getUnit(),
             periodicBounds=meta_cv.getPeriodicBounds(),
@@ -355,60 +361,3 @@ class ExtendedSpaceContext(mm.Context):  # pylint: disable=too-many-instance-att
             The context containing the extension system.
         """
         return self._extension_context
-
-
-def integrate_extended_space(
-    physical_context: mm.Context,
-    steps: int,
-    dynamical_variables: tuple[DynamicalVariable],
-    extension_context: mm.Context,
-    coupling_potential: cvpack.MetaCollectiveVariable,
-) -> None:
-    """
-    Advances the extended phase-space simulation by integrating the physical and
-    extension systems, in tandem, over a specified number of time steps.
-
-    Parameters
-    ----------
-    physical_context
-        The OpenMM context containing the physical system.
-    steps
-        The number of time steps to advance the simulation.
-    dynamical_variables
-        The dynamical variables included in the extended phase-space system.
-    extension_context : mm.Context
-        The OpenMM context containing the extension system.
-    coupling_potential
-        The potential that couples the physical and dynamical variables.
-
-    Raises
-    ------
-    mm.OpenMMException
-        If the particle positions or dynamical variables have not been properly
-        initialized in the context.
-    """
-
-    for _ in range(steps):
-        # pylint: disable=protected-access
-        mmswig.Integrator_step(physical_context._integrator, 1)
-        mmswig.Integrator_step(extension_context._integrator, 1)
-        # pylint: enable=protected-access
-
-        state = mmswig.Context_getState(extension_context, mm.State.Positions)
-        positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
-        for i, dv in enumerate(dynamical_variables):
-            value = positions[i].x
-            if dv.bounds is not None:
-                value, _ = dv.bounds.wrap(value, 0)
-            mmswig.Context_setParameter(physical_context, dv.name, value)
-
-        collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
-            coupling_potential,
-            physical_context,
-        )
-        for i, value in enumerate(collective_variables):
-            mmswig.Context_setParameter(
-                extension_context,
-                mmswig.CustomCVForce_getCollectiveVariableName(coupling_potential, i),
-                value,
-            )

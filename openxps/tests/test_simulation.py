@@ -15,8 +15,6 @@ from openmm import unit as mmunit
 from openmmtools import testsystems
 
 import openxps as xps
-from openxps.context import ExtendedSpaceContext
-from openxps.simulation import ExtendedSpaceSimulation
 
 
 def create_test_system():
@@ -24,7 +22,7 @@ def create_test_system():
     model = testsystems.AlanineDipeptideVacuum()
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     umbrella_potential = cvpack.MetaCollectiveVariable(
-        f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
+        f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
         [phi],
         mmunit.kilojoule_per_mole,
         kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
@@ -33,17 +31,17 @@ def create_test_system():
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
     phi0 = xps.DynamicalVariable("phi0", mmunit.radian, mass, xps.bounds.CIRCULAR)
     integrator = mm.LangevinMiddleIntegrator(
-        300 * mmunit.kelvin, 1 / mmunit.picosecond, 4 * mmunit.femtosecond
+        300 * mmunit.kelvin, 1 / mmunit.picosecond, 1 * mmunit.femtosecond
     )
     integrator.setRandomNumberSeed(1234)
-    return model, [phi0], umbrella_potential, integrator
+    return model, [phi0], umbrella_potential, xps.LockstepIntegrator(integrator)
 
 
 def test_basic_initialization():
     """Test basic initialization with single integrator."""
     model, dvs, coupling_potential, integrator = create_test_system()
 
-    simulation = ExtendedSpaceSimulation(
+    simulation = xps.ExtendedSpaceSimulation(
         dvs,
         coupling_potential,
         model.topology,
@@ -59,28 +57,28 @@ def test_basic_initialization():
     assert simulation.reporters == []
 
 
-def test_with_tuple_integrators():
-    """Test initialization with tuple of two integrators."""
+def test_with_two_integrators():
+    """Test initialization with two integrators."""
     model, dvs, coupling_potential, integrator = create_test_system()
 
     # Create a second integrator for the extension system
     extension_integrator = mm.LangevinMiddleIntegrator(
-        300 * mmunit.kelvin, 1 / mmunit.picosecond, 4 * mmunit.femtosecond
+        300 * mmunit.kelvin, 1 / mmunit.picosecond, 1 * mmunit.femtosecond
     )
     extension_integrator.setRandomNumberSeed(5678)
 
-    simulation = ExtendedSpaceSimulation(
+    simulation = xps.ExtendedSpaceSimulation(
         dvs,
         coupling_potential,
         model.topology,
         model.system,
-        (integrator, extension_integrator),
+        xps.LockstepIntegrator(
+            integrator.getPhysicalIntegrator(), extension_integrator
+        ),
     )
 
     assert simulation is not None
     assert simulation.context is not None
-    # The integrator should be the first one from the tuple
-    assert simulation.integrator.getStepSize() == integrator.getStepSize()
 
 
 def test_with_platform():
@@ -88,7 +86,7 @@ def test_with_platform():
     model, dvs, coupling_potential, integrator = create_test_system()
     platform = mm.Platform.getPlatformByName("Reference")
 
-    simulation = ExtendedSpaceSimulation(
+    simulation = xps.ExtendedSpaceSimulation(
         dvs,
         coupling_potential,
         model.topology,
@@ -107,7 +105,7 @@ def test_with_platform_properties():
     platform = mm.Platform.getPlatformByName("Reference")
     properties = {}
 
-    simulation = ExtendedSpaceSimulation(
+    simulation = xps.ExtendedSpaceSimulation(
         dvs,
         coupling_potential,
         model.topology,
@@ -121,10 +119,10 @@ def test_with_platform_properties():
 
 
 def test_context_is_extended():
-    """Confirm context is an ExtendedSpaceContext instance."""
+    """Confirm context is an xps.ExtendedSpaceContext instance."""
     model, dvs, coupling_potential, integrator = create_test_system()
 
-    simulation = ExtendedSpaceSimulation(
+    simulation = xps.ExtendedSpaceSimulation(
         dvs,
         coupling_potential,
         model.topology,
@@ -132,7 +130,7 @@ def test_context_is_extended():
         integrator,
     )
 
-    assert isinstance(simulation.context, ExtendedSpaceContext)
+    assert isinstance(simulation.context, xps.ExtendedSpaceContext)
     assert simulation.context.getDynamicalVariables() == tuple(dvs)
     assert simulation.context.getCouplingPotential() == coupling_potential
 
@@ -141,7 +139,7 @@ def test_inherited_step_method():
     """Verify step() method works correctly."""
     model, dvs, coupling_potential, integrator = create_test_system()
 
-    simulation = ExtendedSpaceSimulation(
+    simulation = xps.ExtendedSpaceSimulation(
         dvs,
         coupling_potential,
         model.topology,
@@ -169,7 +167,7 @@ def test_inherited_minimize_energy():
     """Verify minimizeEnergy() method works correctly."""
     model, dvs, coupling_potential, integrator = create_test_system()
 
-    simulation = ExtendedSpaceSimulation(
+    simulation = xps.ExtendedSpaceSimulation(
         dvs,
         coupling_potential,
         model.topology,
@@ -200,7 +198,7 @@ def test_reporters():
     """Verify reporters work with the extended simulation."""
     model, dvs, coupling_potential, integrator = create_test_system()
 
-    simulation = ExtendedSpaceSimulation(
+    simulation = xps.ExtendedSpaceSimulation(
         dvs,
         coupling_potential,
         model.topology,
@@ -244,7 +242,7 @@ def test_save_and_load_checkpoint():
     """Test saveCheckpoint and loadCheckpoint methods."""
     model, dvs, coupling_potential, integrator = create_test_system()
 
-    simulation = ExtendedSpaceSimulation(
+    simulation = xps.ExtendedSpaceSimulation(
         dvs,
         coupling_potential,
         model.topology,
@@ -283,9 +281,11 @@ def test_save_and_load_checkpoint():
 
     # DV values should be restored
     dv_values_restored = simulation.context.getDynamicalVariableValues()
-    assert dv_values_restored[0] == pytest.approx(
-        dv_values_before[0].value_in_unit(mmunit.radian)
-    ) * mmunit.radian
+    assert (
+        dv_values_restored[0]
+        == pytest.approx(dv_values_before[0].value_in_unit(mmunit.radian))
+        * mmunit.radian
+    )
 
     # Clean up
     os.unlink(checkpoint_file)
@@ -296,7 +296,7 @@ def test_invalid_dynamical_variables():
     model, _, coupling_potential, integrator = create_test_system()
 
     with pytest.raises(TypeError):
-        ExtendedSpaceSimulation(
+        xps.ExtendedSpaceSimulation(
             [None],  # Invalid DV
             coupling_potential,
             model.topology,
@@ -310,7 +310,7 @@ def test_invalid_coupling_potential():
     model, dvs, _, integrator = create_test_system()
 
     with pytest.raises(TypeError):
-        ExtendedSpaceSimulation(
+        xps.ExtendedSpaceSimulation(
             dvs,
             None,  # Invalid coupling potential
             model.topology,
@@ -336,11 +336,11 @@ def test_missing_dv_in_coupling_potential():
     phi0 = xps.DynamicalVariable("phi0", mmunit.radian, mass, xps.bounds.CIRCULAR)
 
     integrator = mm.LangevinMiddleIntegrator(
-        300 * mmunit.kelvin, 1 / mmunit.picosecond, 4 * mmunit.femtosecond
+        300 * mmunit.kelvin, 1 / mmunit.picosecond, 1 * mmunit.femtosecond
     )
 
     with pytest.raises(ValueError) as excinfo:
-        ExtendedSpaceSimulation(
+        xps.ExtendedSpaceSimulation(
             [phi0],
             coupling_potential,
             model.topology,
@@ -357,7 +357,7 @@ def test_simulation_with_state():
     model, dvs, coupling_potential, integrator1 = create_test_system()
 
     # Create first simulation and run it
-    sim1 = ExtendedSpaceSimulation(
+    sim1 = xps.ExtendedSpaceSimulation(
         dvs,
         deepcopy(coupling_potential),
         model.topology,
@@ -374,16 +374,16 @@ def test_simulation_with_state():
 
     # Create second simulation with the saved state
     integrator2 = mm.LangevinMiddleIntegrator(
-        300 * mmunit.kelvin, 1 / mmunit.picosecond, 4 * mmunit.femtosecond
+        300 * mmunit.kelvin, 1 / mmunit.picosecond, 1 * mmunit.femtosecond
     )
     integrator2.setRandomNumberSeed(1234)
 
-    sim2 = ExtendedSpaceSimulation(
+    sim2 = xps.ExtendedSpaceSimulation(
         dvs,
         deepcopy(coupling_potential),
         model.topology,
         deepcopy(model.system),
-        integrator2,
+        xps.LockstepIntegrator(integrator2),
         state=state,
     )
 
@@ -396,4 +396,3 @@ def test_simulation_with_state():
         assert p1.x == pytest.approx(p2.x)
         assert p1.y == pytest.approx(p2.y)
         assert p1.z == pytest.approx(p2.z)
-

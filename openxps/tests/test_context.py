@@ -9,16 +9,15 @@ import pytest
 from openmm import unit as mmunit
 from openmmtools import testsystems
 
+from openxps import DynamicalVariable, ExtendedSpaceContext, LockstepIntegrator
 from openxps.bounds import CIRCULAR, Reflective
-from openxps.context import ExtendedSpaceContext
-from openxps.dynamical_variable import DynamicalVariable
 
 
 def system_integrator_platform(model):
     """Helper function to create a basic OpenMM Context object."""
     integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
     platform = mm.Platform.getPlatformByName("Reference")
-    return model.system, integrator, platform
+    return model.system, LockstepIntegrator(integrator), platform
 
 
 def create_dvs():
@@ -74,7 +73,7 @@ def test_set_positions_and_velocities():
     model = testsystems.AlanineDipeptideVacuum()
     context = create_extended_context(model)
 
-    random = np.random.RandomState()  # pylint: disable=no-member
+    random = np.random.RandomState()
     num_atoms = context.getSystem().getNumParticles()
     positions = model.positions.value_in_unit(mmunit.nanometer)
     velocities = random.uniform(-1, 1, (num_atoms, 3))
@@ -90,9 +89,7 @@ def test_set_positions_and_velocities():
         [1 * urad / ups, 1 * unm / ups, 1 * unm / ups]
     )
 
-    state = context.getState(  # pylint: disable=unexpected-keyword-arg
-        getPositions=True, getVelocities=True
-    )
+    state = context.getState(getPositions=True, getVelocities=True)
     assert state.getPositions(asNumpy=True) == pytest.approx(positions) * unm
     assert state.getVelocities() == pytest.approx(velocities) * unm / ups
     assert context.getDynamicalVariableValues() == (
@@ -132,9 +129,7 @@ def test_raise_exceptions():
     )
     context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin)
 
-    state = context.getState(  # pylint: disable=unexpected-keyword-arg
-        getVelocities=True
-    )
+    state = context.getState(getVelocities=True)
     velocities = state.getVelocities()
     extra_velocities = context.getDynamicalVariableVelocities()
     assert len(velocities) == len(model.positions)
@@ -189,11 +184,9 @@ def test_consistency():
     for _ in range(10):
         context.getIntegrator().step(1000)
 
-        # pylint: disable=unexpected-keyword-arg
         extension_state = context.getExtensionContext().getState(
             getEnergy=True, getPositions=True, getForces=True
         )
-        # pylint: enable=unexpected-keyword-arg
 
         # Check the consistency of the potential energy
         x1 = extension_state.getPotentialEnergy() / mmunit.kilojoule_per_mole
