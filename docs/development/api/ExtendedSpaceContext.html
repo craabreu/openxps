@@ -57,9 +57,11 @@ couples the DVs to the physical coordinates. It must have units
 of <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mole</span></code>. All DVs must be included as parameters in the
 coupling potential.</p></li>
 <li><p><strong>system</strong> (<em>System</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> to be used in the XPS simulation.</p></li>
-<li><p><strong>integrator</strong> (<em>Integrator</em><em> | </em><em>tuple</em><em>[</em><em>Integrator</em><em>, </em><em>Integrator</em><em>]</em>) – An <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html">openmm.Integrator</a> object or a tuple of two <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Integrator.html">openmm.Integrator</a> objects
-to be used in the XPS simulation. If a tuple is provided, the first integrator
-is used for the physical system and the second one is used for the DVs.</p></li>
+<li><p><strong>integrator</strong> (<em>ExtendedSpaceIntegrator</em>) – An <code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceIntegrator</span></code> object to be used for advancing the XPS
+simulation. Available implementations include <a class="reference internal" href="LockstepIntegrator.html#openxps.LockstepIntegrator" title="openxps.LockstepIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">LockstepIntegrator</span></code></a> for
+systems where both integrators use the same step size, and
+<a class="reference internal" href="SplitIntegrator.html#openxps.SplitIntegrator" title="openxps.SplitIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">SplitIntegrator</span></code></a> for systems with different step sizes related by an
+even integer ratio.</p></li>
 <li><p><strong>platform</strong> (<em>Platform</em><em> | </em><em>None</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Platform.html">openmm.Platform</a> to use for calculations.</p></li>
 <li><p><strong>properties</strong> (<em>dict</em><em> | </em><em>None</em>) – A dictionary of values for platform-specific properties.</p></li>
 </ul>
@@ -94,7 +96,7 @@ is used for the physical system and the second one is used for the DVs.</p></li>
 <span class="gp">... </span>    <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
 <span class="gp">... </span>    <span class="n">umbrella_potential</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">integrator</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">LockstepIntegrator</span><span class="p">(</span><span class="n">integrator</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="n">platform</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
@@ -273,6 +275,8 @@ appropriate boundary condition if necessary.</p>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">ExtendedSpaceContext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SplitIntegrator.html">SplitIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MetadynamicsBias.html">MetadynamicsBias</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSimulation.html">ExtendedSpaceSimulation</a></li>
 </ul>

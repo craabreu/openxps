@@ -1,0 +1,10 @@
+SplitIntegrator
+===============
+
+.. currentmodule:: openxps
+.. autoclass:: SplitIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: step

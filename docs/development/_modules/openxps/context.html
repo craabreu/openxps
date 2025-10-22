@@ -45,22 +45,19 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">copy</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">partial</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">types</span><span class="w"> </span><span class="kn">import</span> <span class="n">MethodType</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="c1"># from .bias_potential import BiasPotential</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.integrator</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceIntegrator</span>
 
 
 <div class="viewcode-block" id="ExtendedSpaceContext">
 <a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">ExtendedSpaceContext</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>  <span class="c1"># pylint: disable=too-many-instance-attributes</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExtendedSpaceContext</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;An :OpenMM:`Context` object that includes extra dynamical variables (DVs) and</span>
 <span class="sd">    allows for extended phase-space (XPS) simulations.</span>
 
@@ -82,9 +79,11 @@
 <span class="sd">    system</span>
 <span class="sd">        The :OpenMM:`System` to be used in the XPS simulation.</span>
 <span class="sd">    integrator</span>
-<span class="sd">        An :OpenMM:`Integrator` object or a tuple of two :OpenMM:`Integrator` objects</span>
-<span class="sd">        to be used in the XPS simulation. If a tuple is provided, the first integrator</span>
-<span class="sd">        is used for the physical system and the second one is used for the DVs.</span>
+<span class="sd">        An :class:`ExtendedSpaceIntegrator` object to be used for advancing the XPS</span>
+<span class="sd">        simulation. Available implementations include :class:`LockstepIntegrator` for</span>
+<span class="sd">        systems where both integrators use the same step size, and</span>
+<span class="sd">        :class:`SplitIntegrator` for systems with different step sizes related by an</span>
+<span class="sd">        even integer ratio.</span>
 <span class="sd">    platform</span>
 <span class="sd">        The :OpenMM:`Platform` to use for calculations.</span>
 <span class="sd">    properties</span>
@@ -120,7 +119,7 @@
 <span class="sd">    ...     [phi0],</span>
 <span class="sd">    ...     umbrella_potential,</span>
 <span class="sd">    ...     model.system,</span>
-<span class="sd">    ...     integrator,</span>
+<span class="sd">    ...     xps.LockstepIntegrator(integrator),</span>
 <span class="sd">    ...     platform,</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; context.setPositions(model.positions)</span>
@@ -140,52 +139,53 @@
         <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
         <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
         <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">,</span>
-        <span class="n">integrator</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span> <span class="o">|</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">],</span>
+        <span class="n">integrator</span><span class="p">:</span> <span class="n">ExtendedSpaceIntegrator</span><span class="p">,</span>
         <span class="n">platform</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Platform</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">properties</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span> <span class="o">=</span> <span class="n">coupling_potential</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">()</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">):</span>
-            <span class="n">integrator_template</span> <span class="o">=</span> <span class="n">integrator</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">integrator</span><span class="p">,</span> <span class="n">integrator_template</span> <span class="o">=</span> <span class="n">integrator</span>
+        <span class="n">dynamical_variables</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">coupling_potential</span><span class="p">,</span> <span class="n">integrator</span><span class="p">)</span>
         <span class="n">coupling_potential</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
-        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">]</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="o">.</span><span class="n">getPhysicalIntegrator</span><span class="p">()]</span>
         <span class="k">if</span> <span class="n">platform</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">platform</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">properties</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">properties</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_createExtensionContext</span><span class="p">(</span><span class="n">integrator_template</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">MethodType</span><span class="p">(</span>
-            <span class="n">partial</span><span class="p">(</span>
-                <span class="n">integrate_extended_space</span><span class="p">,</span>
-                <span class="n">dynamical_variables</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">,</span>
-                <span class="n">extension_context</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span>
-                <span class="n">coupling_potential</span><span class="o">=</span><span class="n">coupling_potential</span><span class="p">,</span>
-            <span class="p">),</span>
-            <span class="bp">self</span><span class="p">,</span>
+        <span class="n">extension_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_createExtensionContext</span><span class="p">(</span>
+            <span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">coupling_potential</span><span class="p">,</span> <span class="n">integrator</span><span class="o">.</span><span class="n">getExtensionIntegrator</span><span class="p">()</span>
         <span class="p">)</span>
+        <span class="n">integrator</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span>
+            <span class="n">physical_context</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
+            <span class="n">extension_context</span><span class="o">=</span><span class="n">extension_context</span><span class="p">,</span>
+            <span class="n">dynamical_variables</span><span class="o">=</span><span class="n">dynamical_variables</span><span class="p">,</span>
+            <span class="n">coupling_potential</span><span class="o">=</span><span class="n">coupling_potential</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span> <span class="o">=</span> <span class="n">dynamical_variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span> <span class="o">=</span> <span class="n">coupling_potential</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span> <span class="o">=</span> <span class="n">integrator</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="n">extension_context</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">dv</span><span class="p">,</span> <span class="n">DynamicalVariable</span><span class="p">)</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+        <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
+        <span class="n">integrator</span><span class="p">:</span> <span class="n">ExtendedSpaceIntegrator</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">dv</span><span class="p">,</span> <span class="n">DynamicalVariable</span><span class="p">)</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
                 <span class="s2">&quot;All dynamical variables must be instances of DynamicalVariable.&quot;</span>
             <span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coupling_potential</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
                 <span class="s2">&quot;The coupling potential must be an instance of MetaCollectiveVariable.&quot;</span>
             <span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span>
-            <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span>
-        <span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">coupling_potential</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The coupling potential must have units of molar energy.&quot;</span><span class="p">)</span>
         <span class="n">missing_parameters</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">dv</span><span class="o">.</span><span class="n">name</span>
-            <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span>
-            <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span><span class="o">.</span><span class="n">getParameterDefaultValues</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span>
+            <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">coupling_potential</span><span class="o">.</span><span class="n">getParameterDefaultValues</span><span class="p">()</span>
         <span class="p">]</span>
         <span class="k">if</span> <span class="n">missing_parameters</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -193,26 +193,32 @@
                 <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_parameters</span><span class="p">)</span>
             <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_createExtensionContext</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">integrator_template</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">:</span>
-        <span class="n">extension_integrator</span> <span class="o">=</span> <span class="n">copy</span><span class="p">(</span><span class="n">integrator_template</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span><span class="p">)</span>
-        <span class="n">extension_integrator</span><span class="o">.</span><span class="n">setStepSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">())</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">ExtendedSpaceIntegrator</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                <span class="s2">&quot;The integrator must be an instance of ExtendedSpaceIntegrator.&quot;</span>
+            <span class="p">)</span>
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_createExtensionContext</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+        <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
+        <span class="n">extension_integrator</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">:</span>
         <span class="n">extension_system</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">:</span>
             <span class="n">extension_system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
 
-        <span class="n">meta_cv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span>
+        <span class="n">meta_cv</span> <span class="o">=</span> <span class="n">coupling_potential</span>
         <span class="n">parameters</span> <span class="o">=</span> <span class="n">meta_cv</span><span class="o">.</span><span class="n">getParameterDefaultValues</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">:</span>
             <span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
         <span class="n">parameters</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerValues</span><span class="p">(</span><span class="bp">self</span><span class="p">))</span>
 
         <span class="n">flipped_potential</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">(</span>
             <span class="n">function</span><span class="o">=</span><span class="n">meta_cv</span><span class="o">.</span><span class="n">getEnergyFunction</span><span class="p">(),</span>
             <span class="n">variables</span><span class="o">=</span><span class="p">[</span>
-                <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">)</span>
+                <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
             <span class="p">],</span>
             <span class="n">unit</span><span class="o">=</span><span class="n">meta_cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">(),</span>
             <span class="n">periodicBounds</span><span class="o">=</span><span class="n">meta_cv</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">(),</span>
@@ -425,63 +431,6 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span></div>
 </div>
 
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">integrate_extended_space</span><span class="p">(</span>
-    <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
-    <span class="n">steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="n">dynamical_variables</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
-    <span class="n">extension_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
-    <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Advances the extended phase-space simulation by integrating the physical and</span>
-<span class="sd">    extension systems, in tandem, over a specified number of time steps.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    physical_context</span>
-<span class="sd">        The OpenMM context containing the physical system.</span>
-<span class="sd">    steps</span>
-<span class="sd">        The number of time steps to advance the simulation.</span>
-<span class="sd">    dynamical_variables</span>
-<span class="sd">        The dynamical variables included in the extended phase-space system.</span>
-<span class="sd">    extension_context : mm.Context</span>
-<span class="sd">        The OpenMM context containing the extension system.</span>
-<span class="sd">    coupling_potential</span>
-<span class="sd">        The potential that couples the physical and dynamical variables.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    mm.OpenMMException</span>
-<span class="sd">        If the particle positions or dynamical variables have not been properly</span>
-<span class="sd">        initialized in the context.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
-        <span class="c1"># pylint: disable=protected-access</span>
-        <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="n">physical_context</span><span class="o">.</span><span class="n">_integrator</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="n">extension_context</span><span class="o">.</span><span class="n">_integrator</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="c1"># pylint: enable=protected-access</span>
-
-        <span class="n">state</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_getState</span><span class="p">(</span><span class="n">extension_context</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
-        <span class="n">positions</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">):</span>
-            <span class="n">value</span> <span class="o">=</span> <span class="n">positions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">x</span>
-            <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span><span class="n">physical_context</span><span class="p">,</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-
-        <span class="n">collective_variables</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">CustomCVForce_getCollectiveVariableValues</span><span class="p">(</span>
-            <span class="n">coupling_potential</span><span class="p">,</span>
-            <span class="n">physical_context</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">collective_variables</span><span class="p">):</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span>
-                <span class="n">extension_context</span><span class="p">,</span>
-                <span class="n">mmswig</span><span class="o">.</span><span class="n">CustomCVForce_getCollectiveVariableName</span><span class="p">(</span><span class="n">coupling_potential</span><span class="p">,</span> <span class="n">i</span><span class="p">),</span>
-                <span class="n">value</span><span class="p">,</span>
-            <span class="p">)</span>
 </pre></div>
 
           </div>
