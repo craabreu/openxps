@@ -7,11 +7,13 @@ ExtendedSpaceContext
 
     .. rubric:: Methods
 
+    .. automethod:: createCheckpoint
     .. automethod:: getCouplingPotential
     .. automethod:: getDynamicalVariableValues
     .. automethod:: getDynamicalVariableVelocities
     .. automethod:: getDynamicalVariables
     .. automethod:: getExtensionContext
+    .. automethod:: loadCheckpoint
     .. automethod:: setDynamicalVariableValues
     .. automethod:: setDynamicalVariableVelocities
     .. automethod:: setDynamicalVariableVelocitiesToTemperature

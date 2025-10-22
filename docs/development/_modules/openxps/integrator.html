@@ -56,6 +56,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">integrators</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">STRING_SEPARATOR</span>
 
 <span class="c1">#: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the</span>
 <span class="c1">#: beginning of each time step (kick-first or leapfrog schemes).</span>
@@ -116,14 +117,13 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the state of the integrator as a string.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">()</span>
-            <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\f</span><span class="s2">&quot;</span>
+            <span class="o">+</span> <span class="n">STRING_SEPARATOR</span>
             <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">()</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Set the state of the integrator from a string.&quot;&quot;&quot;</span>
-        <span class="n">physical_state</span><span class="p">,</span> <span class="n">extension_state</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\f</span><span class="s2">&quot;</span><span class="p">)</span>
-        <span class="c1"># Deserialize integrators from XML strings</span>
+        <span class="n">physical_state</span><span class="p">,</span> <span class="n">extension_state</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">STRING_SEPARATOR</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">XmlSerializer</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">physical_state</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">XmlSerializer</span><span class="o">.</span><span class="n">deserialize</span><span class="p">(</span><span class="n">extension_state</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialize</span><span class="p">()</span>
@@ -322,7 +322,8 @@
                 <span class="s2">&quot;The physical and extension integrators must have the same step size.&quot;</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
-            <span class="n">assume_kick_first</span> <span class="ow">or</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="n">assume_kick_first</span>
+            <span class="ow">or</span> <span class="nb">all</span><span class="p">(</span>
                 <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_KICK_FIRST_INTEGRATORS</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">integrator</span> <span class="ow">in</span> <span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
             <span class="p">)</span>
@@ -409,7 +410,8 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">extension_step_size</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_getStepSize</span><span class="p">(</span><span class="n">extension_integrator</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
-            <span class="n">assume_reversible</span> <span class="ow">or</span> <span class="nb">all</span><span class="p">(</span>
+            <span class="n">assume_reversible</span>
+            <span class="ow">or</span> <span class="nb">all</span><span class="p">(</span>
                 <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_REVERSIBLE_INTEGRATORS</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">integrator</span> <span class="ow">in</span> <span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
             <span class="p">)</span>

@@ -113,6 +113,22 @@ even integer ratio.</p></li>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.createCheckpoint">
+<span class="sig-name descname"><span class="pre">createCheckpoint</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.createCheckpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.createCheckpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Create a checkpoint recording the current state of the Context.</p>
+<p>This should be treated as an opaque block of binary data. See
+<a class="reference internal" href="#openxps.ExtendedSpaceContext.loadCheckpoint" title="openxps.ExtendedSpaceContext.loadCheckpoint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">loadCheckpoint()</span></code></a> for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A string containing the checkpoint data</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getCouplingPotential">
 <span class="sig-name descname"><span class="pre">getCouplingPotential</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getCouplingPotential"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getCouplingPotential" title="Link to this definition">¶</a></dt>
 <dd><p>Get the coupling potential included in the extended phase-space system.</p>
@@ -178,6 +194,18 @@ even integer ratio.</p></li>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>mm.Context</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.loadCheckpoint">
+<span class="sig-name descname"><span class="pre">loadCheckpoint</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">checkpoint</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.loadCheckpoint"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.loadCheckpoint" title="Link to this definition">¶</a></dt>
+<dd><p>Load a checkpoint that was written by <a class="reference internal" href="#openxps.ExtendedSpaceContext.createCheckpoint" title="openxps.ExtendedSpaceContext.createCheckpoint"><code class="xref py py-meth docutils literal notranslate"><span class="pre">createCheckpoint()</span></code></a>.</p>
+<p>See <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> for more details.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>checkpoint</strong> – The checkpoint data to load.</p>
 </dd>
 </dl>
 </dd></dl>
