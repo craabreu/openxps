@@ -126,7 +126,7 @@ def test_get_extension_system():
     assert extension_system.getNumParticles() == len(dvs)
 
     # Verify particle masses match DV masses
-    # The mass is stored in the extension system as the numerical value (divided by unit)
+    # The mass is stored in the extension system as the numerical value
     for i, dv in enumerate(dvs):
         expected_mass = dv.mass / dv.mass.unit  # Get dimensionless value
         actual_mass = extension_system.getParticleMass(i)._value  # Get raw value
