@@ -1,0 +1,11 @@
+ExtendedSpaceMetadynamics
+=========================
+
+.. currentmodule:: openxps
+.. autoclass:: ExtendedSpaceMetadynamics
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getCollectiveVariables
+    .. automethod:: step

@@ -9,7 +9,8 @@ Classes
     ExtensionWriter
     LockstepIntegrator
     SplitIntegrator
-    MetadynamicsBias
+    ExtendedSpaceBiasVariable
+    ExtendedSpaceMetadynamics
     ExtendedSpaceSimulation
     ExtendedSpaceSystem
 

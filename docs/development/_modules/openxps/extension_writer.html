@@ -50,8 +50,6 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span> <span class="k">as</span> <span class="n">mmapp</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.context</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceContext</span>
-
 
 <div class="viewcode-block" id="ExtensionWriter">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter">[docs]</a>
@@ -61,8 +59,6 @@
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    context</span>
-<span class="sd">        The extended space context whose extension-context state data will be reported.</span>
 <span class="sd">    potential</span>
 <span class="sd">        If ``True``, the potential energy of the extension context will be reported.</span>
 <span class="sd">    kinetic</span>
@@ -113,7 +109,7 @@
 <span class="sd">    ...     10,</span>
 <span class="sd">    ...     step=True,</span>
 <span class="sd">    ...     kineticEnergy=True,</span>
-<span class="sd">    ...     writers=[xps.ExtensionWriter(simulation.context, kinetic=True)],</span>
+<span class="sd">    ...     writers=[xps.ExtensionWriter(kinetic=True)],</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; simulation.reporters.append(reporter)</span>
 <span class="sd">    &gt;&gt;&gt; simulation.step(100)  # doctest: +SKIP</span>
@@ -132,15 +128,12 @@
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">context</span><span class="p">:</span> <span class="n">ExtendedSpaceContext</span><span class="p">,</span>
+        <span class="o">*</span><span class="p">,</span>
         <span class="n">potential</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">kinetic</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">total</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">temperature</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">context</span><span class="p">,</span> <span class="n">ExtendedSpaceContext</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;The context must be an instance of ExtendedSpaceContext.&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_context</span> <span class="o">=</span> <span class="n">context</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_potential</span> <span class="o">=</span> <span class="n">potential</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_kinetic</span> <span class="o">=</span> <span class="n">kinetic</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_total</span> <span class="o">=</span> <span class="n">total</span>
@@ -153,7 +146,7 @@
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.initialize">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">mmapp</span><span class="o">.</span><span class="n">Simulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span><span class="p">:</span>
-            <span class="n">number</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">())</span>
+            <span class="n">number</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">())</span>
             <span class="n">kb</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span>
                 <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">kelvin</span>
             <span class="p">)</span>
@@ -178,7 +171,7 @@
 <div class="viewcode-block" id="ExtensionWriter.getValues">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getValues">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">mmapp</span><span class="o">.</span><span class="n">Simulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
-        <span class="n">state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
             <span class="n">getEnergy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">,</span> <span class="n">getVelocities</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">:</span>
@@ -187,7 +180,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span><span class="p">:</span>
             <span class="n">velocities</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Velocities</span><span class="p">)</span>
             <span class="k">for</span> <span class="n">dv</span><span class="p">,</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">(),</span> <span class="n">velocities</span>
+                <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">(),</span> <span class="n">velocities</span>
             <span class="p">):</span>
                 <span class="n">mass</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">_value</span>
                 <span class="n">kinetic_energy</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">mass</span> <span class="o">*</span> <span class="p">(</span><span class="n">velocity</span><span class="o">.</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">velocity</span><span class="o">.</span><span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>

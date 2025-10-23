@@ -44,281 +44,228 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">functools</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cvpack.serialization</span><span class="w"> </span><span class="kn">import</span> <span class="n">Serializable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span> <span class="k">as</span> <span class="n">mmapp</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.bias_potential</span><span class="w"> </span><span class="kn">import</span> <span class="n">BiasPotential</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">NoBounds</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.system</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceSystem</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
 
-<span class="n">MAX_DIMENSIONS</span> <span class="o">=</span> <span class="mi">3</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">_SimulationWrapper</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">mmapp</span><span class="o">.</span><span class="n">Simulation</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_simulation</span> <span class="o">=</span> <span class="n">simulation</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">step</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">currentStep</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simulation</span><span class="o">.</span><span class="n">currentStep</span>
 
 
-<div class="viewcode-block" id="MetadynamicsBias">
-<a class="viewcode-back" href="../../api/MetadynamicsBias.html#openxps.MetadynamicsBias">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">MetadynamicsBias</span><span class="p">(</span><span class="n">BiasPotential</span><span class="p">):</span>
-<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A Metadynamics potential applied to dynamical variables.</span>
-
-<span class="sd">    .. math::</span>
-
-<span class="sd">        V({\bf x}) = \sum_{i=1}^{N} h_i \exp\left\{</span>
-<span class="sd">            -\frac{1}{2} \left(</span>
-<span class="sd">                {\bf x} - {\bf c}_i</span>
-<span class="sd">            \right)^T [{\bf D}({\boldsymbol \sigma}_i)]^{-2} \left(</span>
-<span class="sd">                {\bf x} - {\bf c}_i</span>
-<span class="sd">            \right)</span>
-<span class="sd">        \right\}</span>
-
-<span class="sd">    where :math:`{\bf x}` is the vector of dynamical variables, :math:`h_i` is</span>
-<span class="sd">    the height of the Gaussian kernel, :math:`{\bf c}_i` is the center of the kernel,</span>
-<span class="sd">    :math:`{\boldsymbol \sigma}_i` is the bandwidth vector of the kernel, and</span>
-<span class="sd">    :math:`{\bf D}(\cdot)` builds a diagonal matrix from a vector.</span>
-
-<span class="sd">    The bias potential can be interpolated on a grid using natural splines for 1D, 2D,</span>
-<span class="sd">    or 3D functions. This is done by providing the number of points in each dimension</span>
-<span class="sd">    of the grid. If the grid is not provided, the bias potential is evaluated directly</span>
-<span class="sd">    from the mathematical expression, which gets more expensive as the number of added</span>
-<span class="sd">    kernels increases.</span>
+<div class="viewcode-block" id="ExtendedSpaceBiasVariable">
+<a class="viewcode-back" href="../../api/ExtendedSpaceBiasVariable.html#openxps.ExtendedSpaceBiasVariable">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExtendedSpaceBiasVariable</span><span class="p">(</span><span class="n">Serializable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A dynamical variable augmented with a Gaussian bias kernel.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    dynamical_variables</span>
-<span class="sd">        The dynamical variables subject to the bias potential.</span>
-<span class="sd">    bandwidth</span>
-<span class="sd">        The bandwidth vector of the Gaussian kernel. Each element must have units of</span>
-<span class="sd">        the corresponding dynamical variable.</span>
-<span class="sd">    initial_height</span>
-<span class="sd">        The initial height of the Gaussian kernels. It must have units of molar energy.</span>
-<span class="sd">    temperature</span>
-<span class="sd">        The temperature of the system (with units).</span>
-<span class="sd">    bias_factor</span>
-<span class="sd">        The bias factor that controls the equilibrium bias potential and the rate of</span>
-<span class="sd">        convergence. It must be larger than 1.</span>
-<span class="sd">    grid_sizes</span>
-<span class="sd">        The number of points in each dimension of the grid used to interpolate the bias</span>
-<span class="sd">        potential.</span>
+<span class="sd">    dynamical_variable</span>
+<span class="sd">        The dynamical variable to be augmented.</span>
+<span class="sd">    sigma</span>
+<span class="sd">        The bandwidth (standard deviation) of the Gaussian bias kernel.</span>
+<span class="sd">    grid_width</span>
+<span class="sd">        The width of the grid for the bias kernel. If ``None``, the grid width is</span>
+<span class="sd">        automatically determined based on the dynamical variable&#39;s bounds and the</span>
+<span class="sd">        bandwidth.</span>
 
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    ValueError</span>
-<span class="sd">        If the bias factor is not larger than 1 or if temperature does not have valid</span>
-<span class="sd">        units.</span>
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; dv = xps.DynamicalVariable(</span>
+<span class="sd">    ...     &quot;phi&quot;,</span>
+<span class="sd">    ...     unit.radian,</span>
+<span class="sd">    ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
+<span class="sd">    ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; bias_variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)</span>
+<span class="sd">    &gt;&gt;&gt; bias_variable.dynamical_variable</span>
+<span class="sd">    DynamicalVariable(name=&#39;phi&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dynamical_variable</span><span class="p">:</span> <span class="n">DynamicalVariable</span>
+    <span class="n">sigma</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span>
+    <span class="n">grid_width</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;sigma must be a quantity&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dynamical_variable</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;sigma must be compatible with the dynamical variable&#39;s unit&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;grid_width must be an integer or None&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="n">ExtendedSpaceBiasVariable</span><span class="o">.</span><span class="fm">__init__</span> <span class="o">=</span> <span class="n">preprocess_args</span><span class="p">(</span><span class="n">ExtendedSpaceBiasVariable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">)</span>
+
+<span class="n">ExtendedSpaceBiasVariable</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.metadynamics.ExtendedSpaceBiasVariable&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ExtendedSpaceMetadynamics">
+<a class="viewcode-back" href="../../api/ExtendedSpaceMetadynamics.html#openxps.ExtendedSpaceMetadynamics">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ExtendedSpaceMetadynamics</span><span class="p">(</span><span class="n">mmapp</span><span class="o">.</span><span class="n">Metadynamics</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Performs Extended Phase-Space (XPS) Metadynamics simulations, in which a bias</span>
+<span class="sd">    potential is applied to dynamical variables (DVs) to enhance sampling of the</span>
+<span class="sd">    physical coordinates.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    system</span>
+<span class="sd">        The :class:`ExtendedSpaceSystem` to be used in the XPS simulation.</span>
+<span class="sd">    variables</span>
+<span class="sd">        A sequence of :class:`ExtendedSpaceBiasVariable` objects to specify the biased</span>
+<span class="sd">        dynamical variables and their corresponding Gaussian kernels.</span>
+<span class="sd">    temperature</span>
+<span class="sd">        The temperature at which the simulation is being run. This is used in computing</span>
+<span class="sd">        the free energy.</span>
+<span class="sd">    biasFactor</span>
+<span class="sd">        Used in scaling the height of the Gaussians added to the bias. The dynamical</span>
+<span class="sd">        variables are sampled as if the effective temperature of the simulation were</span>
+<span class="sd">        temperature*biasFactor.</span>
+<span class="sd">    height</span>
+<span class="sd">        The initial height of the Gaussians to add (in units of energy).</span>
+<span class="sd">    frequency</span>
+<span class="sd">        The interval in time steps at which Gaussians should be added to the bias</span>
+<span class="sd">        potential.</span>
+<span class="sd">    saveFrequency</span>
+<span class="sd">        The interval in time steps at which to write out the current biases to disk. At</span>
+<span class="sd">        the same time it writes biases, it also checks for updated biases written by</span>
+<span class="sd">        other processes and loads them in. This must be a multiple of frequency.</span>
+<span class="sd">    biasDir</span>
+<span class="sd">        The directory to which biases should be written, and from which biases written</span>
+<span class="sd">        by other processes should be loaded.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; import cvpack</span>
+<span class="sd">    &gt;&gt;&gt; from math import pi</span>
+<span class="sd">    &gt;&gt;&gt; import openmm</span>
+<span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
+<span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; umbrella_potential = cvpack.MetaCollectiveVariable(</span>
+<span class="sd">    ...     f&quot;0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)&quot;,</span>
+<span class="sd">    ...     [phi],</span>
+<span class="sd">    ...     unit.kilojoule_per_mole,</span>
+<span class="sd">    ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,</span>
+<span class="sd">    ...     phi0=pi*unit.radian,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
+<span class="sd">    &gt;&gt;&gt; system = xps.ExtendedSpaceSystem(</span>
+<span class="sd">    ...     [phi0],</span>
+<span class="sd">    ...     umbrella_potential,</span>
+<span class="sd">    ...     model.system,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; bias_variable = xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degree)</span>
+<span class="sd">    &gt;&gt;&gt; temperature = 300 * unit.kelvin</span>
+<span class="sd">    &gt;&gt;&gt; metadynamics = xps.ExtendedSpaceMetadynamics(</span>
+<span class="sd">    ...     system=system,</span>
+<span class="sd">    ...     variables=[bias_variable],</span>
+<span class="sd">    ...     temperature=temperature,</span>
+<span class="sd">    ...     biasFactor=5.0,</span>
+<span class="sd">    ...     height=2 * unit.kilojoule_per_mole,</span>
+<span class="sd">    ...     frequency=100,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; simulation = xps.ExtendedSpaceSimulation(</span>
+<span class="sd">    ...     model.topology,</span>
+<span class="sd">    ...     system,</span>
+<span class="sd">    ...     xps.LockstepIntegrator(</span>
+<span class="sd">    ...         openmm.LangevinMiddleIntegrator(</span>
+<span class="sd">    ...             temperature, 1 / unit.picosecond, 4 * unit.femtosecond</span>
+<span class="sd">    ...         )</span>
+<span class="sd">    ...     ),</span>
+<span class="sd">    ...     openmm.Platform.getPlatformByName(&quot;Reference&quot;),</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; context = simulation.context</span>
+<span class="sd">    &gt;&gt;&gt; context.setPositions(model.positions)</span>
+<span class="sd">    &gt;&gt;&gt; context.setVelocitiesToTemperature(temperature, 1234)</span>
+<span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableValues([180 * unit.degree])</span>
+<span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableVelocitiesToTemperature(temperature, 1234)</span>
+<span class="sd">    &gt;&gt;&gt; metadynamics.step(simulation, 100)</span>
+<span class="sd">    &gt;&gt;&gt; metadynamics.getFreeEnergy()</span>
+<span class="sd">    [... ... ...] kJ/mol</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
-        <span class="n">bandwidth</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">],</span>
-        <span class="n">initial_height</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">system</span><span class="p">:</span> <span class="n">ExtendedSpaceSystem</span><span class="p">,</span>
+        <span class="n">variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">ExtendedSpaceBiasVariable</span><span class="p">],</span>
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">bias_factor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
-        <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span> <span class="kc">None</span><span class="p">],</span>
+        <span class="n">biasFactor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">height</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">frequency</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">saveFrequency</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">biasDir</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">bias_factor</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;bias_factor must be a float larger than 1&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_bandwidth</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">quantity</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">quantity</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">bandwidth</span><span class="p">,</span> <span class="n">dynamical_variables</span><span class="p">)</span>
-        <span class="p">]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_initial_height</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kb_delta_t</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">quantity</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">quantity</span> <span class="ow">in</span> <span class="p">(</span>
-                <span class="n">initial_height</span><span class="p">,</span>
-                <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="n">temperature</span> <span class="o">*</span> <span class="p">(</span><span class="n">bias_factor</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span>
+        <span class="n">system_dvs</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()</span>
+        <span class="n">bias_variables</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">variable</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
+            <span class="n">dv</span> <span class="o">=</span> <span class="n">variable</span><span class="o">.</span><span class="n">dynamical_variable</span>
+            <span class="k">if</span> <span class="n">dv</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">system_dvs</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> not found in system&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has no bounds&quot;</span><span class="p">)</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="n">system_dvs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">dv</span><span class="p">)</span>
+            <span class="n">bias_variables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">mmapp</span><span class="o">.</span><span class="n">BiasVariable</span><span class="p">(</span>
+                    <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">index</span><span class="p">),</span>
+                    <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">lower</span> <span class="o">*</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+                    <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">upper</span> <span class="o">*</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+                    <span class="n">variable</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span>
+                    <span class="n">dv</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">(),</span>
+                    <span class="n">variable</span><span class="o">.</span><span class="n">grid_width</span><span class="p">,</span>
+                <span class="p">)</span>
             <span class="p">)</span>
-        <span class="p">]</span>
-        <span class="k">if</span> <span class="n">grid_sizes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">summands</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="n">distances</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">dv</span><span class="p">,</span> <span class="n">sigma</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bandwidth</span><span class="p">):</span>
-                <span class="n">distance</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_center&quot;</span>
-                <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">():</span>
-                    <span class="n">length</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">period</span>
-                    <span class="n">distance</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">length</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="si">}</span><span class="s2">*sin(</span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">length</span><span class="si">}</span><span class="s2">*(</span><span class="si">{</span><span class="n">distance</span><span class="si">}</span><span class="s2">))&quot;</span>
-                <span class="n">distances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">distance</span><span class="p">)</span>
-                <span class="n">summands</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_dist/</span><span class="si">{</span><span class="n">sigma</span><span class="si">}</span><span class="s2">)^2&quot;</span><span class="p">)</span>
-            <span class="n">function</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;height*exp(-0.5*(</span><span class="si">{</span><span class="s1">&#39;+&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">summands</span><span class="p">)</span><span class="si">}</span><span class="s2">))&quot;</span>
-            <span class="k">for</span> <span class="n">dv</span><span class="p">,</span> <span class="n">distance</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">distances</span><span class="p">):</span>
-                <span class="n">function</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;;</span><span class="se">\n</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_dist=</span><span class="si">{</span><span class="n">distance</span><span class="si">}</span><span class="s2">&quot;</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">function</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;bias(</span><span class="si">{</span><span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">dv</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="n">dynamical_variables</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">dynamical_variables</span><span class="p">,</span>
-            <span class="n">function</span><span class="p">,</span>
-            <span class="n">functools</span><span class="o">.</span><span class="n">partial</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">CustomCompoundBondForce</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)),</span>
+            <span class="n">system</span><span class="o">.</span><span class="n">getExtensionSystem</span><span class="p">(),</span>
+            <span class="n">bias_variables</span><span class="p">,</span>
+            <span class="n">temperature</span><span class="p">,</span>
+            <span class="n">biasFactor</span><span class="p">,</span>
+            <span class="n">height</span><span class="p">,</span>
+            <span class="n">frequency</span><span class="p">,</span>
+            <span class="n">saveFrequency</span><span class="p">,</span>
+            <span class="n">biasDir</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="n">grid_sizes</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span> <span class="o">=</span> <span class="kc">None</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addPerBondParameter</span><span class="p">(</span><span class="s2">&quot;height&quot;</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">addPerBondParameter</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">_center&quot;</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span> <span class="o">=</span> <span class="n">SplineGrid</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addTabulatedFunction</span><span class="p">(</span><span class="s2">&quot;bias&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_performAddKernel</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">center</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">potential</span><span class="p">:</span> <span class="nb">float</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">height</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initial_height</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">potential</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kb_delta_t</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addBond</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dv_indices</span><span class="p">,</span> <span class="p">[</span><span class="n">height</span><span class="p">,</span> <span class="o">*</span><span class="n">center</span><span class="p">])</span>
-            <span class="n">context</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">(</span><span class="n">preserveState</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">exponents</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">):</span>
-                <span class="n">distances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span><span class="o">.</span><span class="n">getGridPoints</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">-</span> <span class="n">center</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-                <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">():</span>
-                    <span class="n">length</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">upper</span> <span class="o">-</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">lower</span>
-                    <span class="n">distances</span> <span class="o">=</span> <span class="p">(</span><span class="n">length</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">length</span><span class="p">)</span> <span class="o">*</span> <span class="n">distances</span><span class="p">)</span>
-                    <span class="n">distances</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">distances</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-                <span class="n">exponents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">distances</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bandwidth</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
-            <span class="n">kernel</span> <span class="o">=</span> <span class="n">height</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span>
-                <span class="n">exponents</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
-                <span class="k">else</span> <span class="n">functools</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">add</span><span class="o">.</span><span class="n">outer</span><span class="p">,</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">exponents</span><span class="p">))</span>
-            <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span><span class="o">.</span><span class="n">addBias</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">updateParametersInContext</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
-
-<div class="viewcode-block" id="MetadynamicsBias.initialize">
-<a class="viewcode-back" href="../../api/MetadynamicsBias.html#openxps.MetadynamicsBias.initialize">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">context_dvs</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">context_dvs</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addBond</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dv_indices</span><span class="p">,</span> <span class="p">[])</span></div>
+<div class="viewcode-block" id="ExtendedSpaceMetadynamics.step">
+<a class="viewcode-back" href="../../api/ExtendedSpaceMetadynamics.html#openxps.ExtendedSpaceMetadynamics.step">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">,</span> <span class="n">steps</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">_SimulationWrapper</span><span class="p">(</span><span class="n">simulation</span><span class="p">),</span> <span class="n">steps</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="MetadynamicsBias.getBias">
-<a class="viewcode-back" href="../../api/MetadynamicsBias.html#openxps.MetadynamicsBias.getBias">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">getBias</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get the bias values on a spline grid.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        np.ndarray</span>
-<span class="sd">            The bias values on the spline grid.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias_grid</span><span class="o">.</span><span class="n">getBias</span><span class="p">()</span></div>
+<div class="viewcode-block" id="ExtendedSpaceMetadynamics.getCollectiveVariables">
+<a class="viewcode-back" href="../../api/ExtendedSpaceMetadynamics.html#openxps.ExtendedSpaceMetadynamics.getCollectiveVariables">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getCollectiveVariables</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_force</span><span class="o">.</span><span class="n">getCollectiveVariableValues</span><span class="p">(</span>
+            <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span>
+        <span class="p">)</span></div>
 </div>
 
-
-
-<span class="k">class</span><span class="w"> </span><span class="nc">SplineGrid</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">TabulatedFunction</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    A grid used to interpolate a bias potential applied to dynamical variables.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    dynamical_variables</span>
-<span class="sd">        The dynamical variables subject to the bias potential.</span>
-<span class="sd">    grid_sizes</span>
-<span class="sd">        The number of points in each dimension of the grid used to interpolate the bias</span>
-<span class="sd">        potential.</span>
-
-<span class="sd">    Raises</span>
-<span class="sd">    ------</span>
-<span class="sd">    ValueError</span>
-<span class="sd">        If the length of ``dynamical_variables`` is not between 1 and 3, if</span>
-<span class="sd">        ``grid_sizes`` has a different length than ``dynamical_variables``, if any</span>
-<span class="sd">        dynamical variable is not bounded, or if the dimensions of the grid are not</span>
-<span class="sd">        all periodic or all non-periodic.</span>
-
-<span class="sd">    Examples</span>
-<span class="sd">    --------</span>
-<span class="sd">    Create a 2D grid to interpolate a bias potential applied to a single extra degree</span>
-<span class="sd">    of freedom:</span>
-<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
-<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
-<span class="sd">    &gt;&gt;&gt; import numpy as np</span>
-<span class="sd">    &gt;&gt;&gt; mass = 1.0 * unit.dalton</span>
-<span class="sd">    &gt;&gt;&gt; bounds = xps.bounds.Reflective(0, 1, unit.nanometers)</span>
-<span class="sd">    &gt;&gt;&gt; dynamical_variable = xps.DynamicalVariable(&quot;x&quot;, unit.nanometers, mass, bounds)</span>
-<span class="sd">    &gt;&gt;&gt; grid = xps.metadynamics.SplineGrid([dynamical_variable], [10])</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
-        <span class="n">grid_sizes</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">num_dims</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="mi">1</span> <span class="o">&lt;=</span> <span class="n">num_dims</span> <span class="o">&lt;=</span> <span class="n">MAX_DIMENSIONS</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Spline grid can only interpolate up to </span><span class="si">{</span><span class="n">MAX_DIMENSIONS</span><span class="si">}</span><span class="s2">D functions&quot;</span>
-            <span class="p">)</span>
-        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span> <span class="o">!=</span> <span class="n">num_dims</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Number of grid sizes must match number of DVs&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Spline interpolation requires bounded DVs&quot;</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_grid_sizes</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_grid</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">upper</span><span class="p">,</span> <span class="n">num</span><span class="o">=</span><span class="n">grid_size</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">dv</span><span class="p">,</span> <span class="n">grid_size</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">grid_sizes</span><span class="p">)</span>
-        <span class="p">]</span>
-
-        <span class="n">num_periodics</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">num_periodics</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">num_dims</span><span class="p">]:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Mixed periodic/non-periodic dimensions are not supported&quot;</span><span class="p">)</span>
-
-        <span class="bp">self</span><span class="o">.</span><span class="n">_widths</span> <span class="o">=</span> <span class="p">[]</span> <span class="k">if</span> <span class="n">num_dims</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">grid_sizes</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">grid_sizes</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_limits</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Interpolation requires bounded DVs&quot;</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_limits</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">upper</span><span class="p">])</span>
-        <span class="n">periodic</span> <span class="o">=</span> <span class="n">num_periodics</span> <span class="o">==</span> <span class="n">num_dims</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">mm</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;Continuous</span><span class="si">{</span><span class="n">num_dims</span><span class="si">}</span><span class="s2">DFunction&quot;</span><span class="p">)(</span>
-            <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_widths</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_limits</span><span class="p">,</span> <span class="n">periodic</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">this</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">getGridPoints</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dimension</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get the grid points along a specific dimension.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        dimension</span>
-<span class="sd">            The dimension for which the grid points will be returned.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        np.ndarray</span>
-<span class="sd">            The grid points along the specified dimension.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_grid</span><span class="p">[</span><span class="n">dimension</span><span class="p">]</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">getBias</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get the bias values on the spline grid.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        np.ndarray</span>
-<span class="sd">            The bias values on the spline grid.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">addBias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bias</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Add bias values to the grid.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        bias</span>
-<span class="sd">            The bias values to be added to the grid.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span> <span class="o">+=</span> <span class="n">bias</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">setFunctionParameters</span><span class="p">(</span>
-            <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_widths</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bias</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_limits</span>
-        <span class="p">)</span>
 </pre></div>
 
           </div>

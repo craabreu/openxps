@@ -1,0 +1,10 @@
+ExtendedSpaceBiasVariable
+=========================
+
+.. currentmodule:: openxps
+.. autoclass:: ExtendedSpaceBiasVariable
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: grid_width

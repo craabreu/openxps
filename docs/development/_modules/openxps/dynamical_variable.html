@@ -54,7 +54,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">cvpack.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">Quantity</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span><span class="p">,</span> <span class="n">Periodic</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">,</span> <span class="n">Periodic</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
 
 
@@ -68,22 +68,21 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    name</span>
-<span class="sd">        The name of the context parameter to be turned into an extra degree of</span>
-<span class="sd">        freedom.</span>
+<span class="sd">        The name of the context parameter to be turned into a dynamical variable.</span>
 <span class="sd">    unit</span>
 <span class="sd">        The unity of measurement of this dynamical variable. It must be</span>
 <span class="sd">        compatible with OpenMM&#39;s MD unit system (mass in ``dalton``, distance in</span>
 <span class="sd">        ``nanometer``, angle in ``radian``, time in ``picosecond``, temperature in</span>
-<span class="sd">        ``kelvin``, energy in ``kilojoules_per_mol``). If the extra degree of</span>
-<span class="sd">        freedom does not have a unit, use ``dimensionless``.</span>
+<span class="sd">        ``kelvin``, energy in ``kilojoules_per_mol``). If the dynamical variable does</span>
+<span class="sd">        not have a unit, use ``dimensionless``.</span>
 <span class="sd">    mass</span>
 <span class="sd">        The mass assigned to this dynamical variable, whose unit of measurement</span>
 <span class="sd">        must be compatible with ``dalton*(nanometer/unit)**2``, where ``unit`` is the</span>
-<span class="sd">        dynamical variable&#39;s own unit (see above).</span>
+<span class="sd">        dynamical variable&#39;s own unit (see ``unit`` above).</span>
 <span class="sd">    bounds</span>
 <span class="sd">        The boundary condition to be applied to this dynamical variable. It must</span>
-<span class="sd">        be an instance of ``openxps.bounds.Periodic``, ``openxps.bounds.Reflective``,</span>
-<span class="sd">        or ``None`` (for unbounded variables). If it is not ``None``, its unit of</span>
+<span class="sd">        be an instance of :class:`Periodic`, :class:`Reflective`, or :class:`NoBounds`</span>
+<span class="sd">        (for unbounded variables). If it is not :class:`~openxps.NoBounds`, its unit of</span>
 <span class="sd">        measurement must be compatible with the dynamical variable&#39;s own unit.</span>
 
 <span class="sd">    Example</span>
@@ -107,7 +106,7 @@
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">unit</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Unit</span>
     <span class="n">mass</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span>
-    <span class="n">bounds</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Union</span><span class="p">[</span><span class="n">Bounds</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span>
+    <span class="n">bounds</span><span class="p">:</span> <span class="n">Bounds</span> <span class="o">=</span> <span class="n">NoBounds</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_unit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
@@ -124,12 +123,15 @@
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mass units must be compatible with </span><span class="si">{</span><span class="n">mass_unit</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
         <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;mass&quot;</span><span class="p">,</span> <span class="n">Quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">in_units_of</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">)))</span>
 
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">):</span>
+            <span class="k">return</span>
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">Bounds</span><span class="p">):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Provided bounds have incompatible units.&quot;</span><span class="p">)</span>
             <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;bounds&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;The bounds must be an instance of Bounds or None.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;The bounds must be an instance of Bounds.&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">]:</span>
         <span class="k">return</span> <span class="p">{</span>
@@ -172,7 +174,7 @@
 <div class="viewcode-block" id="DynamicalVariable.createCollectiveVariable">
 <a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable.createCollectiveVariable">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">createCollectiveVariable</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">particle</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Returns a :CVPack:`OpenMMForceWrapper` object associating this extra degree of</span>
@@ -180,7 +182,7 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        particle</span>
+<span class="sd">        index</span>
 <span class="sd">            The index of the particle whose x coordinate will be associated with this</span>
 <span class="sd">            dynamical variable.</span>
 <span class="sd">        name</span>
@@ -210,7 +212,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="n">bounds</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
             <span class="n">bounds</span> <span class="o">=</span> <span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
-        <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">particle</span><span class="p">,</span> <span class="p">[])</span>
+        <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">[])</span>
         <span class="k">return</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">(</span>
             <span class="n">force</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>

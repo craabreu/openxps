@@ -7,6 +7,7 @@ DynamicalVariable
 
     .. rubric:: Methods
 
+    .. automethod:: bounds
     .. automethod:: createCollectiveVariable
     .. automethod:: distanceTo
     .. automethod:: isPeriodic
