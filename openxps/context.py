@@ -175,14 +175,12 @@ class ExtendedSpaceContext(mm.Context):
         if name in dv_names:
             i = dv_names.index(name)
             dv = self._dvs[i]
-            value = value.value_in_unit(dv.unit)
-            if dv.bounds is not None:
-                value, _ = dv.bounds.wrap(value, 0)
+            wrapped_value, _ = dv.bounds.wrap(value.value_in_unit(dv.unit), 0)
             state = mmswig.Context_getState(self._extension_context, mm.State.Positions)
             positions = list(mmswig.State__getVectorAsVec3(state, mm.State.Positions))
-            positions[i] = mm.Vec3(value, 0, 0)
+            positions[i] = mm.Vec3(wrapped_value, 0, 0)
             self._extension_context.setPositions(positions)
-            super().setParameter(name, value)
+            super().setParameter(name, wrapped_value)
         else:
             super().setParameter(name, value)
 
@@ -216,9 +214,8 @@ class ExtendedSpaceContext(mm.Context):
             else:
                 value = quantity
             positions.append(mm.Vec3(value, 0, 0))
-            if dv.bounds is not None:
-                value, _ = dv.bounds.wrap(value, 0)
-            super().setParameter(dv.name, value)
+            wrapped_value, _ = dv.bounds.wrap(value, 0)
+            super().setParameter(dv.name, wrapped_value)
         self._extension_context.setPositions(positions)
 
     def getDynamicalVariableValues(self) -> tuple[mmunit.Quantity]:
@@ -284,10 +281,7 @@ class ExtendedSpaceContext(mm.Context):
         velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
         dv_velocities = []
         for i, dv in enumerate(self._dvs):
-            value = positions[i].x
-            rate = velocities[i].x
-            if dv.bounds is not None:
-                value, rate = dv.bounds.wrap(value, rate)
+            _, rate = dv.bounds.wrap(positions[i].x, velocities[i].x)
             dv_velocities.append(rate * dv.unit / mmunit.picosecond)
         return tuple(dv_velocities)
 

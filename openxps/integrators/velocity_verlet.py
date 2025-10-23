@@ -10,8 +10,10 @@
 import openmm as mm
 from openmm import unit as mmunit
 
+from .mixin import IntegratorMixin
 
-class VelocityVerletIntegrator(mm.CustomIntegrator):
+
+class VelocityVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """
     A velocity Verlet integrator.
 
@@ -22,14 +24,30 @@ class VelocityVerletIntegrator(mm.CustomIntegrator):
     stepSize
         The step size with which to integrate the system.
 
+    Example
+    -------
+    >>> import openxps as xps
+    >>> from openmm import unit
+    >>> integrator = xps.integrators.VelocityVerletIntegrator(1 * unit.femtosecond)
+    >>> integrator
+    Per-dof variables:
+      x1
+    Computation steps:
+       0: allow forces to update the context state
+       1: v <- v + 0.5*dt*f/m
+       2: x <- x + dt*v
+       3: x1 <- x
+       4: constrain positions
+       5: v <- v + (x-x1)/dt + 0.5*dt*f/m
+       6: constrain velocities
     """
 
     def __init__(self, stepSize: mmunit.Quantity):
         super().__init__(stepSize)
         self.addPerDofVariable("x1", 0)
         self.addUpdateContextState()
-        self.addComputePerDof("v", "v+0.5*dt*f/m")
-        self.addComputePerDof("x", "x+dt*v")
+        self.addComputePerDof("v", "v + 0.5*dt*f/m")
+        self.addComputePerDof("x", "x + dt*v")
         self.addComputePerDof("x1", "x")
         self.addConstrainPositions()
         self.addComputePerDof("v", "v + (x-x1)/dt + 0.5*dt*f/m")

@@ -209,7 +209,7 @@ def test_reporters():
         step=True,
         potentialEnergy=True,
         kineticEnergy=True,
-        writers=[xps.ExtensionWriter(simulation.context, kinetic=True)],
+        writers=[xps.ExtensionWriter(kinetic=True)],
     )
     simulation.reporters.append(reporter)
 

@@ -13,8 +13,6 @@ from openmm import _openmm as mmswig
 from openmm import app as mmapp
 from openmm import unit as mmunit
 
-from .context import ExtendedSpaceContext
-
 
 class ExtensionWriter(CustomWriter):
     """
@@ -22,8 +20,6 @@ class ExtensionWriter(CustomWriter):
 
     Parameters
     ----------
-    context
-        The extended space context whose extension-context state data will be reported.
     potential
         If ``True``, the potential energy of the extension context will be reported.
     kinetic
@@ -74,7 +70,7 @@ class ExtensionWriter(CustomWriter):
     ...     10,
     ...     step=True,
     ...     kineticEnergy=True,
-    ...     writers=[xps.ExtensionWriter(simulation.context, kinetic=True)],
+    ...     writers=[xps.ExtensionWriter(kinetic=True)],
     ... )
     >>> simulation.reporters.append(reporter)
     >>> simulation.step(100)  # doctest: +SKIP
@@ -93,15 +89,12 @@ class ExtensionWriter(CustomWriter):
 
     def __init__(  # noqa: PLR0913
         self,
-        context: ExtendedSpaceContext,
+        *,
         potential: bool = False,
         kinetic: bool = False,
         total: bool = False,
         temperature: bool = False,
     ) -> None:
-        if not isinstance(context, ExtendedSpaceContext):
-            raise TypeError("The context must be an instance of ExtendedSpaceContext.")
-        self._context = context
         self._potential = potential
         self._kinetic = kinetic
         self._total = total
@@ -112,7 +105,7 @@ class ExtensionWriter(CustomWriter):
 
     def initialize(self, simulation: mmapp.Simulation) -> None:
         if self._temperature:
-            number = len(self._context.getSystem().getDynamicalVariables())
+            number = len(simulation.context.getSystem().getDynamicalVariables())
             kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
                 mmunit.kilojoules_per_mole / mmunit.kelvin
             )
@@ -131,7 +124,7 @@ class ExtensionWriter(CustomWriter):
         return headers
 
     def getValues(self, simulation: mmapp.Simulation) -> list[float]:
-        state = self._context.getExtensionContext().getState(
+        state = simulation.context.getExtensionContext().getState(
             getEnergy=self._needs_energy, getVelocities=self._needs_velocities
         )
         if self._needs_energy:
@@ -140,7 +133,7 @@ class ExtensionWriter(CustomWriter):
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
             for dv, velocity in zip(
-                self._context.getSystem().getDynamicalVariables(), velocities
+                simulation.context.getSystem().getDynamicalVariables(), velocities
             ):
                 mass = dv.mass._value
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
