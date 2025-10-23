@@ -11,8 +11,10 @@ import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
 
+from .mixin import IntegratorMixin
 
-class BAOABIntegrator(mm.CustomIntegrator):
+
+class BAOABIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """
     A BAOAB integrator.
 
@@ -26,6 +28,32 @@ class BAOABIntegrator(mm.CustomIntegrator):
         The friction coefficient which couples the system to the heat bath.
     stepSize
         The step size with which to integrate the system.
+
+    Example
+    -------
+    >>> import openxps as xps
+    >>> from openmm import unit
+    >>> integrator = xps.integrators.BAOABIntegrator(
+    ...     300 * unit.kelvin, 1 / unit.picosecond, 1 * unit.femtosecond
+    ... )
+    >>> integrator
+    Per-dof variables:
+      x1
+    Global variables:
+      a = 0.999000499833375
+      b = 0.044699008184376096
+      kT = 2.494338785445972
+    Computation steps:
+       0: allow forces to update the context state
+       1: v <- v + 0.5*dt*f/m
+       2: constrain velocities
+       3: x <- x + 0.5*dt*v
+       4: v <- a*v + b*sqrt(kT/m)*gaussian
+       5: x <- x + 0.5*dt*v
+       6: x1 <- x
+       7: constrain positions
+       8: v <- v + (x-x1)/dt + 0.5*dt*f/m
+       9: constrain velocities
     """
 
     def __init__(
