@@ -42,9 +42,7 @@ class BiasPotential(cvpack.OpenMMForceWrapper):
         self._dv_indices = self._get_state_args = None
         expression = function
         for index, dv in enumerate(dynamical_variables, start=1):
-            variable = f"x{index}"
-            if dv.bounds is not None:
-                variable = dv.bounds.leptonExpression(variable)
+            variable = dv.bounds.leptonExpression(f"x{index}")
             expression += f";{dv.name}={variable}"
         super().__init__(
             force_constructor(expression),
@@ -96,8 +94,6 @@ class BiasPotential(cvpack.OpenMMForceWrapper):
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         center = []
         for dv, index in zip(self._dvs, self._dv_indices):
-            value = positions[index].x
-            if dv.bounds is not None:
-                value, _ = dv.bounds.wrap(value, 0)
+            value, _ = dv.bounds.wrap(positions[index].x, 0)
             center.append(value)
         self._performAddKernel(context, center, mmswig.State_getPotentialEnergy(state))

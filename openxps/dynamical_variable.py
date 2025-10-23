@@ -17,7 +17,7 @@ from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit
 
-from .bounds import Bounds, Periodic
+from .bounds import Bounds, NoBounds, Periodic
 from .utils import preprocess_args
 
 
@@ -29,22 +29,21 @@ class DynamicalVariable(Serializable):
     Parameters
     ----------
     name
-        The name of the context parameter to be turned into an extra degree of
-        freedom.
+        The name of the context parameter to be turned into a dynamical variable.
     unit
         The unity of measurement of this dynamical variable. It must be
         compatible with OpenMM's MD unit system (mass in ``dalton``, distance in
         ``nanometer``, angle in ``radian``, time in ``picosecond``, temperature in
-        ``kelvin``, energy in ``kilojoules_per_mol``). If the extra degree of
-        freedom does not have a unit, use ``dimensionless``.
+        ``kelvin``, energy in ``kilojoules_per_mol``). If the dynamical variable does
+        not have a unit, use ``dimensionless``.
     mass
         The mass assigned to this dynamical variable, whose unit of measurement
         must be compatible with ``dalton*(nanometer/unit)**2``, where ``unit`` is the
-        dynamical variable's own unit (see above).
+        dynamical variable's own unit (see ``unit`` above).
     bounds
         The boundary condition to be applied to this dynamical variable. It must
-        be an instance of ``openxps.bounds.Periodic``, ``openxps.bounds.Reflective``,
-        or ``None`` (for unbounded variables). If it is not ``None``, its unit of
+        be an instance of :class:`Periodic`, :class:`Reflective`, or :class:`NoBounds`
+        (for unbounded variables). If it is not :class:`~openxps.NoBounds`, its unit of
         measurement must be compatible with the dynamical variable's own unit.
 
     Example
@@ -68,7 +67,7 @@ class DynamicalVariable(Serializable):
     name: str
     unit: mmunit.Unit
     mass: mmunit.Quantity
-    bounds: t.Union[Bounds, None]
+    bounds: Bounds = NoBounds()
 
     def __post_init__(self) -> None:
         if not mmunit.is_unit(self.unit):
@@ -85,12 +84,15 @@ class DynamicalVariable(Serializable):
             raise TypeError(f"Mass units must be compatible with {mass_unit}.")
         object.__setattr__(self, "mass", Quantity(self.mass.in_units_of(mass_unit)))
 
+        if isinstance(self.bounds, NoBounds):
+            return
+
         if isinstance(self.bounds, Bounds):
             if not self.bounds.unit.is_compatible(self.unit):
                 raise ValueError("Provided bounds have incompatible units.")
             object.__setattr__(self, "bounds", self.bounds.convert(self.unit))
-        elif self.bounds is not None:
-            raise TypeError("The bounds must be an instance of Bounds or None.")
+        else:
+            raise TypeError("The bounds must be an instance of Bounds.")
 
     def __getstate__(self) -> dict[str, t.Any]:
         return {
@@ -128,7 +130,7 @@ class DynamicalVariable(Serializable):
         return isinstance(self.bounds, Periodic)
 
     def createCollectiveVariable(
-        self, particle: int, name: t.Optional[str] = None
+        self, index: int, name: t.Optional[str] = None
     ) -> cvpack.OpenMMForceWrapper:
         """
         Returns a :CVPack:`OpenMMForceWrapper` object associating this extra degree of
@@ -136,7 +138,7 @@ class DynamicalVariable(Serializable):
 
         Parameters
         ----------
-        particle
+        index
             The index of the particle whose x coordinate will be associated with this
             dynamical variable.
         name
@@ -166,7 +168,7 @@ class DynamicalVariable(Serializable):
         else:
             force = mm.CustomExternalForce(bounds.leptonExpression("x"))
             bounds = bounds.asQuantity() if self.isPeriodic() else None
-        force.addParticle(particle, [])
+        force.addParticle(index, [])
         return cvpack.OpenMMForceWrapper(
             force,
             self.unit,

@@ -302,4 +302,37 @@ class Reflective(Bounds):
 Reflective.registerTag("!openxps.bounds.Reflective")
 
 
+class NoBounds(Bounds):
+    """
+    No boundary condition. The dynamical variable is allowed to take any value.
+
+    Parameters
+    ----------
+
+    If it is not ``None``, its unit of measurement must be compatible with the dynamical
+    variable's own unit.
+    Example
+    -------
+    >>> import openxps as xps
+    >>> import yaml
+    >>> from openmm import unit
+    >>> bounds = xps.bounds.Periodic(-180, 180, unit.degree)
+    >>> print(bounds)
+    Periodic(lower=-180, upper=180, unit=deg)
+    >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
+    """
+
+    def __init__(self) -> None:
+        super().__init__(-np.inf, np.inf, mmunit.dimensionless)
+
+    def leptonExpression(self, variable: str) -> str:
+        return f"{variable}"
+
+    def wrap(self, value: float, rate: float) -> tuple[float, float]:
+        return value, rate
+
+
+Periodic.registerTag("!openxps.bounds.Periodic")
+
+
 CIRCULAR = Periodic(-np.pi, np.pi, mmunit.radians)

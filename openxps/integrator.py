@@ -114,9 +114,7 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         state = mmswig.Context_getState(self._extension_context, mm.State.Positions)
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         for i, dv in enumerate(self._dynamical_variables):
-            value = positions[i].x
-            if dv.bounds is not None:
-                value, _ = dv.bounds.wrap(value, 0)
+            value, _ = dv.bounds.wrap(positions[i].x, 0)
             mmswig.Context_setParameter(self._physical_context, dv.name, value)
 
     def _update_extension_context(self) -> None:

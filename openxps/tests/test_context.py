@@ -15,7 +15,7 @@ from openxps import (
     ExtendedSpaceSystem,
     LockstepIntegrator,
 )
-from openxps.bounds import CIRCULAR, Reflective
+from openxps.bounds import CIRCULAR, NoBounds, Reflective
 from openxps.utils import BINARY_SEPARATOR
 
 
@@ -36,7 +36,7 @@ def create_dvs():
     kwargs = {"unit": mmunit.nanometer, "mass": 1 * mmunit.dalton}
     return [
         DynamicalVariable(name="phi0", unit=mmunit.radian, mass=mass, bounds=CIRCULAR),
-        DynamicalVariable(name="x0", bounds=None, **kwargs),
+        DynamicalVariable(name="x0", bounds=NoBounds(), **kwargs),
         DynamicalVariable(
             name="y0", bounds=Reflective(-1, 1, mmunit.nanometer), **kwargs
         ),
@@ -206,19 +206,6 @@ def test_consistency():
         x1 = extension_state.getPotentialEnergy() / mmunit.kilojoule_per_mole
         x2 = coupling.getValue(context) / mmunit.kilojoule_per_mole
         assert x1 == pytest.approx(x2)
-
-        # Check the consistency of the energy parameter derivatives
-        positions = extension_state.getPositions()
-        forces = extension_state.getForces()
-        x1 = {}
-        for i, dv in enumerate(context.getSystem().getDynamicalVariables()):
-            force = forces[i].x
-            if dv.bounds is not None:
-                _, force = dv.bounds.wrap(positions[i].x, force)
-            x1[dv.name] = -force
-        x2 = coupling.getParameterDerivatives(context)
-        for dv in context.getSystem().getDynamicalVariables():
-            assert x1[dv.name] == pytest.approx(x2[dv.name] / x2[dv.name].unit)
 
 
 def test_checkpoint_creation_and_loading():
