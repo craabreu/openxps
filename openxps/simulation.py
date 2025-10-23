@@ -118,8 +118,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
             if platformProperties is not None:
                 args.append(platformProperties)
 
-        self.context = self._extended_space_context = ExtendedSpaceContext(*args)
-        self._extension_context = self.context.getExtensionContext()
+        self.context = ExtendedSpaceContext(*args)
 
         # The integrator is stored in the context and might have been modified
         # (for tuple of integrators, only the first is returned)

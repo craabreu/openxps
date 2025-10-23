@@ -20,6 +20,17 @@ from .system import ExtendedSpaceSystem
 from .utils import preprocess_args
 
 
+class _SimulationWrapper:
+    def __init__(self, simulation: mmapp.Simulation):
+        self._simulation = simulation
+        self.context = simulation.context.getExtensionContext()
+        self.step = simulation.step
+
+    @property
+    def currentStep(self):
+        return self._simulation.currentStep
+
+
 @dataclass(frozen=True)
 class ExtendedSpaceBiasVariable(Serializable):
     """
@@ -200,9 +211,9 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         )
 
     def step(self, simulation, steps):
-        simulation.context = simulation._extension_context
-        super().step(simulation, steps)
-        simulation.context = simulation._extended_space_context
+        super().step(_SimulationWrapper(simulation), steps)
 
     def getCollectiveVariables(self, simulation):
-        return self._force.getCollectiveVariableValues(simulation._extension_context)
+        return self._force.getCollectiveVariableValues(
+            simulation.context.getExtensionContext()
+        )
