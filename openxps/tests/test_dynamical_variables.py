@@ -35,8 +35,6 @@ def test_dv_invalid_unit():
     assert "The unit must be a valid OpenMM unit." in str(excinfo.value)
 
 
-
-
 def test_dv_mass_without_unit():
     """Test DynamicalVariable initialization with mass missing a unit."""
     with pytest.raises(TypeError) as excinfo:
