@@ -225,7 +225,7 @@
         <span class="n">system_dvs</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()</span>
         <span class="n">bias_variables</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">variable</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
-            <span class="n">dv</span> <span class="o">=</span> <span class="n">variable</span><span class="o">.</span><span class="n">dynamical_variable</span>
+            <span class="n">dv</span> <span class="o">=</span> <span class="n">variable</span><span class="o">.</span><span class="n">dynamical_variable</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">dv</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">system_dvs</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> not found in system&quot;</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">):</span>

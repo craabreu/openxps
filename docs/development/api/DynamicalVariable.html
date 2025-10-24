@@ -47,11 +47,8 @@
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>name</strong> (<em>str</em>) – The name of the context parameter to be turned into a dynamical variable.</p></li>
-<li><p><strong>unit</strong> (<em>openmm.unit.unit.Unit</em>) – The unity of measurement of this dynamical variable. It must be
-compatible with OpenMM’s MD unit system (mass in <code class="docutils literal notranslate"><span class="pre">dalton</span></code>, distance in
-<code class="docutils literal notranslate"><span class="pre">nanometer</span></code>, angle in <code class="docutils literal notranslate"><span class="pre">radian</span></code>, time in <code class="docutils literal notranslate"><span class="pre">picosecond</span></code>, temperature in
-<code class="docutils literal notranslate"><span class="pre">kelvin</span></code>, energy in <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mol</span></code>). If the dynamical variable does
-not have a unit, use <code class="docutils literal notranslate"><span class="pre">dimensionless</span></code>.</p></li>
+<li><p><strong>unit</strong> (<em>openmm.unit.unit.Unit</em>) – The unity of measurement of this dynamical variable. If it does not have a
+unit, use <code class="docutils literal notranslate"><span class="pre">openmm.unit.dimensionless</span></code>.</p></li>
 <li><p><strong>mass</strong> (<em>openmm.unit.quantity.Quantity</em>) – The mass assigned to this dynamical variable, whose unit of measurement
 must be compatible with <code class="docutils literal notranslate"><span class="pre">dalton*(nanometer/unit)**2</span></code>, where <code class="docutils literal notranslate"><span class="pre">unit</span></code> is the
 dynamical variable’s own unit (see <code class="docutils literal notranslate"><span class="pre">unit</span></code> above).</p></li>
@@ -172,6 +169,17 @@ of freedom and another variable.</p>
 <span class="gp">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.DynamicalVariable.in_md_units">
+<span class="sig-name descname"><span class="pre">in_md_units</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/dynamical_variable.html#DynamicalVariable.in_md_units"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.DynamicalVariable.in_md_units" title="Link to this definition">¶</a></dt>
+<dd><p>Return the dynamical variable in the MD unit system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a></p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">

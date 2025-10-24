@@ -10,4 +10,5 @@ DynamicalVariable
     .. automethod:: bounds
     .. automethod:: createCollectiveVariable
     .. automethod:: distanceTo
+    .. automethod:: in_md_units
     .. automethod:: isPeriodic

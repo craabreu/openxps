@@ -70,11 +70,8 @@
 <span class="sd">    name</span>
 <span class="sd">        The name of the context parameter to be turned into a dynamical variable.</span>
 <span class="sd">    unit</span>
-<span class="sd">        The unity of measurement of this dynamical variable. It must be</span>
-<span class="sd">        compatible with OpenMM&#39;s MD unit system (mass in ``dalton``, distance in</span>
-<span class="sd">        ``nanometer``, angle in ``radian``, time in ``picosecond``, temperature in</span>
-<span class="sd">        ``kelvin``, energy in ``kilojoules_per_mol``). If the dynamical variable does</span>
-<span class="sd">        not have a unit, use ``dimensionless``.</span>
+<span class="sd">        The unity of measurement of this dynamical variable. If it does not have a</span>
+<span class="sd">        unit, use ``openmm.unit.dimensionless``.</span>
 <span class="sd">    mass</span>
 <span class="sd">        The mass assigned to this dynamical variable, whose unit of measurement</span>
 <span class="sd">        must be compatible with ``dalton*(nanometer/unit)**2``, where ``unit`` is the</span>
@@ -111,11 +108,6 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_unit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The unit must be a valid OpenMM unit.&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span><span class="o">.</span><span class="n">value_in_unit_system</span><span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">md_unit_system</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Unit </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="si">}</span><span class="s2"> is incompatible with OpenMM&#39;s MD unit system.&quot;</span>
-            <span class="p">)</span>
-
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Mass must be have units of measurement.&quot;</span><span class="p">)</span>
         <span class="n">mass_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
@@ -143,6 +135,22 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keywords</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">keywords</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DynamicalVariable.in_md_units">
+<a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable.in_md_units">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">in_md_units</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DynamicalVariable&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the dynamical variable in the MD unit system.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">unit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">in_unit_system</span><span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">md_unit_system</span><span class="p">)</span>
+        <span class="n">mass_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="k">return</span> <span class="n">DynamicalVariable</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">unit</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">in_units_of</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">),</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">(),</span>
+        <span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="DynamicalVariable.isPeriodic">
 <a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable.isPeriodic">[docs]</a>
