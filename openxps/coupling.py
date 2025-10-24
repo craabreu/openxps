@@ -239,3 +239,75 @@ class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
 
 
 CustomCouplingForce.registerTag("!openxps.CustomCouplingForce")
+
+
+class HarmonicCouplingForce(CustomCouplingForce):
+    """
+    A harmonic coupling force that uses a harmonic potential to couple physical
+    collective variables with extended dynamical variables.
+
+    The
+
+    Parameters
+    ----------
+    collective_variables
+        The collective variables used in the coupling force.
+    dynamical_variables
+        The dynamical variables used in the coupling force.
+    force_constants
+        The force constants for the coupling force.
+
+    Examples
+    --------
+    >>> import cvpack
+    >>> import openxps as xps
+    >>> from openmm import unit
+    >>> dvmass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2
+    >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    >>> psi = cvpack.Torsion(6, 8, 14, 16, name="psi")
+    >>> phi_s = xps.DynamicalVariable("phi_s", unit.radian, dvmass, xps.bounds.CIRCULAR)
+    >>> psi_s = xps.DynamicalVariable("psi_s", unit.radian, dvmass, xps.bounds.CIRCULAR)
+    >>> coupling = xps.HarmonicCouplingForce(
+    ...     [phi, psi],
+    ...     [phi_s, psi_s],
+    ...     [1000 * unit.kilojoule_per_mole / unit.radian**2] * 2,
+    ... )
+    """
+
+    def __init__(
+        self,
+        collective_variables: t.Sequence[cvpack.CollectiveVariable],
+        dynamical_variables: t.Sequence[DynamicalVariable],
+        force_constants: t.Sequence[mmunit.Quantity],
+    ) -> None:
+        self._validateArguments(
+            collective_variables, dynamical_variables, force_constants
+        )
+        terms = [
+            f"0.5*kappa_{cv.getName()}*({dv.distanceTo(cv)}^2)"
+            for cv, dv in zip(collective_variables, dynamical_variables)
+        ]
+        super().__init__(
+            function="+".join(terms),
+            collective_variables=collective_variables,
+            **{
+                f"kappa_{cv.getName()}": kappa
+                for cv, kappa in zip(collective_variables, force_constants)
+            },
+        )
+
+    def _validateArguments(self, cvs, dvs, kappas):
+        if len(cvs) != len(dvs) or len(cvs) != len(kappas):
+            raise ValueError("Arguments must have the same length.")
+        for cv, dv, kappa in zip(cvs, dvs, kappas):
+            pair = f"{cv.getName()} and {dv.name}"
+            if not cv.getUnit().is_compatible(dv.unit):
+                raise ValueError(f"Incompatible units for {pair}.")
+            if (dv.isPeriodic() == cv.getPeriodicBounds() is None) or (
+                cv.getPeriodicBounds() != dv.bounds.asQuantity()
+            ):
+                raise ValueError(f"Incompatible periodicity for {pair}.")
+            if mmunit.is_quantity(kappa) and not kappa.unit.is_compatible(
+                mmunit.kilojoule_per_mole / dv.unit**2
+            ):
+                raise ValueError(f"Incompatible force constant units for {pair}.")
