@@ -9,7 +9,6 @@
 
 import typing as t
 
-import cvpack
 import openmm as mm
 
 from .coupling import CouplingForce
@@ -40,6 +39,7 @@ class ExtendedSpaceSystem(mm.System):
     >>> import openxps as xps
     >>> from math import pi
     >>> import openmm
+    >>> import cvpack
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
@@ -111,27 +111,8 @@ class ExtendedSpaceSystem(mm.System):
         extension_system = mm.System()
         for dv in dynamical_variables:
             extension_system.addParticle(dv.mass / dv.mass.unit)
-
-        parameters = coupling_potential.getParameterDefaultValues()
-        for dv in dynamical_variables:
-            parameters.pop(dv.name)
-        parameters.update(
-            {cv.getName(): 0.0 for cv in coupling_potential.getInnerVariables()}
-        )
-
-        flipped_potential = cvpack.MetaCollectiveVariable(
-            function=coupling_potential.getEnergyFunction(),
-            variables=[
-                dv.createCollectiveVariable(index)
-                for index, dv in enumerate(dynamical_variables)
-            ],
-            unit=coupling_potential.getUnit(),
-            periodicBounds=coupling_potential.getPeriodicBounds(),
-            name=coupling_potential.getName(),
-            **parameters,
-        )
+        flipped_potential = coupling_potential.flip(dynamical_variables)
         flipped_potential.addToSystem(extension_system)
-
         return extension_system
 
     def getDynamicalVariables(self) -> tuple[DynamicalVariable]:
