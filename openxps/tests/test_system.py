@@ -87,7 +87,7 @@ def test_get_dynamical_variables():
 
     # Verify each DV matches
     for original_dv, retrieved_dv in zip(dvs, retrieved_dvs):
-        assert retrieved_dv is original_dv
+        assert retrieved_dv == original_dv
         assert retrieved_dv.name == original_dv.name
         assert retrieved_dv.unit == original_dv.unit
         assert retrieved_dv.mass == original_dv.mass

@@ -31,11 +31,8 @@ class DynamicalVariable(Serializable):
     name
         The name of the context parameter to be turned into a dynamical variable.
     unit
-        The unity of measurement of this dynamical variable. It must be
-        compatible with OpenMM's MD unit system (mass in ``dalton``, distance in
-        ``nanometer``, angle in ``radian``, time in ``picosecond``, temperature in
-        ``kelvin``, energy in ``kilojoules_per_mol``). If the dynamical variable does
-        not have a unit, use ``dimensionless``.
+        The unity of measurement of this dynamical variable. If it does not have a
+        unit, use ``openmm.unit.dimensionless``.
     mass
         The mass assigned to this dynamical variable, whose unit of measurement
         must be compatible with ``dalton*(nanometer/unit)**2``, where ``unit`` is the
@@ -72,11 +69,6 @@ class DynamicalVariable(Serializable):
     def __post_init__(self) -> None:
         if not mmunit.is_unit(self.unit):
             raise ValueError("The unit must be a valid OpenMM unit.")
-        if (1 * self.unit).value_in_unit_system(mmunit.md_unit_system) != 1:
-            raise ValueError(
-                f"Unit {self.unit} is incompatible with OpenMM's MD unit system."
-            )
-
         if not mmunit.is_quantity(self.mass):
             raise TypeError("Mass must be have units of measurement.")
         mass_unit = mmunit.dalton * (mmunit.nanometer / self.unit) ** 2
@@ -104,6 +96,19 @@ class DynamicalVariable(Serializable):
 
     def __setstate__(self, keywords: dict[str, t.Any]) -> None:
         self.__init__(**keywords)
+
+    def in_md_units(self) -> "DynamicalVariable":
+        """
+        Return the dynamical variable in the MD unit system.
+        """
+        unit = self.unit.in_unit_system(mmunit.md_unit_system)
+        mass_unit = mmunit.dalton * (mmunit.nanometer / self.unit) ** 2
+        return DynamicalVariable(
+            self.name,
+            unit,
+            self.mass.in_units_of(mass_unit),
+            self.bounds.in_md_units(),
+        )
 
     def isPeriodic(self) -> bool:
         """
