@@ -13,7 +13,7 @@ import cvpack
 import openmm as mm
 from openmm import unit as mmunit
 
-from .coupling import CouplingPotential, CustomCoupling
+from .coupling import CouplingPotential, CustomCouplingPotential
 from .dynamical_variable import DynamicalVariable
 
 
@@ -40,7 +40,7 @@ class ExtendedSpaceSystem(mm.System):
     -------
     >>> import openxps as xps
     >>> from math import pi
-    >>> import cvpack
+    >>> from .coupling import CustomCouplingPotential
     >>> import openmm
     >>> from openmm import unit
     >>> from openmmtools import testsystems
@@ -68,7 +68,7 @@ class ExtendedSpaceSystem(mm.System):
     def __init__(
         self,
         dynamical_variables: t.Iterable[DynamicalVariable],
-        coupling_potential: CustomCoupling,
+        coupling_potential: CustomCouplingPotential,
         system: mm.System,
     ) -> None:
         try:
@@ -127,7 +127,7 @@ class ExtendedSpaceSystem(mm.System):
             {cv.getName(): 0.0 for cv in coupling_potential.getInnerVariables()}
         )
 
-        flipped_potential = CustomCoupling(
+        flipped_potential = CustomCouplingPotential(
             function=coupling_potential.getEnergyFunction(),
             variables=[
                 dv.createCollectiveVariable(index)

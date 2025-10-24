@@ -125,7 +125,7 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
-    >>> umbrella_potential = cvpack.MetaCollectiveVariable(
+    >>> umbrella_potential = xps.CustomCouplingPotential(
     ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
     ...     [phi],
     ...     unit.kilojoule_per_mole,

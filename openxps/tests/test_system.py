@@ -9,7 +9,7 @@ import pytest
 from openmm import unit as mmunit
 from openmmtools import testsystems
 
-from openxps import DynamicalVariable, ExtendedSpaceSystem
+from openxps import CustomCouplingPotential, DynamicalVariable, ExtendedSpaceSystem
 from openxps.bounds import CIRCULAR, NoBounds, Reflective
 
 
@@ -38,7 +38,7 @@ def create_coupling_potential(
     }
     if phi0 is not None:
         kwargs["phi0"] = phi0
-    return cvpack.MetaCollectiveVariable(
+    return CustomCouplingPotential(
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],

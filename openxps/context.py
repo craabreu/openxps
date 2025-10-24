@@ -41,8 +41,9 @@ class ExtendedSpaceContext(mm.Context):
     -------
     >>> import openxps as xps
     >>> from math import pi
-    >>> import cvpack
+    >>> from .coupling import CustomCouplingPotential
     >>> import openmm
+    >>> import cvpack
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()

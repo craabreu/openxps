@@ -22,7 +22,7 @@ def create_test_system():
     """Helper function to create a test system."""
     model = testsystems.AlanineDipeptideVacuum()
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
-    umbrella_potential = cvpack.MetaCollectiveVariable(
+    umbrella_potential = xps.CustomCouplingPotential(
         f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
         [phi],
         mmunit.kilojoule_per_mole,
@@ -283,7 +283,7 @@ def test_missing_dv_in_coupling_potential():
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
 
     # Create coupling potential without phi0 parameter
-    coupling_potential = cvpack.MetaCollectiveVariable(
+    coupling_potential = xps.CustomCouplingPotential(
         "0.5*kappa*phi^2",
         [phi],
         mmunit.kilojoule_per_mole,

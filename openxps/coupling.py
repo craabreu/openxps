@@ -21,15 +21,8 @@ class CouplingPotential:
         raise NotImplementedError("Subclasses must implement this method.")
 
 
-class CustomCoupling(CouplingPotential, cvpack.MetaCollectiveVariable):
+class CustomCouplingPotential(cvpack.MetaCollectiveVariable, CouplingPotential):
     __doc__ = cvpack.MetaCollectiveVariable.__doc__
 
-    def addToSystem(self, system: mm.System) -> None:
-        """Add this coupling potential to a system.
 
-        Parameters
-        ----------
-        system
-            The system to which the coupling potential should be added.
-        """
-        system.addForce(self)
+CustomCouplingPotential.registerTag("!openxps.CustomCouplingPotential")
