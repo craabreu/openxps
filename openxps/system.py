@@ -13,6 +13,7 @@ import cvpack
 import openmm as mm
 from openmm import unit as mmunit
 
+from .coupling import CouplingPotential, CustomCoupling
 from .dynamical_variable import DynamicalVariable
 
 
@@ -67,7 +68,7 @@ class ExtendedSpaceSystem(mm.System):
     def __init__(
         self,
         dynamical_variables: t.Iterable[DynamicalVariable],
-        coupling_potential: cvpack.MetaCollectiveVariable,
+        coupling_potential: CustomCoupling,
         system: mm.System,
     ) -> None:
         try:
@@ -87,12 +88,15 @@ class ExtendedSpaceSystem(mm.System):
 
     def _validateCouplingPotential(
         self,
-        coupling_potential: cvpack.MetaCollectiveVariable,
+        coupling_potential: CouplingPotential,
         dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> None:
-        if not isinstance(coupling_potential, cvpack.MetaCollectiveVariable):
+        if not isinstance(
+            coupling_potential, (CouplingPotential, cvpack.MetaCollectiveVariable)
+        ):
             raise TypeError(
-                "The coupling potential must be an instance of MetaCollectiveVariable."
+                "The coupling potential must be an instance of CouplingPotential "
+                "or MetaCollectiveVariable."
             )
         if not coupling_potential.getUnit().is_compatible(mmunit.kilojoule_per_mole):
             raise ValueError("The coupling potential must have units of molar energy.")
@@ -110,7 +114,7 @@ class ExtendedSpaceSystem(mm.System):
     def _createExtensionSystem(
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_potential: cvpack.MetaCollectiveVariable,
+        coupling_potential: CouplingPotential,
     ) -> mm.System:
         extension_system = mm.System()
         for dv in dynamical_variables:
@@ -123,7 +127,7 @@ class ExtendedSpaceSystem(mm.System):
             {cv.getName(): 0.0 for cv in coupling_potential.getInnerVariables()}
         )
 
-        flipped_potential = cvpack.MetaCollectiveVariable(
+        flipped_potential = CustomCoupling(
             function=coupling_potential.getEnergyFunction(),
             variables=[
                 dv.createCollectiveVariable(index)
@@ -149,13 +153,13 @@ class ExtendedSpaceSystem(mm.System):
         """
         return self._dvs
 
-    def getCouplingPotential(self) -> cvpack.MetaCollectiveVariable:
+    def getCouplingPotential(self) -> CouplingPotential:
         """
         Get the coupling potential included in the extended phase-space system.
 
         Returns
         -------
-        cvpack.MetaCollectiveVariable
+        CouplingPotential
             The coupling potential.
         """
         return self._coupling_potential

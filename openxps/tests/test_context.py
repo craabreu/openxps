@@ -164,7 +164,9 @@ def test_validation():
 
     with pytest.raises(TypeError) as e:
         ExtendedSpaceContext(*system_integrator_platform(dvs, None, model))
-    assert "must be an instance of MetaCollectiveVariable" in str(e.value)
+    assert "must be an instance of CouplingPotential or MetaCollectiveVariable" in str(
+        e.value
+    )
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(

@@ -150,7 +150,8 @@ def test_invalid_coupling_potential_type():
     dvs = create_dvs()
 
     with pytest.raises(
-        TypeError, match="must be an instance of MetaCollectiveVariable"
+        TypeError,
+        match="must be an instance of CouplingPotential or MetaCollectiveVariable",
     ):
         ExtendedSpaceSystem(dvs, None, model.system)
 

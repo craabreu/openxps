@@ -11,13 +11,13 @@ import typing as t
 from abc import ABC, abstractmethod
 from copy import deepcopy
 
-import cvpack
 import numpy as np
 import openmm as mm
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from . import integrators
+from .coupling import CouplingPotential
 from .dynamical_variable import DynamicalVariable
 from .utils import STRING_SEPARATOR
 
@@ -143,7 +143,7 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         physical_context: mm.Context,
         extension_context: mm.Context,
         dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_potential: cvpack.MetaCollectiveVariable,
+        coupling_potential: CouplingPotential,
     ) -> None:
         """Configure the integrator.
 

@@ -22,12 +22,6 @@ class ExtendedSpaceContext(mm.Context):
     """An :OpenMM:`Context` object that includes extra dynamical variables (DVs) and
     allows for extended phase-space (XPS) simulations.
 
-    **Note**: The system and integrator provided as arguments are modified in place.
-
-    A given :CVPack:`MetaCollectiveVariable` is added to the system to couple the
-    physical coordinates and the DVs. The integrator's ``step`` method is replaced with
-    a custom function that advances both the physical and extension systems in  tandem.
-
     Parameters
     ----------
     system
