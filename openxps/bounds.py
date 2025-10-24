@@ -325,6 +325,9 @@ class NoBounds(Bounds):
     def __init__(self) -> None:
         super().__init__(-np.inf, np.inf, mmunit.dimensionless)
 
+    def in_md_units(self) -> "NoBounds":
+        return NoBounds()
+
     def leptonExpression(self, variable: str) -> str:
         return f"{variable}"
 

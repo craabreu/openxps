@@ -66,12 +66,17 @@ class ExtendedSpaceSystem(mm.System):
 
     def __init__(
         self,
-        dynamical_variables: t.Sequence[DynamicalVariable],
+        dynamical_variables: t.Iterable[DynamicalVariable],
         coupling_potential: cvpack.MetaCollectiveVariable,
         system: mm.System,
     ) -> None:
-        dynamical_variables = tuple(dynamical_variables)
-        self._validate(dynamical_variables, coupling_potential)
+        try:
+            dynamical_variables = tuple(dv.in_md_units() for dv in dynamical_variables)
+        except AttributeError as e:
+            raise TypeError(
+                "All dynamical variables must be instances of DynamicalVariable."
+            ) from e
+        self._validateCouplingPotential(coupling_potential, dynamical_variables)
         coupling_potential.addToSystem(system)
         self.this = system
         self._extension_system = self._createExtensionSystem(
@@ -80,15 +85,11 @@ class ExtendedSpaceSystem(mm.System):
         self._dvs = dynamical_variables
         self._coupling_potential = coupling_potential
 
-    def _validate(
+    def _validateCouplingPotential(
         self,
-        dynamical_variables: t.Sequence[DynamicalVariable],
         coupling_potential: cvpack.MetaCollectiveVariable,
+        dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> None:
-        if not all(isinstance(dv, DynamicalVariable) for dv in dynamical_variables):
-            raise TypeError(
-                "All dynamical variables must be instances of DynamicalVariable."
-            )
         if not isinstance(coupling_potential, cvpack.MetaCollectiveVariable):
             raise TypeError(
                 "The coupling potential must be an instance of MetaCollectiveVariable."

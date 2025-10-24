@@ -35,13 +35,6 @@ def test_dv_invalid_unit():
     assert "The unit must be a valid OpenMM unit." in str(excinfo.value)
 
 
-def test_dv_not_md_unit_system():
-    """Test DynamicalVariable initialization with an incompatible unit."""
-    with pytest.raises(ValueError) as excinfo:
-        DynamicalVariable("phi", mmunit.degree, 3 * mmunit.dalton)
-    assert "Unit degree is incompatible with OpenMM's MD unit system." in str(
-        excinfo.value
-    )
 
 
 def test_dv_mass_without_unit():

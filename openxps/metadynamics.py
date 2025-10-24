@@ -183,7 +183,7 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         system_dvs = system.getDynamicalVariables()
         bias_variables = []
         for variable in variables:
-            dv = variable.dynamical_variable
+            dv = variable.dynamical_variable.in_md_units()
             if dv not in system_dvs:
                 raise ValueError(f"Dynamical variable {dv.name} not found in system")
             if isinstance(dv.bounds, NoBounds):
