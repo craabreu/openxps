@@ -63,8 +63,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     >>> umbrella_potential = xps.CustomCouplingPotential(
     ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
     ...     [phi],
-    ...     unit.kilojoule_per_mole,
-    ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
+    ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
     ...     phi0=pi*unit.radian,
     ... )
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2

@@ -44,9 +44,7 @@ def create_dvs():
     ]
 
 
-def create_coupling_potential(
-    phi0=180 * mmunit.degrees, unit=mmunit.kilojoule_per_mole
-):
+def create_coupling_potential(phi0=180 * mmunit.degrees):
     """Helper function to create a MetaCollectiveVariable object."""
     kwargs = {
         "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radians**2,
@@ -60,7 +58,6 @@ def create_coupling_potential(
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
-        unit,
         **kwargs,
     )
 
@@ -165,9 +162,7 @@ def test_validation():
 
     with pytest.raises(TypeError) as e:
         ExtendedSpaceContext(*system_integrator_platform(dvs, None, model))
-    assert "must be an instance of CouplingPotential or MetaCollectiveVariable" in str(
-        e.value
-    )
+    assert "must be an instance of CouplingPotential" in str(e.value)
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(
@@ -176,14 +171,6 @@ def test_validation():
             ),
         )
     assert "dynamical variables are not coupling potential parameters" in str(e.value)
-
-    with pytest.raises(ValueError) as e:
-        ExtendedSpaceContext(
-            *system_integrator_platform(
-                dvs, create_coupling_potential(unit=mmunit.radian), model
-            ),
-        )
-    assert "The coupling potential must have units of molar energy." in str(e.value)
 
 
 def test_consistency():

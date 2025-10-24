@@ -41,16 +41,14 @@ class ExtendedSpaceContext(mm.Context):
     -------
     >>> import openxps as xps
     >>> from math import pi
-    >>> from .coupling import CustomCouplingPotential
     >>> import openmm
     >>> import cvpack
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
-    >>> umbrella_potential = cvpack.MetaCollectiveVariable(
+    >>> umbrella_potential = xps.CustomCouplingPotential(
     ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
     ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
-    ...     unit.kilojoule_per_mole,
     ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
     ...     phi0=pi*unit.radian,
     ... )

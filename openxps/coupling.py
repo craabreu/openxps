@@ -7,8 +7,11 @@
 
 """
 
+import typing as t
+
 import cvpack
 import openmm as mm
+from openmm import unit as mmunit
 
 
 class CouplingPotential:
@@ -23,6 +26,23 @@ class CouplingPotential:
 
 class CustomCouplingPotential(cvpack.MetaCollectiveVariable, CouplingPotential):
     __doc__ = cvpack.MetaCollectiveVariable.__doc__
+
+    def __init__(
+        self,
+        function: str,
+        collective_variables: t.Iterable[cvpack.CollectiveVariable],
+        **parameters: t.Any,
+    ) -> None:
+        super().__init__(
+            function,
+            collective_variables,
+            unit=mmunit.kilojoule_per_mole,
+            name="coupling_potential",
+            **parameters,
+        )
+
+    def __setstate__(self, keywords: dict[str, t.Any]) -> None:
+        super().__init__(**keywords)
 
 
 CustomCouplingPotential.registerTag("!openxps.CustomCouplingPotential")

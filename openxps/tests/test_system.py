@@ -26,9 +26,7 @@ def create_dvs():
     ]
 
 
-def create_coupling_potential(
-    phi0=180 * mmunit.degrees, unit=mmunit.kilojoule_per_mole
-):
+def create_coupling_potential(phi0=180 * mmunit.degrees):
     """Helper function to create a MetaCollectiveVariable object."""
     kwargs = {
         "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radians**2,
@@ -42,7 +40,6 @@ def create_coupling_potential(
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
-        unit,
         **kwargs,
     )
 
@@ -151,19 +148,9 @@ def test_invalid_coupling_potential_type():
 
     with pytest.raises(
         TypeError,
-        match="must be an instance of CouplingPotential or MetaCollectiveVariable",
+        match="must be an instance of CouplingPotential",
     ):
         ExtendedSpaceSystem(dvs, None, model.system)
-
-
-def test_invalid_coupling_potential_units():
-    """Test that invalid coupling potential units raise ValueError."""
-    model = testsystems.AlanineDipeptideVacuum()
-    dvs = create_dvs()
-    invalid_potential = create_coupling_potential(unit=mmunit.radian)
-
-    with pytest.raises(ValueError, match="must have units of molar energy"):
-        ExtendedSpaceSystem(dvs, invalid_potential, model.system)
 
 
 def test_missing_dv_parameter():

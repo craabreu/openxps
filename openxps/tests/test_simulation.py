@@ -25,8 +25,7 @@ def create_test_system():
     umbrella_potential = xps.CustomCouplingPotential(
         f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
         [phi],
-        mmunit.kilojoule_per_mole,
-        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+        kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
         phi0=pi * mmunit.radian,
     )
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
@@ -286,7 +285,6 @@ def test_missing_dv_in_coupling_potential():
     coupling_potential = xps.CustomCouplingPotential(
         "0.5*kappa*phi^2",
         [phi],
-        mmunit.kilojoule_per_mole,
         kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 

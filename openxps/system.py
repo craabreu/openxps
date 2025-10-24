@@ -11,9 +11,8 @@ import typing as t
 
 import cvpack
 import openmm as mm
-from openmm import unit as mmunit
 
-from .coupling import CouplingPotential, CustomCouplingPotential
+from .coupling import CouplingPotential
 from .dynamical_variable import DynamicalVariable
 
 
@@ -40,16 +39,14 @@ class ExtendedSpaceSystem(mm.System):
     -------
     >>> import openxps as xps
     >>> from math import pi
-    >>> from .coupling import CustomCouplingPotential
     >>> import openmm
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
-    >>> umbrella_potential = cvpack.MetaCollectiveVariable(
+    >>> umbrella_potential = xps.CustomCouplingPotential(
     ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
     ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
-    ...     unit.kilojoule_per_mole,
-    ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
+    ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
     ...     phi0=pi*unit.radian,
     ... )
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
@@ -68,7 +65,7 @@ class ExtendedSpaceSystem(mm.System):
     def __init__(
         self,
         dynamical_variables: t.Iterable[DynamicalVariable],
-        coupling_potential: CustomCouplingPotential,
+        coupling_potential: CouplingPotential,
         system: mm.System,
     ) -> None:
         try:
@@ -91,15 +88,10 @@ class ExtendedSpaceSystem(mm.System):
         coupling_potential: CouplingPotential,
         dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> None:
-        if not isinstance(
-            coupling_potential, (CouplingPotential, cvpack.MetaCollectiveVariable)
-        ):
+        if not isinstance(coupling_potential, CouplingPotential):
             raise TypeError(
-                "The coupling potential must be an instance of CouplingPotential "
-                "or MetaCollectiveVariable."
+                "The coupling potential must be an instance of CouplingPotential."
             )
-        if not coupling_potential.getUnit().is_compatible(mmunit.kilojoule_per_mole):
-            raise ValueError("The coupling potential must have units of molar energy.")
         missing_parameters = [
             dv.name
             for dv in dynamical_variables
@@ -127,7 +119,7 @@ class ExtendedSpaceSystem(mm.System):
             {cv.getName(): 0.0 for cv in coupling_potential.getInnerVariables()}
         )
 
-        flipped_potential = CustomCouplingPotential(
+        flipped_potential = cvpack.MetaCollectiveVariable(
             function=coupling_potential.getEnergyFunction(),
             variables=[
                 dv.createCollectiveVariable(index)
