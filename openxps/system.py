@@ -30,7 +30,7 @@ class ExtendedSpaceSystem(mm.System):
         A :CVPack:`MetaCollectiveVariable` defining the potential energy term that
         couples the DVs to the physical coordinates. It must have units
         of ``kilojoules_per_mole``. All DVs must be included as parameters in the
-        coupling potential.
+        coupling force.
     system
         The :OpenMM:`System` to be used in the XPS simulation.
 
@@ -89,9 +89,7 @@ class ExtendedSpaceSystem(mm.System):
         dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> None:
         if not isinstance(coupling_potential, CouplingForce):
-            raise TypeError(
-                "The coupling potential must be an instance of CouplingForce."
-            )
+            raise TypeError("The coupling force must be an instance of CouplingForce.")
         missing_parameters = [
             dv.name
             for dv in dynamical_variables
@@ -99,7 +97,7 @@ class ExtendedSpaceSystem(mm.System):
         ]
         if missing_parameters:
             raise ValueError(
-                "These dynamical variables are not coupling potential parameters: "
+                "These dynamical variables are not coupling force parameters: "
                 + ", ".join(missing_parameters)
             )
 
@@ -128,12 +126,12 @@ class ExtendedSpaceSystem(mm.System):
 
     def getCouplingForce(self) -> CouplingForce:
         """
-        Get the coupling potential included in the extended phase-space system.
+        Get the coupling force included in the extended phase-space system.
 
         Returns
         -------
         CouplingForce
-            The coupling potential.
+            The coupling force.
         """
         return self._coupling_potential
 

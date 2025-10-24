@@ -91,7 +91,7 @@ class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
     collective variables with extended dynamical variables.
 
     This class extends :CVPack:`MetaCollectiveVariable` to provide a flexible
-    coupling potential defined by a mathematical expression. It automatically
+    coupling force defined by a mathematical expression. It automatically
     handles the transformation needed for extended phase-space simulations.
 
     Parameters

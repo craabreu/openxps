@@ -170,7 +170,7 @@ def test_validation():
                 dvs, create_coupling_potential(phi0=None), model
             ),
         )
-    assert "dynamical variables are not coupling potential parameters" in str(e.value)
+    assert "dynamical variables are not coupling force parameters" in str(e.value)
 
 
 def test_consistency():

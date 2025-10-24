@@ -59,7 +59,7 @@ def test_initialization():
     # Verify it's an instance of mm.System (inheritance)
     assert isinstance(system, mm.System)
 
-    # Verify the coupling potential was added to the system
+    # Verify the coupling force was added to the system
     assert system.getNumForces() > initial_force_count
 
     # Verify basic properties are accessible
@@ -142,7 +142,7 @@ def test_invalid_dynamical_variable_type():
 
 
 def test_invalid_coupling_potential_type():
-    """Test that invalid coupling potential type raises TypeError."""
+    """Test that invalid coupling force type raises TypeError."""
     model = testsystems.AlanineDipeptideVacuum()
     dvs = create_dvs()
 
@@ -157,10 +157,10 @@ def test_missing_dv_parameter():
     """Test that missing DV parameter raises ValueError."""
     model = testsystems.AlanineDipeptideVacuum()
     dvs = create_dvs()
-    # Create coupling potential without phi0 parameter
+    # Create coupling force without phi0 parameter
     potential_without_phi0 = create_coupling_potential(phi0=None)
 
     with pytest.raises(
-        ValueError, match="dynamical variables are not coupling potential parameters"
+        ValueError, match="dynamical variables are not coupling force parameters"
     ):
         ExtendedSpaceSystem(dvs, potential_without_phi0, model.system)

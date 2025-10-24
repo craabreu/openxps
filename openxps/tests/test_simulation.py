@@ -277,11 +277,11 @@ def test_save_and_load_checkpoint():
 
 
 def test_missing_dv_in_coupling_potential():
-    """Test error when DV is not in coupling potential parameters."""
+    """Test error when DV is not in coupling force parameters."""
     model = testsystems.AlanineDipeptideVacuum()
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
 
-    # Create coupling potential without phi0 parameter
+    # Create coupling force without phi0 parameter
     coupling_potential = xps.CustomCouplingForce(
         "0.5*kappa*phi^2",
         [phi],
@@ -302,9 +302,7 @@ def test_missing_dv_in_coupling_potential():
             xps.LockstepIntegrator(integrator),
             mm.Platform.getPlatformByName("Reference"),
         )
-    assert "dynamical variables are not coupling potential parameters" in str(
-        excinfo.value
-    )
+    assert "dynamical variables are not coupling force parameters" in str(excinfo.value)
 
 
 def test_simulation_with_state():
