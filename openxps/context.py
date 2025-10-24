@@ -106,11 +106,11 @@ class ExtendedSpaceContext(mm.Context):
             physical_context=self,
             extension_context=extension_context,
             dynamical_variables=system.getDynamicalVariables(),
-            coupling_potential=system.getCouplingForce(),
+            coupling_force=system.getCouplingForce(),
         )
         self._system = system
         self._dvs = system.getDynamicalVariables()
-        self._coupling_potential = system.getCouplingForce()
+        self._coupling_force = system.getCouplingForce()
         self._integrator = integrator
         self._extension_context = extension_context
 
@@ -187,7 +187,7 @@ class ExtendedSpaceContext(mm.Context):
             The positions for each particle in the system.
         """
         super().setPositions(positions)
-        for name, value in self._coupling_potential.getInnerValues(self).items():
+        for name, value in self._coupling_force.getInnerValues(self).items():
             self._extension_context.setParameter(name, value / value.unit)
 
     def setDynamicalVariableValues(self, values: t.Iterable[mmunit.Quantity]) -> None:

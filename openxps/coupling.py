@@ -143,7 +143,7 @@ class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
             function,
             collective_variables,
             unit=mmunit.kilojoule_per_mole,
-            name="coupling_potential",
+            name="coupling_force",
             **parameters,
         )
 

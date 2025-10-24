@@ -325,7 +325,7 @@ def test_getstate_setstate_lockstep():
     assert new_integrator._physical_context is None
     assert new_integrator._extension_context is None
     assert new_integrator._dynamical_variables is None
-    assert new_integrator._coupling_potential is None
+    assert new_integrator._coupling_force is None
 
 
 def test_getstate_setstate_split():

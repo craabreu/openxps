@@ -26,7 +26,7 @@ def create_dvs():
     ]
 
 
-def create_coupling_potential(phi0=180 * mmunit.degrees):
+def create_coupling_force(phi0=180 * mmunit.degrees):
     """Helper function to create a MetaCollectiveVariable object."""
     kwargs = {
         "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radians**2,
@@ -47,14 +47,14 @@ def create_coupling_potential(phi0=180 * mmunit.degrees):
 def test_initialization():
     """Test basic initialization of ExtendedSpaceSystem."""
     model = testsystems.AlanineDipeptideVacuum()
-    coupling_potential = create_coupling_potential()
+    coupling_force = create_coupling_force()
     dvs = create_dvs()
 
     # Get initial force count from the base system
     initial_force_count = model.system.getNumForces()
 
     # Create ExtendedSpaceSystem
-    system = ExtendedSpaceSystem(dvs, coupling_potential, model.system)
+    system = ExtendedSpaceSystem(dvs, coupling_force, model.system)
 
     # Verify it's an instance of mm.System (inheritance)
     assert isinstance(system, mm.System)
@@ -69,10 +69,10 @@ def test_initialization():
 def test_get_dynamical_variables():
     """Test getDynamicalVariables returns the correct DVs."""
     model = testsystems.AlanineDipeptideVacuum()
-    coupling_potential = create_coupling_potential()
+    coupling_force = create_coupling_force()
     dvs = create_dvs()
 
-    system = ExtendedSpaceSystem(dvs, coupling_potential, model.system)
+    system = ExtendedSpaceSystem(dvs, coupling_force, model.system)
 
     retrieved_dvs = system.getDynamicalVariables()
 
@@ -90,29 +90,26 @@ def test_get_dynamical_variables():
         assert retrieved_dv.mass == original_dv.mass
 
 
-def test_get_coupling_potential():
+def test_get_coupling_force():
     """Test getCouplingForce returns the correct potential."""
     model = testsystems.AlanineDipeptideVacuum()
-    coupling_potential = create_coupling_potential()
+    coupling_force = create_coupling_force()
     dvs = create_dvs()
 
-    system = ExtendedSpaceSystem(dvs, coupling_potential, model.system)
+    system = ExtendedSpaceSystem(dvs, coupling_force, model.system)
 
     retrieved_potential = system.getCouplingForce()
-    assert retrieved_potential is coupling_potential
-    assert (
-        retrieved_potential.getEnergyFunction()
-        == coupling_potential.getEnergyFunction()
-    )
+    assert retrieved_potential is coupling_force
+    assert retrieved_potential.getEnergyFunction() == coupling_force.getEnergyFunction()
 
 
 def test_get_extension_system():
     """Test getExtensionSystem returns a properly configured system."""
     model = testsystems.AlanineDipeptideVacuum()
-    coupling_potential = create_coupling_potential()
+    coupling_force = create_coupling_force()
     dvs = create_dvs()
 
-    system = ExtendedSpaceSystem(dvs, coupling_potential, model.system)
+    system = ExtendedSpaceSystem(dvs, coupling_force, model.system)
 
     extension_system = system.getExtensionSystem()
 
@@ -133,15 +130,15 @@ def test_get_extension_system():
 def test_invalid_dynamical_variable_type():
     """Test that invalid DV type raises TypeError."""
     model = testsystems.AlanineDipeptideVacuum()
-    coupling_potential = create_coupling_potential()
+    coupling_force = create_coupling_force()
 
     with pytest.raises(
         TypeError, match="dynamical variables must be instances of DynamicalVariable"
     ):
-        ExtendedSpaceSystem([None], coupling_potential, model.system)
+        ExtendedSpaceSystem([None], coupling_force, model.system)
 
 
-def test_invalid_coupling_potential_type():
+def test_invalid_coupling_force_type():
     """Test that invalid coupling force type raises TypeError."""
     model = testsystems.AlanineDipeptideVacuum()
     dvs = create_dvs()
@@ -158,7 +155,7 @@ def test_missing_dv_parameter():
     model = testsystems.AlanineDipeptideVacuum()
     dvs = create_dvs()
     # Create coupling force without phi0 parameter
-    potential_without_phi0 = create_coupling_potential(phi0=None)
+    potential_without_phi0 = create_coupling_force(phi0=None)
 
     with pytest.raises(
         ValueError, match="dynamical variables are not coupling force parameters"

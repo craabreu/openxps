@@ -39,11 +39,11 @@ def create_test_system():
 
 def test_basic_initialization():
     """Test basic initialization with single integrator."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator),
     )
 
@@ -57,7 +57,7 @@ def test_basic_initialization():
 
 def test_with_two_integrators():
     """Test initialization with two integrators."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
 
     # Create a second integrator for the extension system
     extension_integrator = mm.LangevinMiddleIntegrator(
@@ -67,7 +67,7 @@ def test_with_two_integrators():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator, extension_integrator),
     )
 
@@ -77,12 +77,12 @@ def test_with_two_integrators():
 
 def test_with_platform():
     """Test initialization with explicit platform."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
     platform = mm.Platform.getPlatformByName("Reference")
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator),
         platform=platform,
     )
@@ -93,13 +93,13 @@ def test_with_platform():
 
 def test_with_platform_properties():
     """Test initialization with platform and properties."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
     platform = mm.Platform.getPlatformByName("Reference")
     properties = {}
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator),
         platform=platform,
         platformProperties=properties,
@@ -110,27 +110,27 @@ def test_with_platform_properties():
 
 def test_context_is_extended():
     """Confirm context is an xps.ExtendedSpaceContext instance."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
 
     assert isinstance(simulation.context, xps.ExtendedSpaceContext)
     assert simulation.context.getSystem().getDynamicalVariables() == tuple(dvs)
-    assert simulation.context.getSystem().getCouplingForce() == coupling_potential
+    assert simulation.context.getSystem().getCouplingForce() == coupling_force
 
 
 def test_inherited_step_method():
     """Verify step() method works correctly."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -153,11 +153,11 @@ def test_inherited_step_method():
 
 def test_inherited_minimize_energy():
     """Verify minimizeEnergy() method works correctly."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -183,11 +183,11 @@ def test_inherited_minimize_energy():
 
 def test_reporters():
     """Verify reporters work with the extended simulation."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -226,11 +226,11 @@ def test_reporters():
 
 def test_save_and_load_checkpoint():
     """Test saveCheckpoint and loadCheckpoint methods."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -276,13 +276,13 @@ def test_save_and_load_checkpoint():
     os.unlink(checkpoint_file)
 
 
-def test_missing_dv_in_coupling_potential():
+def test_missing_dv_in_coupling_force():
     """Test error when DV is not in coupling force parameters."""
     model = testsystems.AlanineDipeptideVacuum()
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
 
     # Create coupling force without phi0 parameter
-    coupling_potential = xps.CustomCouplingForce(
+    coupling_force = xps.CustomCouplingForce(
         "0.5*kappa*phi^2",
         [phi],
         kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
@@ -298,7 +298,7 @@ def test_missing_dv_in_coupling_potential():
     with pytest.raises(ValueError) as excinfo:
         xps.ExtendedSpaceSimulation(
             model.topology,
-            xps.ExtendedSpaceSystem([phi0], coupling_potential, model.system),
+            xps.ExtendedSpaceSystem([phi0], coupling_force, model.system),
             xps.LockstepIntegrator(integrator),
             mm.Platform.getPlatformByName("Reference"),
         )
@@ -307,14 +307,12 @@ def test_missing_dv_in_coupling_potential():
 
 def test_simulation_with_state():
     """Test initialization with a state parameter."""
-    model, dvs, coupling_potential, integrator1 = create_test_system()
+    model, dvs, coupling_force, integrator1 = create_test_system()
 
     # Create first simulation and run it
     sim1 = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(
-            dvs, deepcopy(coupling_potential), deepcopy(model.system)
-        ),
+        xps.ExtendedSpaceSystem(dvs, deepcopy(coupling_force), deepcopy(model.system)),
         xps.LockstepIntegrator(deepcopy(integrator1)),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -334,9 +332,7 @@ def test_simulation_with_state():
 
     sim2 = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(
-            dvs, deepcopy(coupling_potential), deepcopy(model.system)
-        ),
+        xps.ExtendedSpaceSystem(dvs, deepcopy(coupling_force), deepcopy(model.system)),
         xps.LockstepIntegrator(integrator2),
         mm.Platform.getPlatformByName("Reference"),
         state=state,
@@ -355,11 +351,11 @@ def test_simulation_with_state():
 
 def test_loadcheckpoint_comprehensive():
     """Test loadCheckpoint method comprehensively restores all state components."""
-    model, dvs, coupling_potential, integrator = create_test_system()
+    model, dvs, coupling_force, integrator = create_test_system()
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling_potential, model.system),
+        xps.ExtendedSpaceSystem(dvs, coupling_force, model.system),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
