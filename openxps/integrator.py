@@ -125,18 +125,10 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         corresponding parameters in the extension context.
 
         """
-        collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
-            self._coupling_potential,
-            self._physical_context,
-        )
-        for i, value in enumerate(collective_variables):
-            mmswig.Context_setParameter(
-                self._extension_context,
-                mmswig.CustomCVForce_getCollectiveVariableName(
-                    self._coupling_potential, i
-                ),
-                value,
-            )
+        for name, value in self._coupling_potential.getExtensionParameters(
+            self._physical_context
+        ).items():
+            mmswig.Context_setParameter(self._extension_context, name, value)
 
     def configure(
         self,

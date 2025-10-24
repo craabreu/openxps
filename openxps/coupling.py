@@ -11,6 +11,7 @@ import typing as t
 
 import cvpack
 import openmm as mm
+from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from .dynamical_variable import DynamicalVariable
@@ -65,6 +66,24 @@ class CouplingForce(mm.Force):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
+    def getExtensionParameters(
+        self, physical_context: mm.Context
+    ) -> dict[str, mmunit.Quantity]:
+        """Get parameter names and values to update the extension context with.
+
+        Parameters
+        ----------
+        physical_context
+            The physical context to get the extension parameters from.
+
+        Returns
+        -------
+        dict[str, mmunit.Quantity]
+            A dictionary with the names of the parameters as keys and their values in
+            the extension context as values.
+        """
+        raise NotImplementedError("Subclasses must implement this method.")
+
 
 class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
     """
@@ -99,12 +118,6 @@ class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
     ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
     ...     phi0=pi * unit.radian,
     ... )
-
-    See Also
-    --------
-    CouplingForce : Base class for coupling forces
-    cvpack.MetaCollectiveVariable : CVPack's meta collective variable class
-
     """
 
     def __init__(
@@ -196,6 +209,33 @@ class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
             ],
             **parameters,
         )
+
+    def getExtensionParameters(
+        self, physical_context: mm.Context
+    ) -> dict[str, mmunit.Quantity]:
+        """Get parameters to update the extension context.
+
+        This method evaluates the collective variables in the physical context and
+        returns their names and values as parameters.
+
+        Parameters
+        ----------
+        physical_context
+            The physical context to get the extension parameters from.
+
+        Returns
+        -------
+        dict[str, mmunit.Quantity]
+            A dictionary with the names of the parameters as keys and their values in
+            the extension context as values.
+        """
+        collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
+            self, physical_context
+        )
+        return {
+            mmswig.CustomCVForce_getCollectiveVariableName(self, index): value
+            for index, value in enumerate(collective_variables)
+        }
 
 
 CustomCouplingForce.registerTag("!openxps.CustomCouplingForce")
