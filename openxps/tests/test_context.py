@@ -10,7 +10,7 @@ from openmm import unit as mmunit
 from openmmtools import testsystems
 
 from openxps import (
-    CustomCouplingPotential,
+    CustomCouplingForce,
     DynamicalVariable,
     ExtendedSpaceContext,
     ExtendedSpaceSystem,
@@ -54,7 +54,7 @@ def create_coupling_potential(phi0=180 * mmunit.degrees):
     }
     if phi0 is not None:
         kwargs["phi0"] = phi0
-    return CustomCouplingPotential(
+    return CustomCouplingForce(
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
@@ -162,7 +162,7 @@ def test_validation():
 
     with pytest.raises(TypeError) as e:
         ExtendedSpaceContext(*system_integrator_platform(dvs, None, model))
-    assert "must be an instance of CouplingPotential" in str(e.value)
+    assert "must be an instance of CouplingForce" in str(e.value)
 
     with pytest.raises(ValueError) as e:
         ExtendedSpaceContext(

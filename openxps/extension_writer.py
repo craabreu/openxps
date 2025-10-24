@@ -39,7 +39,7 @@ class ExtensionWriter(CustomWriter):
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
-    >>> umbrella_potential = xps.CustomCouplingPotential(
+    >>> umbrella_potential = xps.CustomCouplingForce(
     ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
     ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
     ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,

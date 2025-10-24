@@ -9,7 +9,7 @@ import pytest
 from openmm import unit as mmunit
 from openmmtools import testsystems
 
-from openxps import CustomCouplingPotential, DynamicalVariable, ExtendedSpaceSystem
+from openxps import CustomCouplingForce, DynamicalVariable, ExtendedSpaceSystem
 from openxps.bounds import CIRCULAR, NoBounds, Reflective
 
 
@@ -36,7 +36,7 @@ def create_coupling_potential(phi0=180 * mmunit.degrees):
     }
     if phi0 is not None:
         kwargs["phi0"] = phi0
-    return CustomCouplingPotential(
+    return CustomCouplingForce(
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
@@ -91,14 +91,14 @@ def test_get_dynamical_variables():
 
 
 def test_get_coupling_potential():
-    """Test getCouplingPotential returns the correct potential."""
+    """Test getCouplingForce returns the correct potential."""
     model = testsystems.AlanineDipeptideVacuum()
     coupling_potential = create_coupling_potential()
     dvs = create_dvs()
 
     system = ExtendedSpaceSystem(dvs, coupling_potential, model.system)
 
-    retrieved_potential = system.getCouplingPotential()
+    retrieved_potential = system.getCouplingForce()
     assert retrieved_potential is coupling_potential
     assert (
         retrieved_potential.getEnergyFunction()
@@ -148,7 +148,7 @@ def test_invalid_coupling_potential_type():
 
     with pytest.raises(
         TypeError,
-        match="must be an instance of CouplingPotential",
+        match="must be an instance of CouplingForce",
     ):
         ExtendedSpaceSystem(dvs, None, model.system)
 

@@ -46,7 +46,7 @@ class ExtendedSpaceContext(mm.Context):
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
-    >>> umbrella_potential = xps.CustomCouplingPotential(
+    >>> umbrella_potential = xps.CustomCouplingForce(
     ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
     ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
     ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
@@ -106,11 +106,11 @@ class ExtendedSpaceContext(mm.Context):
             physical_context=self,
             extension_context=extension_context,
             dynamical_variables=system.getDynamicalVariables(),
-            coupling_potential=system.getCouplingPotential(),
+            coupling_potential=system.getCouplingForce(),
         )
         self._system = system
         self._dvs = system.getDynamicalVariables()
-        self._coupling_potential = system.getCouplingPotential()
+        self._coupling_potential = system.getCouplingForce()
         self._integrator = integrator
         self._extension_context = extension_context
 

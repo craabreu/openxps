@@ -22,7 +22,7 @@ def create_test_system():
     """Helper function to create a test system."""
     model = testsystems.AlanineDipeptideVacuum()
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
-    umbrella_potential = xps.CustomCouplingPotential(
+    umbrella_potential = xps.CustomCouplingForce(
         f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
         [phi],
         kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
@@ -121,7 +121,7 @@ def test_context_is_extended():
 
     assert isinstance(simulation.context, xps.ExtendedSpaceContext)
     assert simulation.context.getSystem().getDynamicalVariables() == tuple(dvs)
-    assert simulation.context.getSystem().getCouplingPotential() == coupling_potential
+    assert simulation.context.getSystem().getCouplingForce() == coupling_potential
 
 
 def test_inherited_step_method():
@@ -282,7 +282,7 @@ def test_missing_dv_in_coupling_potential():
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
 
     # Create coupling potential without phi0 parameter
-    coupling_potential = xps.CustomCouplingPotential(
+    coupling_potential = xps.CustomCouplingForce(
         "0.5*kappa*phi^2",
         [phi],
         kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,

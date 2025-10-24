@@ -14,7 +14,7 @@ import openmm as mm
 from openmm import unit as mmunit
 
 
-class CouplingPotential:
+class CouplingForce(mm.Force):
     """
     Abstract base class for couplings between physical and extended phase-space systems.
 
@@ -24,7 +24,7 @@ class CouplingPotential:
         raise NotImplementedError("Subclasses must implement this method.")
 
 
-class CustomCouplingPotential(cvpack.MetaCollectiveVariable, CouplingPotential):
+class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
     __doc__ = cvpack.MetaCollectiveVariable.__doc__
 
     def __init__(
@@ -45,4 +45,4 @@ class CustomCouplingPotential(cvpack.MetaCollectiveVariable, CouplingPotential):
         super().__init__(**keywords)
 
 
-CustomCouplingPotential.registerTag("!openxps.CustomCouplingPotential")
+CustomCouplingForce.registerTag("!openxps.CustomCouplingForce")

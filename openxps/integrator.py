@@ -17,7 +17,7 @@ from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from . import integrators
-from .coupling import CouplingPotential
+from .coupling import CouplingForce
 from .dynamical_variable import DynamicalVariable
 from .utils import STRING_SEPARATOR
 
@@ -143,7 +143,7 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         physical_context: mm.Context,
         extension_context: mm.Context,
         dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_potential: CouplingPotential,
+        coupling_potential: CouplingForce,
     ) -> None:
         """Configure the integrator.
 

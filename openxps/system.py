@@ -12,7 +12,7 @@ import typing as t
 import cvpack
 import openmm as mm
 
-from .coupling import CouplingPotential
+from .coupling import CouplingForce
 from .dynamical_variable import DynamicalVariable
 
 
@@ -43,7 +43,7 @@ class ExtendedSpaceSystem(mm.System):
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
-    >>> umbrella_potential = xps.CustomCouplingPotential(
+    >>> umbrella_potential = xps.CustomCouplingForce(
     ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
     ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
     ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
@@ -65,7 +65,7 @@ class ExtendedSpaceSystem(mm.System):
     def __init__(
         self,
         dynamical_variables: t.Iterable[DynamicalVariable],
-        coupling_potential: CouplingPotential,
+        coupling_potential: CouplingForce,
         system: mm.System,
     ) -> None:
         try:
@@ -74,7 +74,7 @@ class ExtendedSpaceSystem(mm.System):
             raise TypeError(
                 "All dynamical variables must be instances of DynamicalVariable."
             ) from e
-        self._validateCouplingPotential(coupling_potential, dynamical_variables)
+        self._validateCouplingForce(coupling_potential, dynamical_variables)
         coupling_potential.addToSystem(system)
         self.this = system
         self._extension_system = self._createExtensionSystem(
@@ -83,14 +83,14 @@ class ExtendedSpaceSystem(mm.System):
         self._dvs = dynamical_variables
         self._coupling_potential = coupling_potential
 
-    def _validateCouplingPotential(
+    def _validateCouplingForce(
         self,
-        coupling_potential: CouplingPotential,
+        coupling_potential: CouplingForce,
         dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> None:
-        if not isinstance(coupling_potential, CouplingPotential):
+        if not isinstance(coupling_potential, CouplingForce):
             raise TypeError(
-                "The coupling potential must be an instance of CouplingPotential."
+                "The coupling potential must be an instance of CouplingForce."
             )
         missing_parameters = [
             dv.name
@@ -106,7 +106,7 @@ class ExtendedSpaceSystem(mm.System):
     def _createExtensionSystem(
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_potential: CouplingPotential,
+        coupling_potential: CouplingForce,
     ) -> mm.System:
         extension_system = mm.System()
         for dv in dynamical_variables:
@@ -145,13 +145,13 @@ class ExtendedSpaceSystem(mm.System):
         """
         return self._dvs
 
-    def getCouplingPotential(self) -> CouplingPotential:
+    def getCouplingForce(self) -> CouplingForce:
         """
         Get the coupling potential included in the extended phase-space system.
 
         Returns
         -------
-        CouplingPotential
+        CouplingForce
             The coupling potential.
         """
         return self._coupling_potential
