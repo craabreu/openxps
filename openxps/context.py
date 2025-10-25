@@ -22,12 +22,6 @@ class ExtendedSpaceContext(mm.Context):
     """An :OpenMM:`Context` object that includes extra dynamical variables (DVs) and
     allows for extended phase-space (XPS) simulations.
 
-    **Note**: The system and integrator provided as arguments are modified in place.
-
-    A given :CVPack:`MetaCollectiveVariable` is added to the system to couple the
-    physical coordinates and the DVs. The integrator's ``step`` method is replaced with
-    a custom function that advances both the physical and extension systems in  tandem.
-
     Parameters
     ----------
     system
@@ -47,34 +41,27 @@ class ExtendedSpaceContext(mm.Context):
     -------
     >>> import openxps as xps
     >>> from math import pi
-    >>> import cvpack
     >>> import openmm
+    >>> import cvpack
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
-    >>> umbrella_potential = cvpack.MetaCollectiveVariable(
-    ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
-    ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
-    ...     unit.kilojoule_per_mole,
-    ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
-    ...     phi0=pi*unit.radian,
-    ... )
+    >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
+    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    >>> kappa = 1000 * unit.kilojoule_per_mole / unit.radian**2
+    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
+    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
     >>> temp = 300 * unit.kelvin
     >>> integrator = openmm.LangevinMiddleIntegrator(
     ...     temp, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
     >>> integrator.setRandomNumberSeed(1234)
     >>> platform = openmm.Platform.getPlatformByName("Reference")
-    >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
-    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> height = 2 * unit.kilojoule_per_mole
     >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
-    ...     xps.ExtendedSpaceSystem(
-    ...         [phi0],
-    ...         umbrella_potential,
-    ...         model.system,
-    ...     ),
+    ...     xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),
     ...     xps.LockstepIntegrator(integrator),
     ...     platform,
     ... )
@@ -113,11 +100,11 @@ class ExtendedSpaceContext(mm.Context):
             physical_context=self,
             extension_context=extension_context,
             dynamical_variables=system.getDynamicalVariables(),
-            coupling_potential=system.getCouplingPotential(),
+            coupling_force=system.getCouplingForce(),
         )
         self._system = system
         self._dvs = system.getDynamicalVariables()
-        self._coupling_potential = system.getCouplingPotential()
+        self._coupling_force = system.getCouplingForce()
         self._integrator = integrator
         self._extension_context = extension_context
 
@@ -194,7 +181,7 @@ class ExtendedSpaceContext(mm.Context):
             The positions for each particle in the system.
         """
         super().setPositions(positions)
-        for name, value in self._coupling_potential.getInnerValues(self).items():
+        for name, value in self._coupling_force.getInnerValues(self).items():
             self._extension_context.setParameter(name, value / value.unit)
 
     def setDynamicalVariableValues(self, values: t.Iterable[mmunit.Quantity]) -> None:

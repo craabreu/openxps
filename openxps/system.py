@@ -9,10 +9,9 @@
 
 import typing as t
 
-import cvpack
 import openmm as mm
-from openmm import unit as mmunit
 
+from .coupling import CouplingForce
 from .dynamical_variable import DynamicalVariable
 
 
@@ -27,11 +26,11 @@ class ExtendedSpaceSystem(mm.System):
     ----------
     dynamical_variables
         A collection of dynamical variables (DVs) to be included in the XPS simulation.
-    coupling_potential
+    coupling_force
         A :CVPack:`MetaCollectiveVariable` defining the potential energy term that
         couples the DVs to the physical coordinates. It must have units
         of ``kilojoules_per_mole``. All DVs must be included as parameters in the
-        coupling potential.
+        coupling force.
     system
         The :OpenMM:`System` to be used in the XPS simulation.
 
@@ -39,25 +38,19 @@ class ExtendedSpaceSystem(mm.System):
     -------
     >>> import openxps as xps
     >>> from math import pi
-    >>> import cvpack
     >>> import openmm
+    >>> import cvpack
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
-    >>> umbrella_potential = cvpack.MetaCollectiveVariable(
-    ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
-    ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
-    ...     unit.kilojoule_per_mole,
-    ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
-    ...     phi0=pi*unit.radian,
-    ... )
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
-    >>> system = xps.ExtendedSpaceSystem(
-    ...     [phi0],
-    ...     umbrella_potential,
-    ...     model.system,
+    >>> harmonic_force = xps.HarmonicCouplingForce(
+    ...     cvpack.Torsion(6, 8, 14, 16, name="phi"),
+    ...     phi0,
+    ...     1000 * unit.kilojoules_per_mole / unit.radian**2,
     ... )
+    >>> system = xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system)
     >>> system.getDynamicalVariables()
     (DynamicalVariable(name='phi0', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...),)
     >>> system.getExtensionSystem().getNumParticles()
@@ -67,7 +60,7 @@ class ExtendedSpaceSystem(mm.System):
     def __init__(
         self,
         dynamical_variables: t.Iterable[DynamicalVariable],
-        coupling_potential: cvpack.MetaCollectiveVariable,
+        coupling_force: CouplingForce,
         system: mm.System,
     ) -> None:
         try:
@@ -76,66 +69,43 @@ class ExtendedSpaceSystem(mm.System):
             raise TypeError(
                 "All dynamical variables must be instances of DynamicalVariable."
             ) from e
-        self._validateCouplingPotential(coupling_potential, dynamical_variables)
-        coupling_potential.addToSystem(system)
+        self._validateCouplingForce(coupling_force, dynamical_variables)
+        coupling_force.addToSystem(system)
         self.this = system
         self._extension_system = self._createExtensionSystem(
-            dynamical_variables, coupling_potential
+            dynamical_variables, coupling_force
         )
         self._dvs = dynamical_variables
-        self._coupling_potential = coupling_potential
+        self._coupling_force = coupling_force
 
-    def _validateCouplingPotential(
+    def _validateCouplingForce(
         self,
-        coupling_potential: cvpack.MetaCollectiveVariable,
+        coupling_force: CouplingForce,
         dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> None:
-        if not isinstance(coupling_potential, cvpack.MetaCollectiveVariable):
-            raise TypeError(
-                "The coupling potential must be an instance of MetaCollectiveVariable."
-            )
-        if not coupling_potential.getUnit().is_compatible(mmunit.kilojoule_per_mole):
-            raise ValueError("The coupling potential must have units of molar energy.")
+        if not isinstance(coupling_force, CouplingForce):
+            raise TypeError("The coupling force must be an instance of CouplingForce.")
         missing_parameters = [
             dv.name
             for dv in dynamical_variables
-            if dv.name not in coupling_potential.getParameterDefaultValues()
+            if dv.name not in coupling_force.getParameterDefaultValues()
         ]
         if missing_parameters:
             raise ValueError(
-                "These dynamical variables are not coupling potential parameters: "
+                "These dynamical variables are not coupling force parameters: "
                 + ", ".join(missing_parameters)
             )
 
     def _createExtensionSystem(
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_potential: cvpack.MetaCollectiveVariable,
+        coupling_force: CouplingForce,
     ) -> mm.System:
         extension_system = mm.System()
         for dv in dynamical_variables:
             extension_system.addParticle(dv.mass / dv.mass.unit)
-
-        parameters = coupling_potential.getParameterDefaultValues()
-        for dv in dynamical_variables:
-            parameters.pop(dv.name)
-        parameters.update(
-            {cv.getName(): 0.0 for cv in coupling_potential.getInnerVariables()}
-        )
-
-        flipped_potential = cvpack.MetaCollectiveVariable(
-            function=coupling_potential.getEnergyFunction(),
-            variables=[
-                dv.createCollectiveVariable(index)
-                for index, dv in enumerate(dynamical_variables)
-            ],
-            unit=coupling_potential.getUnit(),
-            periodicBounds=coupling_potential.getPeriodicBounds(),
-            name=coupling_potential.getName(),
-            **parameters,
-        )
+        flipped_potential = coupling_force.flip(dynamical_variables)
         flipped_potential.addToSystem(extension_system)
-
         return extension_system
 
     def getDynamicalVariables(self) -> tuple[DynamicalVariable]:
@@ -149,16 +119,16 @@ class ExtendedSpaceSystem(mm.System):
         """
         return self._dvs
 
-    def getCouplingPotential(self) -> cvpack.MetaCollectiveVariable:
+    def getCouplingForce(self) -> CouplingForce:
         """
-        Get the coupling potential included in the extended phase-space system.
+        Get the coupling force included in the extended phase-space system.
 
         Returns
         -------
-        cvpack.MetaCollectiveVariable
-            The coupling potential.
+        CouplingForce
+            The coupling force.
         """
-        return self._coupling_potential
+        return self._coupling_force
 
     def getExtensionSystem(self) -> mm.System:
         """

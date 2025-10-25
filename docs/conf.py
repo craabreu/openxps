@@ -65,7 +65,14 @@ functions = [item for item in openxps.__dict__.values() if inspect.isfunction(it
 
 if classes:
     with open("api/classes.rst", "w") as f:
-        f.write("Classes\n" "=======\n" "\n" ".. toctree::\n" "    :titlesonly:\n" "\n")
+        f.write(
+            "Classes\n"
+            "=======\n"
+            "\n"
+            ".. toctree::\n"
+            "    :titlesonly:\n"
+            "\n"
+        )
         for item in classes:
             f.write(f"    {item.__name__}\n")
             create_class_rst_file(item)
@@ -74,12 +81,38 @@ if classes:
 if functions:
     with open("api/functions.rst", "w") as f:
         f.write(
-            "Functions\n" "=========\n" "\n" ".. toctree::\n" "    :titlesonly:\n" "\n"
+            "Functions\n"
+            "=========\n"
+            "\n"
+            ".. toctree::\n"
+            "    :titlesonly:\n"
+            "\n"
         )
         for item in functions:
             f.write(f"    {item.__name__}\n")
             create_function_rst_file(item)
         f.write("\n.. testsetup::\n\n    from openxps import *")
+
+# Documentation entries for submodules
+with open("api/bounds.rst", "w") as f:
+    f.writelines([
+        "bounds module\n",
+        "=============\n\n",
+        ".. automodule:: openxps.bounds\n",
+        "    :members:\n",
+        "    :undoc-members:\n",
+        "    :show-inheritance:\n"
+    ])
+
+with open("api/integrators.rst", "w") as f:
+    f.writelines([
+        "integrators module\n",
+        "==================\n\n",
+        ".. automodule:: openxps.integrators\n",
+        "    :members:\n",
+        "    :undoc-members:\n",
+        "    :show-inheritance:\n"
+    ])
 
 with open("api/index.rst", "w") as f:
     f.write(
@@ -89,7 +122,11 @@ with open("api/index.rst", "w") as f:
         ".. toctree::\n"
         "    :maxdepth: 2\n"
         "    :titlesonly:\n"
-        "\n" + "    classes\n" * bool(classes) + "    functions\n" * bool(functions)
+        "\n"
+        + "    classes\n" * bool(classes)
+        + "    functions\n" * bool(functions)
+        + "    bounds\n"
+        + "    integrators\n"
     )
 
 # -- Project information -----------------------------------------------------
