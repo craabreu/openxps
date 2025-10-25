@@ -41,7 +41,7 @@
 <h1>ExtendedSpaceBiasVariable<a class="headerlink" href="#extendedspacebiasvariable" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceBiasVariable">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceBiasVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamical_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_width</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/metadynamics.html#ExtendedSpaceBiasVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceBiasVariable" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceBiasVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamical_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grid_width=&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/metadynamics.html#ExtendedSpaceBiasVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceBiasVariable" title="Link to this definition">¶</a></dt>
 <dd><p>A dynamical variable augmented with a Gaussian bias kernel.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -68,13 +68,6 @@ bandwidth.</p></li>
 <span class="go">DynamicalVariable(name=&#39;phi&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
 </pre></div>
 </div>
-<p class="rubric">Methods</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.ExtendedSpaceBiasVariable.grid_width">
-<span class="sig-name descname"><span class="pre">grid_width</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.ExtendedSpaceBiasVariable.grid_width" title="Link to this definition">¶</a></dt>
-<dd><p>The type of the None singleton.</p>
-</dd></dl>
-
 </dd></dl>
 
 </section>
@@ -104,6 +97,9 @@ bandwidth.</p></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CouplingForceSum.html">CouplingForceSum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CustomCouplingForce.html">CustomCouplingForce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="HarmonicCouplingForce.html">HarmonicCouplingForce</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
@@ -114,6 +110,8 @@ bandwidth.</p></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">bounds module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators module</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>

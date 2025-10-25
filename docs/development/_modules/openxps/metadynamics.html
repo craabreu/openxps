@@ -45,7 +45,7 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">cvpack.serialization</span><span class="w"> </span><span class="kn">import</span> <span class="n">Serializable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span> <span class="k">as</span> <span class="n">mmapp</span>
@@ -103,7 +103,7 @@
 
     <span class="n">dynamical_variable</span><span class="p">:</span> <span class="n">DynamicalVariable</span>
     <span class="n">sigma</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span>
-    <span class="n">grid_width</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">grid_width</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">):</span>
@@ -167,27 +167,19 @@
 <span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
 <span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
-<span class="sd">    &gt;&gt;&gt; umbrella_potential = cvpack.MetaCollectiveVariable(</span>
-<span class="sd">    ...     f&quot;0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)&quot;,</span>
-<span class="sd">    ...     [phi],</span>
-<span class="sd">    ...     unit.kilojoule_per_mole,</span>
-<span class="sd">    ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,</span>
-<span class="sd">    ...     phi0=pi*unit.radian,</span>
-<span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
 <span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
-<span class="sd">    &gt;&gt;&gt; system = xps.ExtendedSpaceSystem(</span>
-<span class="sd">    ...     [phi0],</span>
-<span class="sd">    ...     umbrella_potential,</span>
-<span class="sd">    ...     model.system,</span>
-<span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; bias_variable = xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degree)</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2</span>
+<span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)</span>
+<span class="sd">    &gt;&gt;&gt; system = xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system)</span>
+<span class="sd">    &gt;&gt;&gt; bias_variable = xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degrees)</span>
 <span class="sd">    &gt;&gt;&gt; temperature = 300 * unit.kelvin</span>
 <span class="sd">    &gt;&gt;&gt; metadynamics = xps.ExtendedSpaceMetadynamics(</span>
 <span class="sd">    ...     system=system,</span>
 <span class="sd">    ...     variables=[bias_variable],</span>
 <span class="sd">    ...     temperature=temperature,</span>
-<span class="sd">    ...     biasFactor=5.0,</span>
+<span class="sd">    ...     biasFactor=5,</span>
 <span class="sd">    ...     height=2 * unit.kilojoule_per_mole,</span>
 <span class="sd">    ...     frequency=100,</span>
 <span class="sd">    ... )</span>

@@ -1,0 +1,11 @@
+CustomCouplingForce
+===================
+
+.. currentmodule:: openxps
+.. autoclass:: CustomCouplingForce
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: flip
+    .. automethod:: getExtensionParameters

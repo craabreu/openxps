@@ -1,0 +1,7 @@
+integrators module
+==================
+
+.. automodule:: openxps.integrators
+    :members:
+    :undoc-members:
+    :show-inheritance:

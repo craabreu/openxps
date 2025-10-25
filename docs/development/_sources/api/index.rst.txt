@@ -6,3 +6,5 @@ API Reference
     :titlesonly:
 
     classes
+    bounds
+    integrators

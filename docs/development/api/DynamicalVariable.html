@@ -19,7 +19,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="ExtensionWriter" href="ExtensionWriter.html" />
-    <link rel="prev" title="ExtendedSpaceContext" href="ExtendedSpaceContext.html" />
+    <link rel="prev" title="HarmonicCouplingForce" href="HarmonicCouplingForce.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -41,7 +41,7 @@
 <h1>DynamicalVariable<a class="headerlink" href="#dynamicalvariable" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.DynamicalVariable">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">DynamicalVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">NoBounds(lower=-inf,</span> <span class="pre">upper=inf,</span> <span class="pre">unit=dimensionless)</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/dynamical_variable.html#DynamicalVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.DynamicalVariable" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">DynamicalVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mass</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bounds=&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/dynamical_variable.html#DynamicalVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.DynamicalVariable" title="Link to this definition">¶</a></dt>
 <dd><p>Dynamical variable for extended phase-space simulations with OpenMM.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -52,7 +52,7 @@ unit, use <code class="docutils literal notranslate"><span class="pre">openmm.un
 <li><p><strong>mass</strong> (<em>openmm.unit.quantity.Quantity</em>) – The mass assigned to this dynamical variable, whose unit of measurement
 must be compatible with <code class="docutils literal notranslate"><span class="pre">dalton*(nanometer/unit)**2</span></code>, where <code class="docutils literal notranslate"><span class="pre">unit</span></code> is the
 dynamical variable’s own unit (see <code class="docutils literal notranslate"><span class="pre">unit</span></code> above).</p></li>
-<li><p><strong>bounds</strong> (<em>openxps.bounds.Bounds</em>) – The boundary condition to be applied to this dynamical variable. It must
+<li><p><strong>bounds</strong> (<a class="reference internal" href="bounds.html#openxps.bounds.Bounds" title="openxps.bounds.Bounds"><em>openxps.bounds.Bounds</em></a>) – The boundary condition to be applied to this dynamical variable. It must
 be an instance of <code class="xref py py-class docutils literal notranslate"><span class="pre">Periodic</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Reflective</span></code>, or <code class="xref py py-class docutils literal notranslate"><span class="pre">NoBounds</span></code>
 (for unbounded variables). If it is not <code class="xref py py-class docutils literal notranslate"><span class="pre">NoBounds</span></code>, its unit of
 measurement must be compatible with the dynamical variable’s own unit.</p></li>
@@ -77,31 +77,6 @@ measurement must be compatible with the dynamical variable’s own unit.</p></li
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.DynamicalVariable.bounds">
-<span class="sig-name descname"><span class="pre">bounds</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.DynamicalVariable.bounds" title="Link to this definition">¶</a></dt>
-<dd><p>No boundary condition. The dynamical variable is allowed to take any value.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>None</strong> (<em>If it is not</em>)</p></li>
-<li><p><strong>dynamical</strong> (<em>its unit</em><em> of </em><em>measurement must be compatible with the</em>)</p></li>
-<li><p><strong>unit.</strong> (<em>variable's own</em>)</p></li>
-</ul>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span>
-<span class="go">Periodic(lower=-180, upper=180, unit=deg)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">bounds</span><span class="p">))</span> <span class="o">==</span> <span class="n">bounds</span>
-</pre></div>
-</div>
-</dd></dl>
-
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.DynamicalVariable.createCollectiveVariable">
 <span class="sig-name descname"><span class="pre">createCollectiveVariable</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/dynamical_variable.html#DynamicalVariable.createCollectiveVariable"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.DynamicalVariable.createCollectiveVariable" title="Link to this definition">¶</a></dt>
@@ -238,6 +213,9 @@ of freedom and another variable.</p>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CouplingForceSum.html">CouplingForceSum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CustomCouplingForce.html">CustomCouplingForce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="HarmonicCouplingForce.html">HarmonicCouplingForce</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">DynamicalVariable</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
@@ -248,6 +226,8 @@ of freedom and another variable.</p>
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">bounds module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators module</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>

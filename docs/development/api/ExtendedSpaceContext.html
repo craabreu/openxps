@@ -18,7 +18,7 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="DynamicalVariable" href="DynamicalVariable.html" />
+    <link rel="next" title="CouplingForceSum" href="CouplingForceSum.html" />
     <link rel="prev" title="Classes" href="classes.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -44,10 +44,6 @@
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">platform</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">properties</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext" title="Link to this definition">¶</a></dt>
 <dd><p>An <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Context.html">openmm.Context</a> object that includes extra dynamical variables (DVs) and
 allows for extended phase-space (XPS) simulations.</p>
-<p><strong>Note</strong>: The system and integrator provided as arguments are modified in place.</p>
-<p>A given <a class="extlink-CVPack reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> is added to the system to couple the
-physical coordinates and the DVs. The integrator’s <code class="docutils literal notranslate"><span class="pre">step</span></code> method is replaced with
-a custom function that advances both the physical and extension systems in  tandem.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -65,34 +61,27 @@ even integer ratio.</p></li>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">pi</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmmtools</span><span class="w"> </span><span class="kn">import</span> <span class="n">testsystems</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">testsystems</span><span class="o">.</span><span class="n">AlanineDipeptideVacuum</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">umbrella_potential</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="sa">f</span><span class="s2">&quot;0.5*kappa*min(delta,</span><span class="si">{</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="si">}</span><span class="s2">-delta)^2; delta=abs(phi-phi0)&quot;</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="p">[</span><span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi&quot;</span><span class="p">)],</span>
-<span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">kappa</span><span class="o">=</span><span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">phi0</span><span class="o">=</span><span class="n">pi</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
-<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;phi0&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">kappa</span> <span class="o">=</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">harmonic_force</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCouplingForce</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="n">kappa</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">harmonic_force</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCouplingForce</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="n">kappa</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">temp</span> <span class="o">=</span> <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">LangevinMiddleIntegrator</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">temp</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtosecond</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span><span class="o">.</span><span class="n">setRandomNumberSeed</span><span class="p">(</span><span class="mi">1234</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">platform</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">&quot;Reference&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;phi0&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">height</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">sigma</span> <span class="o">=</span> <span class="mi">18</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceContext</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSystem</span><span class="p">(</span>
-<span class="gp">... </span>        <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
-<span class="gp">... </span>        <span class="n">umbrella_potential</span><span class="p">,</span>
-<span class="gp">... </span>        <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="p">),</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSystem</span><span class="p">([</span><span class="n">phi0</span><span class="p">],</span> <span class="n">harmonic_force</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">LockstepIntegrator</span><span class="p">(</span><span class="n">integrator</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="n">platform</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
@@ -298,6 +287,9 @@ appropriate boundary condition if necessary.</p>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">ExtendedSpaceContext</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CouplingForceSum.html">CouplingForceSum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CustomCouplingForce.html">CustomCouplingForce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="HarmonicCouplingForce.html">HarmonicCouplingForce</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
@@ -308,6 +300,8 @@ appropriate boundary condition if necessary.</p>
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">bounds module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators module</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>

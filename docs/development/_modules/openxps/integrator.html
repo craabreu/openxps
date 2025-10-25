@@ -48,13 +48,13 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">abc</span><span class="w"> </span><span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">deepcopy</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">integrators</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.coupling</span><span class="w"> </span><span class="kn">import</span> <span class="n">CouplingForce</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">STRING_SEPARATOR</span>
 
@@ -138,7 +138,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_physical_context</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the physical context with the current state of the extension system.</span>
@@ -162,25 +162,17 @@
 <span class="sd">        corresponding parameters in the extension context.</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">collective_variables</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">CustomCVForce_getCollectiveVariableValues</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">collective_variables</span><span class="p">):</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span>
-                <span class="n">mmswig</span><span class="o">.</span><span class="n">CustomCVForce_getCollectiveVariableName</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span><span class="p">,</span> <span class="n">i</span>
-                <span class="p">),</span>
-                <span class="n">value</span><span class="p">,</span>
-            <span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span><span class="o">.</span><span class="n">getExtensionParameters</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">configure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
         <span class="n">extension_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
         <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
-        <span class="n">coupling_potential</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span>
+        <span class="n">coupling_force</span><span class="p">:</span> <span class="n">CouplingForce</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure the integrator.</span>
 
@@ -196,13 +188,13 @@
 <span class="sd">            The OpenMM context containing the extension system.</span>
 <span class="sd">        dynamical_variables</span>
 <span class="sd">            The dynamical variables included in the extended phase-space system.</span>
-<span class="sd">        coupling_potential</span>
+<span class="sd">        coupling_force</span>
 <span class="sd">            The potential that couples the physical and dynamical variables.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span> <span class="o">=</span> <span class="n">physical_context</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="n">extension_context</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span> <span class="o">=</span> <span class="n">dynamical_variables</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_potential</span> <span class="o">=</span> <span class="n">coupling_potential</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span> <span class="o">=</span> <span class="n">coupling_force</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">getPhysicalIntegrator</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the integrator for the physical system.</span>

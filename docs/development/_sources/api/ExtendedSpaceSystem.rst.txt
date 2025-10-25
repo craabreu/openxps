@@ -7,6 +7,6 @@ ExtendedSpaceSystem
 
     .. rubric:: Methods
 
-    .. automethod:: getCouplingPotential
+    .. automethod:: getCouplingForce
     .. automethod:: getDynamicalVariables
     .. automethod:: getExtensionSystem

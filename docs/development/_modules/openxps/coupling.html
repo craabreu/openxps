@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>openxps.coupling &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=572d9513" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for openxps.coupling</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.. module:: openxps.coupling</span>
+<span class="sd">   :platform: Linux, MacOS, Windows</span>
+<span class="sd">   :synopsis: Coupling between physical and extended phase-space systems.</span>
+
+<span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">copy</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">cvpack.serialization</span><span class="w"> </span><span class="kn">import</span> <span class="n">Serializable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
+
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CouplingForce</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Force</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Abstract base class for coupling forces between physical and extended phase-space</span>
+<span class="sd">    systems.</span>
+
+<span class="sd">    A coupling force connects the physical system&#39;s collective variables to the</span>
+<span class="sd">    extended phase-space dynamical variables, enabling enhanced sampling simulations.</span>
+<span class="sd">    Subclasses must implement the :meth:`addToSystem` and :meth:`flip` methods.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="s2">&quot;CouplingForce&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CouplingForceSum&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">CouplingForceSum</span><span class="p">([</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">])</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">addToSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add this coupling force to an OpenMM system.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        system : openmm.System</span>
+<span class="sd">            The system to which the coupling force should be added.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            This method must be implemented by subclasses.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">flip</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CouplingForce&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a flipped version of this coupling force.</span>
+
+<span class="sd">        The flipped force swaps the roles of physical collective variables and</span>
+<span class="sd">        extended dynamical variables, creating a force suitable for the extension</span>
+<span class="sd">        system where dynamical variables are treated as particles.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dynamical_variables : Sequence[DynamicalVariable]</span>
+<span class="sd">            The extended dynamical variables to be promoted to collective variables.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        CouplingForce</span>
+<span class="sd">            A new coupling force with swapped variable roles.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        NotImplementedError</span>
+<span class="sd">            This method must be implemented by subclasses.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method.&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">getExtensionParameters</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get parameter names and values to update the extension context with.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        physical_context</span>
+<span class="sd">            The physical context to get the extension parameters from.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict[str, mmunit.Quantity]</span>
+<span class="sd">            A dictionary with the names of the parameters as keys and their values in</span>
+<span class="sd">            the extension context as values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;Subclasses must implement this method.&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="CouplingForceSum">
+<a class="viewcode-back" href="../../api/CouplingForceSum.html#openxps.CouplingForceSum">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CouplingForceSum</span><span class="p">(</span><span class="n">CouplingForce</span><span class="p">,</span> <span class="n">Serializable</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A sum of coupling forces.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    coupling_forces</span>
+<span class="sd">        The coupling forces to be added.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from copy import copy</span>
+<span class="sd">    &gt;&gt;&gt; import cvpack</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; psi = cvpack.Torsion(4, 6, 8, 14, name=&quot;psi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; dvmass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2</span>
+<span class="sd">    &gt;&gt;&gt; phi_s = xps.DynamicalVariable(&quot;phi_s&quot;, unit.radian, dvmass, xps.bounds.CIRCULAR)</span>
+<span class="sd">    &gt;&gt;&gt; psi_s = xps.DynamicalVariable(&quot;psi_s&quot;, unit.radian, dvmass, xps.bounds.CIRCULAR)</span>
+<span class="sd">    &gt;&gt;&gt; coupling_force = xps.HarmonicCouplingForce(</span>
+<span class="sd">    ...     phi, phi_s, 1000 * unit.kilojoule_per_mole / unit.radian**2</span>
+<span class="sd">    ... ) + xps.HarmonicCouplingForce(</span>
+<span class="sd">    ...     psi, psi_s, 500 * unit.kilojoule_per_mole / unit.radian**2</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">coupling_forces</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">CouplingForce</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">coupling_forces</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">CouplingForceSum</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getCouplingForces</span><span class="p">())</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;+&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="nb">repr</span><span class="p">(</span><span class="n">force</span><span class="p">)</span><span class="si">}</span><span class="s2">)&quot;</span> <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__copy__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CouplingForceSum&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">CouplingForceSum</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">copy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span><span class="p">))</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">CouplingForce</span><span class="p">]:</span>
+        <span class="k">return</span> <span class="p">{</span><span class="sa">f</span><span class="s2">&quot;force</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">:</span> <span class="n">force</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">force</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span><span class="p">)}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keywords</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">CouplingForce</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">keywords</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+<div class="viewcode-block" id="CouplingForceSum.getCouplingForces">
+<a class="viewcode-back" href="../../api/CouplingForceSum.html#openxps.CouplingForceSum.getCouplingForces">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getCouplingForces</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">CouplingForce</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the coupling forces included in the summed coupling force.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span></div>
+
+
+<div class="viewcode-block" id="CouplingForceSum.getParameterDefaultValues">
+<a class="viewcode-back" href="../../api/CouplingForceSum.html#openxps.CouplingForceSum.getParameterDefaultValues">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getParameterDefaultValues</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get parameter names and default values from all coupling forces.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict[str, mmunit.Quantity]</span>
+<span class="sd">            A dictionary with parameter names as keys and their default values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span><span class="p">:</span>
+            <span class="n">force_params</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">getParameterDefaultValues</span><span class="p">()</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">force_params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">parameters</span> <span class="ow">and</span> <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Parameter </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> has conflicting default values in &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;coupling forces: </span><span class="si">{</span><span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span><span class="si">}</span><span class="s2"> != </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">parameters</span></div>
+
+
+<div class="viewcode-block" id="CouplingForceSum.addToSystem">
+<a class="viewcode-back" href="../../api/CouplingForceSum.html#openxps.CouplingForceSum.addToSystem">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">addToSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span><span class="p">:</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">system</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CouplingForceSum.flip">
+<a class="viewcode-back" href="../../api/CouplingForceSum.html#openxps.CouplingForceSum.flip">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">flip</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CouplingForceSum&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">CouplingForceSum</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">force</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span> <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span><span class="p">]</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CouplingForceSum.getExtensionParameters">
+<a class="viewcode-back" href="../../api/CouplingForceSum.html#openxps.CouplingForceSum.getExtensionParameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getExtensionParameters</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
+        <span class="n">parameter_dicts</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">getExtensionParameters</span><span class="p">(</span><span class="n">physical_context</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_forces</span>
+        <span class="p">]</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">parameter_dict</span> <span class="ow">in</span> <span class="n">parameter_dicts</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">parameter_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">parameters</span> <span class="ow">and</span> <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Parameter </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2"> has conflicting values in coupling forces: &quot;</span>
+                    <span class="p">)</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="n">parameters</span></div>
+</div>
+
+
+
+<span class="n">CouplingForceSum</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.CouplingForceSum&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="CustomCouplingForce">
+<a class="viewcode-back" href="../../api/CustomCouplingForce.html#openxps.CustomCouplingForce">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustomCouplingForce</span><span class="p">(</span><span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">,</span> <span class="n">CouplingForce</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A custom coupling force that uses an algebraic expression to couple physical</span>
+<span class="sd">    collective variables with extended dynamical variables.</span>
+
+<span class="sd">    This class extends :CVPack:`MetaCollectiveVariable` to provide a flexible</span>
+<span class="sd">    coupling force defined by a mathematical expression. It automatically</span>
+<span class="sd">    handles the transformation needed for extended phase-space simulations.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    function : str</span>
+<span class="sd">        An algebraic expression that defines the coupling energy as a function of</span>
+<span class="sd">        collective variables and parameters.</span>
+<span class="sd">    collective_variables : Iterable[cvpack.CollectiveVariable]</span>
+<span class="sd">        The collective variables used in the coupling function.</span>
+<span class="sd">    **parameters : Any</span>
+<span class="sd">        Named parameters that appear in the function expression. These can include</span>
+<span class="sd">        extended dynamical variable names that will be promoted to context parameters.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from copy import copy</span>
+<span class="sd">    &gt;&gt;&gt; import cvpack</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; from math import pi</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; xps.CustomCouplingForce(</span>
+<span class="sd">    ...     f&quot;0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)&quot;,</span>
+<span class="sd">    ...     [phi],</span>
+<span class="sd">    ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,</span>
+<span class="sd">    ...     phi0=pi * unit.radian,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    CustomCouplingForce(&quot;0.5*kappa*min(delta,6.28318...-delta)^2; delta=abs(phi-phi0)&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">function</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">collective_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">],</span>
+        <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a custom coupling force.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        function : str</span>
+<span class="sd">            An algebraic expression defining the coupling energy.</span>
+<span class="sd">        collective_variables : Iterable[cvpack.CollectiveVariable]</span>
+<span class="sd">            The collective variables used in the function.</span>
+<span class="sd">        **parameters : Any</span>
+<span class="sd">            Named parameters appearing in the function expression.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">function</span><span class="p">,</span>
+            <span class="n">collective_variables</span><span class="p">,</span>
+            <span class="n">unit</span><span class="o">=</span><span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;coupling_force&quot;</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">parameters</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">(&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">getEnergyFunction</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot;)&#39;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keywords</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Restore the object state during deserialization.&quot;&quot;&quot;</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">keywords</span><span class="p">)</span>
+
+<div class="viewcode-block" id="CustomCouplingForce.flip">
+<a class="viewcode-back" href="../../api/CustomCouplingForce.html#openxps.CustomCouplingForce.flip">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">flip</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;CustomCouplingForce&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Create a flipped version of this coupling force for the extension system.</span>
+
+<span class="sd">        The flipped force replaces dynamical variable parameters with collective</span>
+<span class="sd">        variables that represent the dynamical variables as particles. Physical</span>
+<span class="sd">        collective variables become parameters set to zero.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dynamical_variables : Sequence[DynamicalVariable]</span>
+<span class="sd">            The extended dynamical variables to be promoted to collective variables.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        CustomCouplingForce</span>
+<span class="sd">            A new coupling force with swapped variable roles, suitable for adding</span>
+<span class="sd">            to the extension system.</span>
+
+<span class="sd">        Examples</span>
+<span class="sd">        --------</span>
+<span class="sd">        &gt;&gt;&gt; import cvpack</span>
+<span class="sd">        &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">        &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">        &gt;&gt;&gt; from math import pi</span>
+<span class="sd">        &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; coupling = xps.CustomCouplingForce(</span>
+<span class="sd">        ...     &quot;0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)&quot;,</span>
+<span class="sd">        ...     [phi],</span>
+<span class="sd">        ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,</span>
+<span class="sd">        ...     phi0=pi * unit.radian,</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; phi0 = xps.DynamicalVariable(</span>
+<span class="sd">        ...     &quot;phi0&quot;,</span>
+<span class="sd">        ...     unit.radian,</span>
+<span class="sd">        ...     3 * unit.dalton * (unit.nanometer / unit.radian)**2,</span>
+<span class="sd">        ...     xps.bounds.CIRCULAR</span>
+<span class="sd">        ... )</span>
+<span class="sd">        &gt;&gt;&gt; flipped = coupling.flip([phi0])</span>
+<span class="sd">        &gt;&gt;&gt; flipped.getParameterDefaultValues()</span>
+<span class="sd">        {&#39;kappa&#39;: 1000 kJ/(mol rad**2), &#39;phi&#39;: 0.0 rad}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getParameterDefaultValues</span><span class="p">()</span>
+        <span class="c1"># Only pop DVs that are actually parameters in this force</span>
+        <span class="n">dvs_to_flip</span> <span class="o">=</span> <span class="p">[</span><span class="n">dv</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span> <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dvs_to_flip</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">parameters</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">():</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span> <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">()}</span>
+        <span class="p">)</span>
+        <span class="c1"># Create CVs only for the DVs that were parameters</span>
+        <span class="k">return</span> <span class="n">CustomCouplingForce</span><span class="p">(</span>
+            <span class="n">function</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">getEnergyFunction</span><span class="p">(),</span>
+            <span class="n">collective_variables</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dvs_to_flip</span>
+            <span class="p">],</span>
+            <span class="o">**</span><span class="n">parameters</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="CustomCouplingForce.getExtensionParameters">
+<a class="viewcode-back" href="../../api/CustomCouplingForce.html#openxps.CustomCouplingForce.getExtensionParameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getExtensionParameters</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get parameters to update the extension context.</span>
+
+<span class="sd">        This method evaluates the collective variables in the physical context and</span>
+<span class="sd">        returns their names and values as parameters.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        physical_context</span>
+<span class="sd">            The physical context to get the extension parameters from.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict[str, mmunit.Quantity]</span>
+<span class="sd">            A dictionary with the names of the parameters as keys and their values in</span>
+<span class="sd">            the extension context as values.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">collective_variables</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">CustomCVForce_getCollectiveVariableValues</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">physical_context</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">mmswig</span><span class="o">.</span><span class="n">CustomCVForce_getCollectiveVariableName</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span> <span class="n">value</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">collective_variables</span><span class="p">)</span>
+        <span class="p">}</span></div>
+</div>
+
+
+
+<span class="n">CustomCouplingForce</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.CustomCouplingForce&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="HarmonicCouplingForce">
+<a class="viewcode-back" href="../../api/HarmonicCouplingForce.html#openxps.HarmonicCouplingForce">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">HarmonicCouplingForce</span><span class="p">(</span><span class="n">CustomCouplingForce</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;A harmonic coupling between a dynamical variable and a collective variable.</span>
+
+<span class="sd">    The coupling energy is given by:</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        U = \frac{1}{2} \kappa \left(s - q({\bf r})\right)^2</span>
+
+<span class="sd">    where :math:`s` is an extended dynamical variable, :math:`q({\bf r})` is a</span>
+<span class="sd">    physical collective variable, and :math:`\kappa` is a coupling force constant.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    collective_variable</span>
+<span class="sd">        The collective variable used in the coupling force.</span>
+<span class="sd">    dynamical_variable</span>
+<span class="sd">        The dynamical variable used in the coupling force.</span>
+<span class="sd">    force_constant</span>
+<span class="sd">        The force constant for the coupling force.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from copy import copy</span>
+<span class="sd">    &gt;&gt;&gt; import cvpack</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; dvmass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; phi_s = xps.DynamicalVariable(&quot;phi_s&quot;, unit.radian, dvmass, xps.bounds.CIRCULAR)</span>
+<span class="sd">    &gt;&gt;&gt; kappa = 1000 * unit.kilojoule_per_mole / unit.radian**2</span>
+<span class="sd">    &gt;&gt;&gt; xps.HarmonicCouplingForce(phi, phi_s, kappa)</span>
+<span class="sd">    HarmonicCouplingForce(&quot;0.5*kappa_phi_phi_s*((phi-phi_s-6.28...*floor(...))^2)&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">collective_variable</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">,</span>
+        <span class="n">dynamical_variable</span><span class="p">:</span> <span class="n">DynamicalVariable</span><span class="p">,</span>
+        <span class="n">force_constant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validateArguments</span><span class="p">(</span><span class="n">collective_variable</span><span class="p">,</span> <span class="n">dynamical_variable</span><span class="p">,</span> <span class="n">force_constant</span><span class="p">)</span>
+        <span class="n">kappa</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;kappa_</span><span class="si">{</span><span class="n">collective_variable</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">dynamical_variable</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">function</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;0.5*</span><span class="si">{</span><span class="n">kappa</span><span class="si">}</span><span class="s2">*(</span><span class="si">{</span><span class="n">dynamical_variable</span><span class="o">.</span><span class="n">distanceTo</span><span class="p">(</span><span class="n">collective_variable</span><span class="p">)</span><span class="si">}</span><span class="s2">^2)&quot;</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
+            <span class="n">function</span><span class="o">=</span><span class="n">function</span><span class="p">,</span>
+            <span class="n">collective_variables</span><span class="o">=</span><span class="p">[</span><span class="n">collective_variable</span><span class="p">],</span>
+            <span class="o">**</span><span class="p">{</span><span class="n">kappa</span><span class="p">:</span> <span class="n">force_constant</span><span class="p">},</span>
+            <span class="o">**</span><span class="p">{</span><span class="n">dynamical_variable</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">dynamical_variable</span><span class="o">.</span><span class="n">unit</span><span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validateArguments</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cv</span><span class="p">,</span> <span class="n">dv</span><span class="p">,</span> <span class="n">kappa</span><span class="p">):</span>
+        <span class="n">pair</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Incompatible units for </span><span class="si">{</span><span class="n">pair</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="o">==</span> <span class="n">cv</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span>
+            <span class="n">cv</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">()</span> <span class="o">!=</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">()</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Incompatible periodicity for </span><span class="si">{</span><span class="n">pair</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="n">kappa</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">kappa</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span>
+            <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span> <span class="o">/</span> <span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="o">**</span><span class="mi">2</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Incompatible force constant units for </span><span class="si">{</span><span class="n">pair</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
+
+
+
+<span class="n">HarmonicCouplingForce</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.HarmonicCouplingForce&quot;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
