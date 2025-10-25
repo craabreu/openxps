@@ -46,28 +46,22 @@ class ExtendedSpaceContext(mm.Context):
     >>> from openmm import unit
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
-    >>> umbrella_potential = xps.CustomCouplingForce(
-    ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
-    ...     [cvpack.Torsion(6, 8, 14, 16, name="phi")],
-    ...     kappa=1000 * unit.kilojoule_per_mole / unit.radian**2,
-    ...     phi0=pi*unit.radian,
-    ... )
+    >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
+    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    >>> kappa = 1000 * unit.kilojoule_per_mole / unit.radian**2
+    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
+    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
     >>> temp = 300 * unit.kelvin
     >>> integrator = openmm.LangevinMiddleIntegrator(
     ...     temp, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
     >>> integrator.setRandomNumberSeed(1234)
     >>> platform = openmm.Platform.getPlatformByName("Reference")
-    >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
-    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> height = 2 * unit.kilojoule_per_mole
     >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
-    ...     xps.ExtendedSpaceSystem(
-    ...         [phi0],
-    ...         umbrella_potential,
-    ...         model.system,
-    ...     ),
+    ...     xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),
     ...     xps.LockstepIntegrator(integrator),
     ...     platform,
     ... )

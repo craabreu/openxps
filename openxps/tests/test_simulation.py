@@ -6,7 +6,6 @@ import io
 import os
 import tempfile
 from copy import deepcopy
-from math import pi
 
 import cvpack
 import numpy as np
@@ -21,20 +20,16 @@ import openxps as xps
 def create_test_system():
     """Helper function to create a test system."""
     model = testsystems.AlanineDipeptideVacuum()
-    phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
-    umbrella_potential = xps.CustomCouplingForce(
-        f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
-        [phi],
-        kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
-        phi0=pi * mmunit.radian,
-    )
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
     phi0 = xps.DynamicalVariable("phi0", mmunit.radian, mass, xps.bounds.CIRCULAR)
+    phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    kappa = 1000 * mmunit.kilojoules_per_mole / mmunit.radian**2
+    harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
     integrator = mm.LangevinMiddleIntegrator(
         300 * mmunit.kelvin, 1 / mmunit.picosecond, 1 * mmunit.femtosecond
     )
     integrator.setRandomNumberSeed(1234)
-    return model, [phi0], umbrella_potential, integrator
+    return model, [phi0], harmonic_force, integrator
 
 
 def test_basic_initialization():

@@ -6,6 +6,7 @@ from . import bounds  # noqa: F401
 from ._version import __version__  # noqa: F401
 from .context import ExtendedSpaceContext  # noqa: F401
 from .coupling import (
+    CouplingForceSum,  # noqa: F401
     CustomCouplingForce,  # noqa: F401
     HarmonicCouplingForce,  # noqa: F401
 )
@@ -23,6 +24,7 @@ __all__ = [
     "bounds",
     "CustomCouplingForce",
     "HarmonicCouplingForce",
+    "CouplingForceSum",
     "ExtendedSpaceContext",
     "ExtendedSpaceSystem",
     "ExtensionWriter",

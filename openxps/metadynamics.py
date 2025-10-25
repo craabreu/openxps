@@ -125,26 +125,19 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
-    >>> umbrella_potential = xps.CustomCouplingForce(
-    ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
-    ...     [phi],
-    ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
-    ...     phi0=pi*unit.radian,
-    ... )
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
-    >>> system = xps.ExtendedSpaceSystem(
-    ...     [phi0],
-    ...     umbrella_potential,
-    ...     model.system,
-    ... )
-    >>> bias_variable = xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degree)
+    >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    >>> kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2
+    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
+    >>> system = xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system)
+    >>> bias_variable = xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degrees)
     >>> temperature = 300 * unit.kelvin
     >>> metadynamics = xps.ExtendedSpaceMetadynamics(
     ...     system=system,
     ...     variables=[bias_variable],
     ...     temperature=temperature,
-    ...     biasFactor=5.0,
+    ...     biasFactor=5,
     ...     height=2 * unit.kilojoule_per_mole,
     ...     frequency=100,
     ... )

@@ -4,7 +4,6 @@ Test the extension writer
 
 import os
 import tempfile
-from math import pi
 
 import cvpack
 import openmm
@@ -20,22 +19,19 @@ def test_extension_writer():
     """
 
     model = testsystems.AlanineDipeptideVacuum()
-    umbrella_potential = xps.CustomCouplingForce(
-        f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
-        [cvpack.Torsion(6, 8, 14, 16, name="phi")],
-        kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
-        phi0=pi * unit.radian,
-    )
+    mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2
+    harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
     integrator = openmm.LangevinMiddleIntegrator(
         300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond
     )
     integrator.setRandomNumberSeed(1234)
     platform = openmm.Platform.getPlatformByName("Reference")
-    mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
-    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem([phi0], umbrella_potential, model.system),
+        xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),
         xps.LockstepIntegrator(integrator),
         platform,
     )
