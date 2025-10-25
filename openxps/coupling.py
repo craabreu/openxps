@@ -214,16 +214,20 @@ class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
         {'kappa': 1000 kJ/(mol rad**2), 'phi': 0.0 rad}
         """
         parameters = self.getParameterDefaultValues()
-        for dv in dynamical_variables:
+        # Only pop DVs that are actually parameters in this force
+        dvs_to_flip = [dv for dv in dynamical_variables if dv.name in parameters]
+        for dv in dvs_to_flip:
             parameters.pop(dv.name)
         parameters.update(
             {cv.getName(): 0.0 * cv.getUnit() for cv in self.getInnerVariables()}
         )
+        # Create CVs only for the DVs that were parameters
         return CustomCouplingForce(
             function=self.getEnergyFunction(),
             collective_variables=[
-                dv.createCollectiveVariable(index)
-                for index, dv in enumerate(dynamical_variables)
+                dv.createCollectiveVariable(i)
+                for i, dv in enumerate(dynamical_variables)
+                if dv in dvs_to_flip
             ],
             **parameters,
         )
@@ -377,6 +381,26 @@ class CouplingForceSum(CouplingForce, Serializable):
     def getCouplingForces(self) -> t.Sequence[CouplingForce]:
         """Get the coupling forces included in the summed coupling force."""
         return self._coupling_forces
+
+    def getParameterDefaultValues(self) -> dict[str, mmunit.Quantity]:
+        """Get parameter names and default values from all coupling forces.
+
+        Returns
+        -------
+        dict[str, mmunit.Quantity]
+            A dictionary with parameter names as keys and their default values.
+        """
+        parameters = {}
+        for force in self._coupling_forces:
+            force_params = force.getParameterDefaultValues()
+            for key, value in force_params.items():
+                if key in parameters and parameters[key] != value:
+                    raise ValueError(
+                        f"Parameter {key} has conflicting default values in "
+                        f"coupling forces: {parameters[key]} != {value}"
+                    )
+                parameters[key] = value
+        return parameters
 
     def addToSystem(self, system: mm.System) -> None:
         for force in self._coupling_forces:
