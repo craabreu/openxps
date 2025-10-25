@@ -8,7 +8,7 @@
 """
 
 import typing as t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from cvpack.serialization import Serializable
 from openmm import app as mmapp
@@ -64,7 +64,7 @@ class ExtendedSpaceBiasVariable(Serializable):
 
     dynamical_variable: DynamicalVariable
     sigma: mmunit.Quantity
-    grid_width: t.Optional[int] = None
+    grid_width: t.Optional[int] = field(default_factory=lambda: None)
 
     def __post_init__(self) -> None:
         if not mmunit.is_quantity(self.sigma):

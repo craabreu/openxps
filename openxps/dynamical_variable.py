@@ -8,7 +8,7 @@
 """
 
 import typing as t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import cvpack
 import openmm as mm
@@ -64,7 +64,7 @@ class DynamicalVariable(Serializable):
     name: str
     unit: mmunit.Unit
     mass: mmunit.Quantity
-    bounds: Bounds = NoBounds()
+    bounds: Bounds = field(default_factory=NoBounds)
 
     def __post_init__(self) -> None:
         if not mmunit.is_unit(self.unit):
