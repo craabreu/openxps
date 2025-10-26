@@ -130,16 +130,21 @@ class Coupling(Serializable):
         raise NotImplementedError("Subclasses must implement this method.")
 
     def updateExtensionContext(
-        self, extension_context: mm.Context, physical_context: mm.Context
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+        dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> None:
         """Update the extension context with the current physical parameters.
 
         Parameters
         ----------
-        extension_context
-            The extension context to update with the physical parameters.
         physical_context
             The physical context to get the physical parameters from.
+        extension_context
+            The extension context to update with the physical parameters.
+        dynamical_variables
+            The dynamical variables corresponding to the extension system particles.
 
         """
         raise NotImplementedError("Subclasses must implement this method.")
@@ -223,10 +228,15 @@ class CouplingSum(Coupling):
             coupling.addToExtensionSystem(extension_system, dynamical_variables)
 
     def updateExtensionContext(
-        self, extension_context: mm.Context, physical_context: mm.Context
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+        dynamical_variables: t.Sequence[DynamicalVariable],
     ):
         for coupling in self._couplings:
-            coupling.updateExtensionContext(extension_context, physical_context)
+            coupling.updateExtensionContext(
+                physical_context, extension_context, dynamical_variables
+            )
 
     def updatePhysicalContext(
         self,
@@ -380,7 +390,10 @@ class CustomCoupling(Coupling):
         extension_system.addForce(flipped_force)
 
     def updateExtensionContext(
-        self, extension_context: mm.Context, physical_context: mm.Context
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+        dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> None:
         force = self._forces[0]
         collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(

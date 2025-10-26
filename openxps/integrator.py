@@ -103,30 +103,6 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         self._dynamical_variables = None
         self._coupling = None
 
-    def _update_physical_context(self) -> None:
-        """Update the physical context with the current state of the extension system.
-
-        This function transfers the current positions of particles in the extension
-        context to the corresponding parameters in the physical context. If a dynamical
-        variable has bounds, the value is wrapped accordingly.
-
-        """
-        self._coupling.updatePhysicalContext(
-            self._physical_context, self._extension_context, self._dynamical_variables
-        )
-
-    def _update_extension_context(self) -> None:
-        """Update the extension context with the current collective variable values.
-
-        This function evaluates the collective variables that define the coupling
-        potential in the physical context and transfers their values to the
-        corresponding parameters in the extension context.
-
-        """
-        self._coupling.updateExtensionContext(
-            self._extension_context, self._physical_context
-        )
-
     def configure(
         self,
         physical_context: mm.Context,
@@ -294,8 +270,16 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
         for _ in range(steps):
             mmswig.Integrator_step(self._physical_integrator, 1)
             mmswig.Integrator_step(self._extension_integrator, 1)
-            self._update_physical_context()
-            self._update_extension_context()
+            self._coupling.updatePhysicalContext(
+                self._physical_context,
+                self._extension_context,
+                self._dynamical_variables,
+            )
+            self._coupling.updateExtensionContext(
+                self._physical_context,
+                self._extension_context,
+                self._dynamical_variables,
+            )
 
 
 class SplitIntegrator(ExtendedSpaceIntegrator):
@@ -378,17 +362,30 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         extension_step_size = mmswig.Integrator_getStepSize(self._extension_integrator)
         if physical_step_size > extension_step_size:
             self._middle_integrator = self._physical_integrator
-            self._update_middle_context = self._update_physical_context
             self._end_integrator = self._extension_integrator
-            self._update_end_context = self._update_extension_context
             ratio = physical_step_size / (2 * extension_step_size)
         else:
             self._middle_integrator = self._extension_integrator
-            self._update_middle_context = self._update_extension_context
             self._end_integrator = self._physical_integrator
-            self._update_end_context = self._update_physical_context
             ratio = extension_step_size / (2 * physical_step_size)
         self._num_substeps = int(np.rint(ratio))
+
+    def configure(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+        coupling: Coupling,
+    ) -> None:
+        super().configure(
+            physical_context, extension_context, dynamical_variables, coupling
+        )
+        if self._middle_integrator is self._physical_integrator:
+            self._update_middle_context = self._coupling.updatePhysicalContext
+            self._update_end_context = self._coupling.updateExtensionContext
+        else:
+            self._update_middle_context = self._coupling.updateExtensionContext
+            self._update_end_context = self._coupling.updatePhysicalContext
 
     def step(self, steps: int) -> None:
         """Advance the extended phase-space simulation by integrating the physical and
@@ -401,8 +398,20 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         """
         for _ in range(steps):
             mmswig.Integrator_step(self._end_integrator, self._num_substeps)
-            self._update_middle_context()
+            self._update_middle_context(
+                self._physical_context,
+                self._extension_context,
+                self._dynamical_variables,
+            )
             mmswig.Integrator_step(self._middle_integrator, 1)
-            self._update_end_context()
+            self._update_end_context(
+                self._physical_context,
+                self._extension_context,
+                self._dynamical_variables,
+            )
             mmswig.Integrator_step(self._end_integrator, self._num_substeps)
-            self._update_middle_context()
+            self._update_middle_context(
+                self._physical_context,
+                self._extension_context,
+                self._dynamical_variables,
+            )

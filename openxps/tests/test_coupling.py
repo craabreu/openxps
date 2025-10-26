@@ -133,7 +133,7 @@ def test_custom_coupling_get_extension_parameters():
     extension_context = mm.Context(extension_system, extension_integrator)
 
     # Update extension context with physical parameters
-    coupling.updateExtensionContext(extension_context, physical_context)
+    coupling.updateExtensionContext(physical_context, extension_context, [phi0])
 
     # Verify that phi parameter was set in extension context
     phi_value = extension_context.getParameter("phi")
@@ -440,7 +440,9 @@ def test_coupling_sum_get_extension_parameters():
     extension_context = mm.Context(extension_system, extension_integrator)
 
     # Update extension context with physical parameters
-    force_sum.updateExtensionContext(extension_context, physical_context)
+    force_sum.updateExtensionContext(
+        physical_context, extension_context, [phi_s, psi_s]
+    )
 
     # Should have parameters for both phi and psi set in extension context
     phi_value = extension_context.getParameter("phi")
