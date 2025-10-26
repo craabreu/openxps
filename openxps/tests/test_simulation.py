@@ -38,7 +38,7 @@ def test_basic_initialization():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator),
     )
 
@@ -62,7 +62,7 @@ def test_with_two_integrators():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator, extension_integrator),
     )
 
@@ -77,7 +77,7 @@ def test_with_platform():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator),
         platform=platform,
     )
@@ -94,7 +94,7 @@ def test_with_platform_properties():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator),
         platform=platform,
         platformProperties=properties,
@@ -109,7 +109,7 @@ def test_context_is_extended():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -125,7 +125,7 @@ def test_inherited_step_method():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -152,7 +152,7 @@ def test_inherited_minimize_energy():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -182,7 +182,7 @@ def test_reporters():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -225,7 +225,7 @@ def test_save_and_load_checkpoint():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -272,11 +272,12 @@ def test_save_and_load_checkpoint():
 
 
 def test_missing_dv_in_coupling():
-    """Test error when DV is not in coupling parameters."""
+    """Test that simulation with coupling having no DVs fails
+    (no particles in extension system)."""
     model = testsystems.AlanineDipeptideVacuum()
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
 
-    # Create coupling without phi0 parameter
+    # Create coupling with no dynamical variables
     coupling = xps.CustomCoupling(
         "0.5*kappa*phi^2",
         [phi],
@@ -284,21 +285,19 @@ def test_missing_dv_in_coupling():
         kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 
-    mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    phi0 = xps.DynamicalVariable("phi0", mmunit.radian, mass, xps.bounds.CIRCULAR)
-
     integrator = mm.LangevinMiddleIntegrator(
         300 * mmunit.kelvin, 1 / mmunit.picosecond, 1 * mmunit.femtosecond
     )
 
-    with pytest.raises(ValueError) as excinfo:
+    # Should raise an error because extension system has no particles
+    with pytest.raises(Exception) as excinfo:
         xps.ExtendedSpaceSimulation(
             model.topology,
-            xps.ExtendedSpaceSystem([phi0], coupling, model.system),
+            xps.ExtendedSpaceSystem(model.system, coupling),
             xps.LockstepIntegrator(integrator),
             mm.Platform.getPlatformByName("Reference"),
         )
-    assert "dynamical variables are not coupling parameters" in str(excinfo.value)
+    assert "no particles" in str(excinfo.value).lower()
 
 
 def test_simulation_with_state():
@@ -308,7 +307,7 @@ def test_simulation_with_state():
     # Create first simulation and run it
     sim1 = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, deepcopy(coupling), deepcopy(model.system)),
+        xps.ExtendedSpaceSystem(deepcopy(model.system), deepcopy(coupling)),
         xps.LockstepIntegrator(deepcopy(integrator1)),
         mm.Platform.getPlatformByName("Reference"),
     )
@@ -328,7 +327,7 @@ def test_simulation_with_state():
 
     sim2 = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, deepcopy(coupling), deepcopy(model.system)),
+        xps.ExtendedSpaceSystem(deepcopy(model.system), deepcopy(coupling)),
         xps.LockstepIntegrator(integrator2),
         mm.Platform.getPlatformByName("Reference"),
         state=state,
@@ -351,7 +350,7 @@ def test_loadcheckpoint_comprehensive():
 
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem(dvs, coupling, model.system),
+        xps.ExtendedSpaceSystem(model.system, coupling),
         xps.LockstepIntegrator(integrator),
         mm.Platform.getPlatformByName("Reference"),
     )

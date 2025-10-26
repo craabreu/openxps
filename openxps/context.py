@@ -61,7 +61,7 @@ class ExtendedSpaceContext(mm.Context):
     >>> height = 2 * unit.kilojoule_per_mole
     >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
-    ...     xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),
+    ...     xps.ExtendedSpaceSystem(model.system, harmonic_force),
     ...     xps.LockstepIntegrator(integrator),
     ...     platform,
     ... )

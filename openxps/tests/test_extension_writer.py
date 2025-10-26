@@ -31,7 +31,7 @@ def test_extension_writer():
     platform = openmm.Platform.getPlatformByName("Reference")
     simulation = xps.ExtendedSpaceSimulation(
         model.topology,
-        xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),
+        xps.ExtendedSpaceSystem(model.system, harmonic_force),
         xps.LockstepIntegrator(integrator),
         platform,
     )

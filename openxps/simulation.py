@@ -70,7 +70,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     >>> integrator.setRandomNumberSeed(1234)
     >>> simulation = xps.ExtendedSpaceSimulation(
     ...     model.topology,
-    ...     xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),
+    ...     xps.ExtendedSpaceSystem(model.system, harmonic_force),
     ...     xps.LockstepIntegrator(integrator),
     ...     openmm.Platform.getPlatformByName("Reference"),
     ... )

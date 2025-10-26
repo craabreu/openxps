@@ -123,7 +123,7 @@ def test_custom_coupling_get_extension_parameters():
         kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
     )
 
-    system = ExtendedSpaceSystem([phi0], coupling, model.system)
+    system = ExtendedSpaceSystem(model.system, coupling)
     physical_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
     physical_context = mm.Context(system, physical_integrator)
     physical_context.setPositions(model.positions)
@@ -431,7 +431,7 @@ def test_coupling_sum_get_extension_parameters():
     force2 = HarmonicCoupling(psi, psi_s, kappa)
     force_sum = force1 + force2
 
-    system = ExtendedSpaceSystem([phi_s, psi_s], force_sum, model.system)
+    system = ExtendedSpaceSystem(model.system, force_sum)
     physical_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
     physical_context = mm.Context(system, physical_integrator)
     physical_context.setPositions(model.positions)
@@ -538,7 +538,7 @@ def test_coupling_with_extended_space_system():
     )
 
     initial_physical_forces = model.system.getNumForces()
-    system = ExtendedSpaceSystem([phi_s], coupling, model.system)
+    system = ExtendedSpaceSystem(model.system, coupling)
 
     # Physical system should have one more force
     assert system.getNumForces() == initial_physical_forces + 1
@@ -557,7 +557,7 @@ def test_harmonic_coupling_integration():
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
     coupling = HarmonicCoupling(phi, phi_s, kappa)
-    system = ExtendedSpaceSystem([phi_s], coupling, model.system)
+    system = ExtendedSpaceSystem(model.system, coupling)
 
     # Check dynamical variables
     dvs = system.getDynamicalVariables()
@@ -583,7 +583,7 @@ def test_coupling_sum_integration():
     force_sum = force1 + force2
 
     initial_forces = model.system.getNumForces()
-    system = ExtendedSpaceSystem([phi_s, psi_s], force_sum, model.system)
+    system = ExtendedSpaceSystem(model.system, force_sum)
 
     # Physical system should have 2 more forces
     assert system.getNumForces() == initial_forces + 2

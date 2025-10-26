@@ -50,13 +50,12 @@ def test_initialization():
     """Test basic initialization of ExtendedSpaceSystem."""
     model = testsystems.AlanineDipeptideVacuum()
     coupling = create_coupling()
-    dvs = create_dvs()
 
     # Get initial force count from the base system
     initial_force_count = model.system.getNumForces()
 
     # Create ExtendedSpaceSystem
-    system = ExtendedSpaceSystem(dvs, coupling, model.system)
+    system = ExtendedSpaceSystem(model.system, coupling)
 
     # Verify it's an instance of mm.System (inheritance)
     assert isinstance(system, mm.System)
@@ -72,9 +71,9 @@ def test_get_dynamical_variables():
     """Test getDynamicalVariables returns the correct DVs."""
     model = testsystems.AlanineDipeptideVacuum()
     coupling = create_coupling()
-    dvs = create_dvs()
+    original_dvs = coupling.getDynamicalVariables()
 
-    system = ExtendedSpaceSystem(dvs, coupling, model.system)
+    system = ExtendedSpaceSystem(model.system, coupling)
 
     retrieved_dvs = system.getDynamicalVariables()
 
@@ -85,7 +84,7 @@ def test_get_dynamical_variables():
     assert len(retrieved_dvs) == 3
 
     # Verify each DV matches
-    for original_dv, retrieved_dv in zip(dvs, retrieved_dvs):
+    for original_dv, retrieved_dv in zip(original_dvs, retrieved_dvs):
         assert retrieved_dv == original_dv
         assert retrieved_dv.name == original_dv.name
         assert retrieved_dv.unit == original_dv.unit
@@ -96,9 +95,8 @@ def test_get_coupling():
     """Test getCoupling returns the correct potential."""
     model = testsystems.AlanineDipeptideVacuum()
     coupling = create_coupling()
-    dvs = create_dvs()
 
-    system = ExtendedSpaceSystem(dvs, coupling, model.system)
+    system = ExtendedSpaceSystem(model.system, coupling)
 
     retrieved_potential = system.getCoupling()
     assert retrieved_potential is coupling
@@ -112,9 +110,9 @@ def test_get_extension_system():
     """Test getExtensionSystem returns a properly configured system."""
     model = testsystems.AlanineDipeptideVacuum()
     coupling = create_coupling()
-    dvs = create_dvs()
 
-    system = ExtendedSpaceSystem(dvs, coupling, model.system)
+    system = ExtendedSpaceSystem(model.system, coupling)
+    dvs = system.getDynamicalVariables()
 
     extension_system = system.getExtensionSystem()
 
@@ -133,36 +131,38 @@ def test_get_extension_system():
 
 
 def test_invalid_dynamical_variable_type():
-    """Test that invalid DV type raises TypeError."""
+    """Test that invalid DV type raises AttributeError when accessed."""
+    # Note: DVs are now validated at coupling creation time, not in ExtendedSpaceSystem
+    # If someone manually corrupts the coupling's DVs, it will fail when accessed
     model = testsystems.AlanineDipeptideVacuum()
     coupling = create_coupling()
 
-    with pytest.raises(
-        TypeError, match="dynamical variables must be instances of DynamicalVariable"
-    ):
-        ExtendedSpaceSystem([None], coupling, model.system)
+    # Manually corrupt the coupling's DVs
+    coupling._dynamical_variables = [None]
+
+    # Will raise AttributeError when trying to access .mass on None
+    with pytest.raises(AttributeError):
+        ExtendedSpaceSystem(model.system, coupling)
 
 
 def test_invalid_coupling_type():
     """Test that invalid coupling type raises TypeError."""
     model = testsystems.AlanineDipeptideVacuum()
-    dvs = create_dvs()
 
     with pytest.raises(
-        TypeError,
-        match="must be an instance of Coupling",
+        AttributeError,
+        match="'NoneType' object has no attribute 'addToPhysicalSystem'",
     ):
-        ExtendedSpaceSystem(dvs, None, model.system)
+        ExtendedSpaceSystem(model.system, None)
 
 
 def test_missing_dv_parameter():
-    """Test that missing DV parameter raises ValueError."""
+    """Test that ExtendedSpaceSystem with coupling having no DVs works."""
     model = testsystems.AlanineDipeptideVacuum()
-    dvs = create_dvs()
-    # Create coupling without phi0 parameter
-    potential_without_phi0 = create_coupling(phi0=None)
+    # Create coupling without dynamical variables
+    potential_without_dvs = create_coupling(phi0=None)
 
-    with pytest.raises(
-        ValueError, match="dynamical variables are not coupling parameters"
-    ):
-        ExtendedSpaceSystem(dvs, potential_without_phi0, model.system)
+    # This should work fine - just creates a system with no extension DVs
+    system = ExtendedSpaceSystem(model.system, potential_without_dvs)
+    assert len(system.getDynamicalVariables()) == 0
+    assert system.getExtensionSystem().getNumParticles() == 0
