@@ -50,8 +50,8 @@ class ExtendedSpaceContext(mm.Context):
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     >>> kappa = 1000 * unit.kilojoule_per_mole / unit.radian**2
-    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
-    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
+    >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)
+    >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)
     >>> temp = 300 * unit.kelvin
     >>> integrator = openmm.LangevinMiddleIntegrator(
     ...     temp, 1 / unit.picosecond, 4 * unit.femtosecond
@@ -61,7 +61,7 @@ class ExtendedSpaceContext(mm.Context):
     >>> height = 2 * unit.kilojoule_per_mole
     >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
-    ...     xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),
+    ...     xps.ExtendedSpaceSystem(model.system, harmonic_force),
     ...     xps.LockstepIntegrator(integrator),
     ...     platform,
     ... )
@@ -100,11 +100,11 @@ class ExtendedSpaceContext(mm.Context):
             physical_context=self,
             extension_context=extension_context,
             dynamical_variables=system.getDynamicalVariables(),
-            coupling_force=system.getCouplingForce(),
+            coupling=system.getCoupling(),
         )
         self._system = system
         self._dvs = system.getDynamicalVariables()
-        self._coupling_force = system.getCouplingForce()
+        self._coupling = system.getCoupling()
         self._integrator = integrator
         self._extension_context = extension_context
 
@@ -181,8 +181,7 @@ class ExtendedSpaceContext(mm.Context):
             The positions for each particle in the system.
         """
         super().setPositions(positions)
-        for name, value in self._coupling_force.getInnerValues(self).items():
-            self._extension_context.setParameter(name, value / value.unit)
+        self._coupling.updateExtensionContext(self, self._extension_context)
 
     def setDynamicalVariableValues(self, values: t.Iterable[mmunit.Quantity]) -> None:
         """

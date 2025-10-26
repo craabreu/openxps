@@ -6,7 +6,6 @@ from copy import copy
 from math import pi
 
 import cvpack
-import numpy as np
 import openmm as mm
 import pytest
 import yaml
@@ -14,13 +13,13 @@ from openmm import unit as mmunit
 from openmmtools import testsystems
 
 from openxps import (
-    CustomCouplingForce,
+    CustomCoupling,
     DynamicalVariable,
     ExtendedSpaceSystem,
-    HarmonicCouplingForce,
+    HarmonicCoupling,
 )
 from openxps.bounds import CIRCULAR, NoBounds
-from openxps.coupling import CouplingForceSum
+from openxps.coupling import CouplingSum
 
 
 # Helper functions
@@ -41,138 +40,165 @@ def create_test_system():
     return testsystems.AlanineDipeptideVacuum()
 
 
-# CustomCouplingForce Tests
-def test_custom_coupling_force_initialization():
-    """Test basic initialization of CustomCouplingForce."""
+# CustomCoupling Tests
+def test_custom_coupling_initialization():
+    """Test basic initialization of CustomCoupling."""
     phi = create_test_cv()
-    coupling = CustomCouplingForce(
+    phi0 = create_test_dv("phi0")
+    coupling = CustomCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
+        [phi0],
         kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
-        phi0=np.pi * mmunit.radian,
     )
 
-    assert coupling.getEnergyFunction() == "0.5*kappa*(phi-phi0)^2"
-    assert coupling.getNumCollectiveVariables() == 1
-    params = coupling.getParameterDefaultValues()
+    assert coupling.getForce(0).getEnergyFunction() == "0.5*kappa*(phi-phi0)^2"
+    assert coupling.getForce(0).getNumCollectiveVariables() == 1
+    params = coupling.getForce(0).getParameterDefaultValues()
     assert "kappa" in params
     assert "phi0" in params
 
 
-def test_custom_coupling_force_repr():
-    """Test string representation of CustomCouplingForce."""
+def test_custom_coupling_repr():
+    """Test string representation of CustomCoupling."""
     phi = create_test_cv()
-    coupling = CustomCouplingForce(
+    phi0 = create_test_dv("phi0")
+    coupling = CustomCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
+        [phi0],
         kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
-        phi0=np.pi * mmunit.radian,
     )
 
     repr_str = repr(coupling)
-    assert "CustomCouplingForce" in repr_str
+    assert "CustomCoupling" in repr_str
     assert "0.5*kappa*(phi-phi0)^2" in repr_str
 
 
-def test_custom_coupling_force_flip():
-    """Test flipping a CustomCouplingForce."""
+def test_custom_coupling_add_to_extension_system():
+    """Test adding a CustomCoupling to the extension system."""
 
     phi = create_test_cv()
-    coupling = CustomCouplingForce(
+    phi0 = create_test_dv("phi0")
+    coupling = CustomCoupling(
         f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
         [phi],
+        [phi0],
         kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
-        phi0=pi * mmunit.radian,
     )
-    phi0 = create_test_dv("phi0")
 
-    flipped = coupling.flip([phi0])
+    # Create extension system and add coupling
+    extension_system = mm.System()
+    extension_system.addParticle(phi0.mass / phi0.mass.unit)
+    coupling.addToExtensionSystem(extension_system)
 
-    # Check that phi0 is now a collective variable (not a parameter)
-    assert "phi0" not in flipped.getParameterDefaultValues()
-    # Check that phi is now a parameter set to zero
-    params = flipped.getParameterDefaultValues()
-    assert "phi" in params
-    assert params["phi"].value_in_unit(mmunit.radian) == 0.0
-    assert "kappa" in params
+    # Check that a force was added to the extension system
+    assert extension_system.getNumForces() == 1
+    flipped_force = extension_system.getForce(0)
+
+    # Verify it's a CustomCVForce
+    assert isinstance(flipped_force, mm.CustomCVForce)
+    # Check that phi0 is now a collective variable
+    assert flipped_force.getNumCollectiveVariables() == 1
+    assert flipped_force.getCollectiveVariableName(0) == "phi0"
+    # Check that phi and kappa are parameters
+    param_names = [
+        flipped_force.getGlobalParameterName(i)
+        for i in range(flipped_force.getNumGlobalParameters())
+    ]
+    assert "phi" in param_names
+    assert "kappa" in param_names
 
 
-def test_custom_coupling_force_get_extension_parameters():
-    """Test getExtensionParameters method."""
+def test_custom_coupling_get_extension_parameters():
+    """Test updateExtensionContext method."""
     model = create_test_system()
     phi = create_test_cv()
     phi0 = create_test_dv("phi0")
 
-    coupling = CustomCouplingForce(
+    coupling = CustomCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
+        [phi0],
         kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
-        phi0=0.0 * mmunit.radian,
     )
 
-    system = ExtendedSpaceSystem([phi0], coupling, model.system)
-    integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
-    context = mm.Context(system, integrator)
-    context.setPositions(model.positions)
+    system = ExtendedSpaceSystem(model.system, coupling)
+    physical_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    physical_context = mm.Context(system, physical_integrator)
+    physical_context.setPositions(model.positions)
 
-    params = coupling.getExtensionParameters(context)
-    assert "phi" in params
-    # Values are returned as floats (in MD units)
-    assert isinstance(params["phi"], float)
+    # Create extension context
+    extension_system = system.getExtensionSystem()
+    extension_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    extension_context = mm.Context(extension_system, extension_integrator)
+
+    # Update extension context with physical parameters
+    coupling.updateExtensionContext(physical_context, extension_context)
+
+    # Verify that phi parameter was set in extension context
+    phi_value = extension_context.getParameter("phi")
+    assert isinstance(phi_value, float)
 
 
-def test_custom_coupling_force_serialization():
-    """Test YAML serialization and deserialization of CustomCouplingForce."""
+def test_custom_coupling_serialization():
+    """Test YAML serialization and deserialization of CustomCoupling."""
     phi = create_test_cv()
-    coupling = CustomCouplingForce(
+    phi0 = create_test_dv("phi0")
+    coupling = CustomCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
+        [phi0],
         kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
-        phi0=np.pi * mmunit.radian,
     )
 
     serialized = yaml.safe_dump(coupling)
     deserialized = yaml.safe_load(serialized)
 
-    assert deserialized.getEnergyFunction() == coupling.getEnergyFunction()
     assert (
-        deserialized.getNumCollectiveVariables() == coupling.getNumCollectiveVariables()
+        deserialized.getForce(0).getEnergyFunction()
+        == coupling.getForce(0).getEnergyFunction()
+    )
+    assert (
+        deserialized.getForce(0).getNumCollectiveVariables()
+        == coupling.getForce(0).getNumCollectiveVariables()
     )
 
 
-def test_custom_coupling_force_add_to_system():
-    """Test adding CustomCouplingForce to a system."""
+def test_custom_coupling_add_to_system():
+    """Test adding CustomCoupling to a system."""
     model = create_test_system()
     phi = create_test_cv()
-    coupling = CustomCouplingForce(
+    phi0 = create_test_dv("phi0")
+    coupling = CustomCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
+        [phi0],
         kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
-        phi0=0.0 * mmunit.radian,
     )
 
     initial_forces = model.system.getNumForces()
-    coupling.addToSystem(model.system)
+    coupling.addToPhysicalSystem(model.system)
     assert model.system.getNumForces() == initial_forces + 1
 
 
-# HarmonicCouplingForce Tests
-def test_harmonic_coupling_force_initialization():
-    """Test initialization of HarmonicCouplingForce with valid arguments."""
+# HarmonicCoupling Tests
+def test_harmonic_coupling_initialization():
+    """Test initialization of HarmonicCoupling with valid arguments."""
     phi = create_test_cv()
     phi_s = create_test_dv()
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    coupling = HarmonicCouplingForce(phi, phi_s, kappa)
+    coupling = HarmonicCoupling(phi, phi_s, kappa)
 
-    assert coupling.getNumCollectiveVariables() == 1
-    params = coupling.getParameterDefaultValues()
+    assert coupling.getForce(0).getNumCollectiveVariables() == 1
+    params = coupling.getForce(0).getParameterDefaultValues()
     assert "kappa_phi_phi_s" in params
     assert "phi_s" in params
 
 
-def test_harmonic_coupling_force_incompatible_units():
-    """Test HarmonicCouplingForce with incompatible CV and DV units."""
+def test_harmonic_coupling_incompatible_units():
+    """Test HarmonicCoupling with incompatible CV and DV units."""
     # Create a distance CV
     distance_cv = cvpack.Distance(0, 1, name="dist")
     # Create an angle DV
@@ -180,22 +206,22 @@ def test_harmonic_coupling_force_incompatible_units():
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.nanometer**2
 
     with pytest.raises(ValueError, match="Incompatible units"):
-        HarmonicCouplingForce(distance_cv, phi_s, kappa)
+        HarmonicCoupling(distance_cv, phi_s, kappa)
 
 
-def test_harmonic_coupling_force_incompatible_periodicity_nonperiodic_cv():
-    """Test HarmonicCouplingForce with periodic DV but non-periodic CV."""
+def test_harmonic_coupling_incompatible_periodicity_nonperiodic_cv():
+    """Test HarmonicCoupling with periodic DV but non-periodic CV."""
     distance_cv = cvpack.Distance(0, 1, name="dist")
     phi_s = create_test_dv()  # Periodic DV
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
     # Units check happens first, so we expect incompatible units error
     with pytest.raises(ValueError, match="Incompatible units"):
-        HarmonicCouplingForce(distance_cv, phi_s, kappa)
+        HarmonicCoupling(distance_cv, phi_s, kappa)
 
 
-def test_harmonic_coupling_force_incompatible_periodicity_nonperiodic_dv():
-    """Test HarmonicCouplingForce with periodic CV but non-periodic DV."""
+def test_harmonic_coupling_incompatible_periodicity_nonperiodic_dv():
+    """Test HarmonicCoupling with periodic CV but non-periodic DV."""
     phi = create_test_cv()
     # Create non-periodic DV
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
@@ -203,122 +229,139 @@ def test_harmonic_coupling_force_incompatible_periodicity_nonperiodic_dv():
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
     with pytest.raises(ValueError, match="Incompatible periodicity"):
-        HarmonicCouplingForce(phi, phi_s, kappa)
+        HarmonicCoupling(phi, phi_s, kappa)
 
 
-def test_harmonic_coupling_force_incompatible_force_constant():
-    """Test HarmonicCouplingForce with wrong force constant units."""
+def test_harmonic_coupling_incompatible_force_constant():
+    """Test HarmonicCoupling with wrong force constant units."""
     phi = create_test_cv()
     phi_s = create_test_dv()
     # Wrong units: should be energy/angle^2, not just energy
     kappa = 1000 * mmunit.kilojoule_per_mole
 
     with pytest.raises(ValueError, match="Incompatible force constant units"):
-        HarmonicCouplingForce(phi, phi_s, kappa)
+        HarmonicCoupling(phi, phi_s, kappa)
 
 
-def test_harmonic_coupling_force_flip():
-    """Test flipping a HarmonicCouplingForce."""
+def test_harmonic_coupling_add_to_extension_system():
+    """Test adding a HarmonicCoupling to the extension system."""
     phi = create_test_cv()
     phi_s = create_test_dv()
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    coupling = HarmonicCouplingForce(phi, phi_s, kappa)
-    flipped = coupling.flip([phi_s])
+    coupling = HarmonicCoupling(phi, phi_s, kappa)
 
-    # Check that phi_s is now a CV (not a parameter)
-    assert "phi_s" not in flipped.getParameterDefaultValues()
+    # Create extension system and add coupling
+    extension_system = mm.System()
+    extension_system.addParticle(phi_s.mass / phi_s.mass.unit)
+    coupling.addToExtensionSystem(extension_system)
+
+    # Check that a force was added to the extension system
+    assert extension_system.getNumForces() == 1
+    flipped_force = extension_system.getForce(0)
+
+    # Verify it's a CustomCVForce
+    assert isinstance(flipped_force, mm.CustomCVForce)
+    # Check that phi_s is now a collective variable
+    assert flipped_force.getNumCollectiveVariables() == 1
+    assert flipped_force.getCollectiveVariableName(0) == "phi_s"
     # Check that phi is now a parameter
-    params = flipped.getParameterDefaultValues()
-    assert "phi" in params
+    param_names = [
+        flipped_force.getGlobalParameterName(i)
+        for i in range(flipped_force.getNumGlobalParameters())
+    ]
+    assert "phi" in param_names
 
 
-def test_harmonic_coupling_force_repr():
-    """Test string representation of HarmonicCouplingForce."""
+def test_harmonic_coupling_repr():
+    """Test string representation of HarmonicCoupling."""
     phi = create_test_cv()
     phi_s = create_test_dv()
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    coupling = HarmonicCouplingForce(phi, phi_s, kappa)
+    coupling = HarmonicCoupling(phi, phi_s, kappa)
     repr_str = repr(coupling)
 
-    assert "HarmonicCouplingForce" in repr_str
+    assert "HarmonicCoupling" in repr_str
     assert "kappa_phi_phi_s" in repr_str
 
 
-def test_harmonic_coupling_force_serialization():
-    """Test YAML serialization of HarmonicCouplingForce."""
+def test_harmonic_coupling_serialization():
+    """Test YAML serialization of HarmonicCoupling."""
     phi = create_test_cv()
     phi_s = create_test_dv()
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    coupling = HarmonicCouplingForce(phi, phi_s, kappa)
+    coupling = HarmonicCoupling(phi, phi_s, kappa)
     serialized = yaml.safe_dump(coupling)
     deserialized = yaml.safe_load(serialized)
 
-    assert deserialized.getEnergyFunction() == coupling.getEnergyFunction()
+    assert (
+        deserialized.getForce(0).getEnergyFunction()
+        == coupling.getForce(0).getEnergyFunction()
+    )
 
 
-# CouplingForceSum Tests
-def test_coupling_force_sum_initialization():
-    """Test initialization of CouplingForceSum."""
+# CouplingSum Tests
+def test_coupling_sum_initialization():
+    """Test initialization of CouplingSum."""
     phi = create_test_cv("phi")
     psi = create_test_cv("psi")
     phi_s = create_test_dv("phi_s")
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa)
-    force2 = HarmonicCouplingForce(psi, psi_s, kappa)
+    force1 = HarmonicCoupling(phi, phi_s, kappa)
+    force2 = HarmonicCoupling(psi, psi_s, kappa)
 
-    force_sum = CouplingForceSum([force1, force2])
-    forces = force_sum.getCouplingForces()
+    force_sum = CouplingSum([force1, force2])
+    forces = force_sum.getCouplings()
 
     assert len(forces) == 2
     assert forces[0] is force1
     assert forces[1] is force2
 
 
-def test_coupling_force_sum_flattening():
-    """Test that nested CouplingForceSum objects are flattened."""
+def test_coupling_sum_flattening():
+    """Test that nested CouplingSum objects are flattened."""
     phi = create_test_cv("phi")
     psi = create_test_cv("psi")
     phi_s = create_test_dv("phi_s")
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa)
-    force2 = HarmonicCouplingForce(psi, psi_s, kappa)
+    force1 = HarmonicCoupling(phi, phi_s, kappa)
+    force2 = HarmonicCoupling(psi, psi_s, kappa)
 
     # Create nested sum: sum of (force1) and (sum of force2)
-    sum1 = CouplingForceSum([force1])
-    sum2 = CouplingForceSum([force2])
-    nested_sum = CouplingForceSum([sum1, sum2])
+    sum1 = CouplingSum([force1])
+    sum2 = CouplingSum([force2])
+    nested_sum = CouplingSum([sum1, sum2])
 
     # Should be flattened to just [force1, force2]
-    forces = nested_sum.getCouplingForces()
+    forces = nested_sum.getCouplings()
     assert len(forces) == 2
 
 
-def test_coupling_force_addition_operator():
-    """Test the addition operator for coupling forces."""
+def test_coupling_addition_operator():
+    """Test the addition operator for couplings."""
     phi = create_test_cv("phi")
     psi = create_test_cv("psi")
     phi_s = create_test_dv("phi_s")
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa)
-    force2 = HarmonicCouplingForce(psi, psi_s, kappa)
+    force1 = HarmonicCoupling(phi, phi_s, kappa)
+    force2 = HarmonicCoupling(psi, psi_s, kappa)
 
     force_sum = force1 + force2
 
-    assert isinstance(force_sum, CouplingForceSum)
-    forces = force_sum.getCouplingForces()
+    assert isinstance(force_sum, CouplingSum)
+    forces = force_sum.getCouplings()
     assert len(forces) == 2
 
 
-def test_coupling_force_sum_add_to_system():
+def test_coupling_sum_add_to_system():
     """Test that all forces in sum are added to system."""
     model = create_test_system()
     phi = create_test_cv("phi")
@@ -327,53 +370,56 @@ def test_coupling_force_sum_add_to_system():
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa)
-    force2 = HarmonicCouplingForce(psi, psi_s, kappa)
+    force1 = HarmonicCoupling(phi, phi_s, kappa)
+    force2 = HarmonicCoupling(psi, psi_s, kappa)
     force_sum = force1 + force2
 
     initial_forces = model.system.getNumForces()
-    force_sum.addToSystem(model.system)
+    force_sum.addToPhysicalSystem(model.system)
 
     # Should add 2 forces
     assert model.system.getNumForces() == initial_forces + 2
 
 
-def test_coupling_force_sum_flip():
-    """Test flipping a CouplingForceSum."""
+def test_coupling_sum_add_to_extension_system():
+    """Test adding a CouplingSum to the extension system."""
     phi = create_test_cv("phi")
     phi_s = create_test_dv("phi_s")
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
     # Create a custom coupling with both DVs
-    coupling = CustomCouplingForce(
+    coupling = CustomCoupling(
         "0.5*kappa1*(phi-phi_s)^2 + 0.5*kappa2*(phi-psi_s)^2",
         [phi],
+        [phi_s, psi_s],
         kappa1=kappa,
         kappa2=kappa,
-        phi_s=0.0 * mmunit.radian,
-        psi_s=0.0 * mmunit.radian,
     )
 
     # Create another one for the sum
     psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
-    coupling2 = CustomCouplingForce(
+    coupling2 = CustomCoupling(
         "0.5*kappa*(psi-phi_s)^2",
         [psi],
+        [phi_s],
         kappa=kappa,
-        phi_s=0.0 * mmunit.radian,
     )
 
     force_sum = coupling + coupling2
-    flipped = force_sum.flip([phi_s, psi_s])
 
-    assert isinstance(flipped, CouplingForceSum)
-    flipped_forces = flipped.getCouplingForces()
-    assert len(flipped_forces) == 2
+    # Create extension system and add coupling
+    extension_system = mm.System()
+    extension_system.addParticle(phi_s.mass / phi_s.mass.unit)
+    extension_system.addParticle(psi_s.mass / psi_s.mass.unit)
+    force_sum.addToExtensionSystem(extension_system)
+
+    # Check that 2 forces were added to the extension system
+    assert extension_system.getNumForces() == 2
 
 
-def test_coupling_force_sum_get_extension_parameters():
-    """Test getExtensionParameters with non-overlapping CVs."""
+def test_coupling_sum_get_extension_parameters():
+    """Test updateExtensionContext with non-overlapping CVs."""
     model = create_test_system()
     phi = create_test_cv("phi")
     psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
@@ -381,63 +427,66 @@ def test_coupling_force_sum_get_extension_parameters():
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa)
-    force2 = HarmonicCouplingForce(psi, psi_s, kappa)
+    force1 = HarmonicCoupling(phi, phi_s, kappa)
+    force2 = HarmonicCoupling(psi, psi_s, kappa)
     force_sum = force1 + force2
 
-    system = ExtendedSpaceSystem([phi_s, psi_s], force_sum, model.system)
-    integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
-    context = mm.Context(system, integrator)
-    context.setPositions(model.positions)
+    system = ExtendedSpaceSystem(model.system, force_sum)
+    physical_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    physical_context = mm.Context(system, physical_integrator)
+    physical_context.setPositions(model.positions)
 
-    params = force_sum.getExtensionParameters(context)
+    # Create extension context
+    extension_system = system.getExtensionSystem()
+    extension_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    extension_context = mm.Context(extension_system, extension_integrator)
 
-    # Should have parameters for both phi and psi
-    assert "phi" in params
-    assert "psi" in params
+    # Update extension context with physical parameters
+    force_sum.updateExtensionContext(physical_context, extension_context)
+
+    # Should have parameters for both phi and psi set in extension context
+    phi_value = extension_context.getParameter("phi")
+    psi_value = extension_context.getParameter("psi")
+    assert isinstance(phi_value, float)
+    assert isinstance(psi_value, float)
 
 
-def test_coupling_force_sum_conflicting_parameters():
+def test_coupling_sum_conflicting_parameters():
     """Test that conflicting parameters raise an error."""
     phi = create_test_cv("phi")
     phi_s = create_test_dv("phi_s")
     kappa1 = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
     kappa2 = 500 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    # Create two forces with same CV but different values
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa1)
-    force2 = HarmonicCouplingForce(phi, phi_s, kappa2)
+    # Create two forces with same CV and DV but different force constants
+    force1 = HarmonicCoupling(phi, phi_s, kappa1)
+    force2 = HarmonicCoupling(phi, phi_s, kappa2)
 
-    # Note: This test assumes that when both forces evaluate "phi",
-    # they would return different values if phi_s has different values
-    # in their parameter sets. However, in practice, the CV value should
-    # be the same since it's evaluated in the same context.
-    # This test may need adjustment based on actual behavior.
-
-    # For now, we'll just verify the sum can be created
-    force_sum = force1 + force2
-    assert len(force_sum.getCouplingForces()) == 2
+    # Adding them should raise an error because they have the same parameter name
+    # (kappa_phi_phi_s) but different values
+    with pytest.raises(ValueError, match="conflicting default values"):
+        _ = force1 + force2
 
 
-def test_coupling_force_sum_repr():
-    """Test string representation of CouplingForceSum."""
+def test_coupling_sum_repr():
+    """Test string representation of CouplingSum."""
     phi = create_test_cv("phi")
     psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
     phi_s = create_test_dv("phi_s")
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa)
-    force2 = HarmonicCouplingForce(psi, psi_s, kappa)
+    force1 = HarmonicCoupling(phi, phi_s, kappa)
+    force2 = HarmonicCoupling(psi, psi_s, kappa)
     force_sum = force1 + force2
 
     repr_str = repr(force_sum)
-    assert "HarmonicCouplingForce" in repr_str
+    assert "HarmonicCoupling" in repr_str
     assert "+" in repr_str
 
 
-def test_coupling_force_sum_copy():
-    """Test copying a CouplingForceSum."""
+def test_coupling_sum_copy():
+    """Test copying a CouplingSum."""
 
     phi = create_test_cv("phi")
     psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
@@ -445,51 +494,51 @@ def test_coupling_force_sum_copy():
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa)
-    force2 = HarmonicCouplingForce(psi, psi_s, kappa)
+    force1 = HarmonicCoupling(phi, phi_s, kappa)
+    force2 = HarmonicCoupling(psi, psi_s, kappa)
     force_sum = force1 + force2
 
     copied = copy(force_sum)
 
-    assert isinstance(copied, CouplingForceSum)
-    assert len(copied.getCouplingForces()) == len(force_sum.getCouplingForces())
+    assert isinstance(copied, CouplingSum)
+    assert len(copied.getCouplings()) == len(force_sum.getCouplings())
 
 
-def test_coupling_force_sum_serialization():
-    """Test YAML serialization of CouplingForceSum."""
+def test_coupling_sum_serialization():
+    """Test YAML serialization of CouplingSum."""
     phi = create_test_cv("phi")
     psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
     phi_s = create_test_dv("phi_s")
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa)
-    force2 = HarmonicCouplingForce(psi, psi_s, kappa)
+    force1 = HarmonicCoupling(phi, phi_s, kappa)
+    force2 = HarmonicCoupling(psi, psi_s, kappa)
     force_sum = force1 + force2
 
     serialized = yaml.safe_dump(force_sum)
     deserialized = yaml.safe_load(serialized)
 
-    assert isinstance(deserialized, CouplingForceSum)
-    assert len(deserialized.getCouplingForces()) == 2
+    assert isinstance(deserialized, CouplingSum)
+    assert len(deserialized.getCouplings()) == 2
 
 
 # Integration Tests
-def test_coupling_force_with_extended_space_system():
-    """Test CustomCouplingForce with ExtendedSpaceSystem."""
+def test_coupling_with_extended_space_system():
+    """Test CustomCoupling with ExtendedSpaceSystem."""
     model = create_test_system()
     phi = create_test_cv()
     phi_s = create_test_dv("phi_s")
 
-    coupling = CustomCouplingForce(
+    coupling = CustomCoupling(
         "0.5*kappa*(phi-phi_s)^2",
         [phi],
+        [phi_s],
         kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
-        phi_s=0.0 * mmunit.radian,
     )
 
     initial_physical_forces = model.system.getNumForces()
-    system = ExtendedSpaceSystem([phi_s], coupling, model.system)
+    system = ExtendedSpaceSystem(model.system, coupling)
 
     # Physical system should have one more force
     assert system.getNumForces() == initial_physical_forces + 1
@@ -500,28 +549,28 @@ def test_coupling_force_with_extended_space_system():
     assert extension_system.getNumParticles() == 1
 
 
-def test_harmonic_coupling_force_integration():
-    """Test HarmonicCouplingForce integration with ExtendedSpaceSystem."""
+def test_harmonic_coupling_integration():
+    """Test HarmonicCoupling integration with ExtendedSpaceSystem."""
     model = create_test_system()
     phi = create_test_cv()
     phi_s = create_test_dv()
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    coupling = HarmonicCouplingForce(phi, phi_s, kappa)
-    system = ExtendedSpaceSystem([phi_s], coupling, model.system)
+    coupling = HarmonicCoupling(phi, phi_s, kappa)
+    system = ExtendedSpaceSystem(model.system, coupling)
 
     # Check dynamical variables
     dvs = system.getDynamicalVariables()
     assert len(dvs) == 1
     assert dvs[0].name == "phi_s"
 
-    # Check coupling force
-    retrieved_force = system.getCouplingForce()
+    # Check coupling
+    retrieved_force = system.getCoupling()
     assert retrieved_force is coupling
 
 
-def test_coupling_force_sum_integration():
-    """Test CouplingForceSum with ExtendedSpaceSystem."""
+def test_coupling_sum_integration():
+    """Test CouplingSum with ExtendedSpaceSystem."""
     model = create_test_system()
     phi = create_test_cv("phi")
     psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
@@ -529,12 +578,12 @@ def test_coupling_force_sum_integration():
     psi_s = create_test_dv("psi_s")
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
-    force1 = HarmonicCouplingForce(phi, phi_s, kappa)
-    force2 = HarmonicCouplingForce(psi, psi_s, kappa)
+    force1 = HarmonicCoupling(phi, phi_s, kappa)
+    force2 = HarmonicCoupling(psi, psi_s, kappa)
     force_sum = force1 + force2
 
     initial_forces = model.system.getNumForces()
-    system = ExtendedSpaceSystem([phi_s, psi_s], force_sum, model.system)
+    system = ExtendedSpaceSystem(model.system, force_sum)
 
     # Physical system should have 2 more forces
     assert system.getNumForces() == initial_forces + 2

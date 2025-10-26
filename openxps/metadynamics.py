@@ -129,8 +129,8 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     >>> kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2
-    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)
-    >>> system = xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system)
+    >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)
+    >>> system = xps.ExtendedSpaceSystem(model.system, harmonic_force)
     >>> bias_variable = xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degrees)
     >>> temperature = 300 * unit.kelvin
     >>> metadynamics = xps.ExtendedSpaceMetadynamics(

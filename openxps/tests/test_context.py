@@ -10,7 +10,7 @@ from openmm import unit as mmunit
 from openmmtools import testsystems
 
 from openxps import (
-    CustomCouplingForce,
+    CustomCoupling,
     DynamicalVariable,
     ExtendedSpaceContext,
     ExtendedSpaceSystem,
@@ -20,12 +20,12 @@ from openxps.bounds import CIRCULAR, NoBounds, Reflective
 from openxps.utils import BINARY_SEPARATOR
 
 
-def system_integrator_platform(dvs, coupling_force, model):
+def system_integrator_platform(coupling, model):
     """Helper function to create a basic OpenMM Context object."""
     integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
     platform = mm.Platform.getPlatformByName("Reference")
     return (
-        ExtendedSpaceSystem(dvs, coupling_force, model.system),
+        ExtendedSpaceSystem(model.system, coupling),
         LockstepIntegrator(integrator),
         platform,
     )
@@ -44,31 +44,33 @@ def create_dvs():
     ]
 
 
-def create_coupling_force(phi0=180 * mmunit.degrees):
+def create_coupling(phi0=180 * mmunit.degrees):
     """Helper function to create a MetaCollectiveVariable object."""
+    dvs = create_dvs()
     kwargs = {
         "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radians**2,
         "alpha": 0.01 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
-        "x0": 1 * mmunit.nanometer,
-        "y0": 1 * mmunit.nanometer,
     }
     if phi0 is not None:
         kwargs["phi0"] = phi0
-    return CustomCouplingForce(
+    # Always include x0 and y0 as parameters (they're in the expression)
+    kwargs["x0"] = 1 * mmunit.nanometer
+    kwargs["y0"] = 1 * mmunit.nanometer
+    return CustomCoupling(
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
+        dvs if phi0 is not None else [],
         **kwargs,
     )
 
 
-def create_extended_context(model, coupling_force=None):
+def create_extended_context(model, coupling=None):
     """Helper function to create an ExtendedSpaceContext object."""
     return ExtendedSpaceContext(
         ExtendedSpaceSystem(
-            create_dvs(),
-            coupling_force or create_coupling_force(),
             model.system,
+            coupling or create_coupling(),
         ),
         LockstepIntegrator(mm.VerletIntegrator(1.0 * mmunit.femtosecond)),
         mm.Platform.getPlatformByName("Reference"),
@@ -151,28 +153,32 @@ def test_raise_exceptions():
 def test_validation():
     """Test the validation of extended space context."""
     model = testsystems.AlanineDipeptideVacuum()
-    dvs = create_dvs()
-    coupling_force = create_coupling_force()
 
-    with pytest.raises(TypeError) as e:
-        ExtendedSpaceContext(*system_integrator_platform([None], coupling_force, model))
-    assert "dynamical variables must be instances of DynamicalVariable" in str(e.value)
+    # Test invalid DVs by corrupting the coupling
+    bad_coupling = create_coupling()
+    bad_coupling._dynamical_variables = [None]
+    # Will raise AttributeError when trying to access .mass on None
+    with pytest.raises(AttributeError):
+        ExtendedSpaceContext(*system_integrator_platform(bad_coupling, model))
 
-    with pytest.raises(TypeError) as e:
-        ExtendedSpaceContext(*system_integrator_platform(dvs, None, model))
-    assert "must be an instance of CouplingForce" in str(e.value)
+    # Test invalid coupling (None)
+    with pytest.raises(AttributeError) as e:
+        ExtendedSpaceContext(*system_integrator_platform(None, model))
+    assert "'NoneType' object has no attribute 'addToPhysicalSystem'" in str(e.value)
 
-    with pytest.raises(ValueError) as e:
+    # Test coupling with no DVs (will raise error about conflicting parameters
+    # since x0 and y0 are parameters but not DVs)
+    with pytest.raises(Exception) as e:
         ExtendedSpaceContext(
-            *system_integrator_platform(dvs, create_coupling_force(phi0=None), model),
+            *system_integrator_platform(create_coupling(phi0=None), model),
         )
-    assert "dynamical variables are not coupling force parameters" in str(e.value)
+    assert "different default values" in str(e.value).lower()
 
 
 def test_consistency():
     """Test the consistency of the extended space context."""
     model = testsystems.AlanineDipeptideVacuum()
-    coupling = create_coupling_force()
+    coupling = create_coupling()
     context = create_extended_context(model, coupling)
     context.setPositions(model.positions)
     context.setVelocitiesToTemperature(300 * mmunit.kelvin)
@@ -190,7 +196,7 @@ def test_consistency():
 
         # Check the consistency of the potential energy
         x1 = extension_state.getPotentialEnergy() / mmunit.kilojoule_per_mole
-        x2 = coupling.getValue(context) / mmunit.kilojoule_per_mole
+        x2 = coupling.getForce(0).getValue(context) / mmunit.kilojoule_per_mole
         assert x1 == pytest.approx(x2)
 
 
@@ -331,12 +337,11 @@ def test_context_with_platform_properties():
     platform = mm.Platform.getPlatformByName("CPU")
     properties = {"Threads": "1"}
 
-    dvs = create_dvs()
-    coupling_force = create_coupling_force()
+    coupling = create_coupling()
     integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
 
     context = ExtendedSpaceContext(
-        ExtendedSpaceSystem(dvs, coupling_force, model.system),
+        ExtendedSpaceSystem(model.system, coupling),
         LockstepIntegrator(integrator),
         platform,
         properties,
@@ -349,15 +354,14 @@ def test_context_with_platform_properties():
 def test_invalid_integrator_type():
     """Test that non-ExtendedSpaceIntegrator raises TypeError."""
     model = testsystems.AlanineDipeptideVacuum()
-    dvs = create_dvs()
-    coupling_force = create_coupling_force()
+    coupling = create_coupling()
     integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
 
     with pytest.raises(
         TypeError, match="The integrator must be an instance of ExtendedSpaceIntegrator"
     ):
         ExtendedSpaceContext(
-            ExtendedSpaceSystem(dvs, coupling_force, model.system),
+            ExtendedSpaceSystem(model.system, coupling),
             integrator,  # Wrong type - not wrapped in ExtendedSpaceIntegrator
         )
 

@@ -7,11 +7,9 @@
 
 """
 
-import typing as t
-
 import openmm as mm
 
-from .coupling import CouplingForce
+from .coupling import Coupling
 from .dynamical_variable import DynamicalVariable
 
 
@@ -19,20 +17,13 @@ class ExtendedSpaceSystem(mm.System):
     """An :OpenMM:`System` object that includes extra dynamical variables (DVs) and
     allows for extended phase-space (XPS) simulations.
 
-    A given :CVPack:`MetaCollectiveVariable` is added to the system to couple the
-    physical coordinates and the DVs.
-
     Parameters
     ----------
-    dynamical_variables
-        A collection of dynamical variables (DVs) to be included in the XPS simulation.
-    coupling_force
-        A :CVPack:`MetaCollectiveVariable` defining the potential energy term that
-        couples the DVs to the physical coordinates. It must have units
-        of ``kilojoules_per_mole``. All DVs must be included as parameters in the
-        coupling force.
     system
         The :OpenMM:`System` to be used in the XPS simulation.
+    coupling
+        A :class:`Coupling` object, required to couple the physical and extended
+        phase-space systems. The dynamical variables are obtained from this coupling.
 
     Example
     -------
@@ -45,68 +36,26 @@ class ExtendedSpaceSystem(mm.System):
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
-    >>> harmonic_force = xps.HarmonicCouplingForce(
+    >>> harmonic_force = xps.HarmonicCoupling(
     ...     cvpack.Torsion(6, 8, 14, 16, name="phi"),
     ...     phi0,
     ...     1000 * unit.kilojoules_per_mole / unit.radian**2,
     ... )
-    >>> system = xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system)
+    >>> system = xps.ExtendedSpaceSystem(model.system, harmonic_force)
     >>> system.getDynamicalVariables()
     (DynamicalVariable(name='phi0', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...),)
     >>> system.getExtensionSystem().getNumParticles()
     1
     """
 
-    def __init__(
-        self,
-        dynamical_variables: t.Iterable[DynamicalVariable],
-        coupling_force: CouplingForce,
-        system: mm.System,
-    ) -> None:
-        try:
-            dynamical_variables = tuple(dv.in_md_units() for dv in dynamical_variables)
-        except AttributeError as e:
-            raise TypeError(
-                "All dynamical variables must be instances of DynamicalVariable."
-            ) from e
-        self._validateCouplingForce(coupling_force, dynamical_variables)
-        coupling_force.addToSystem(system)
-        self.this = system
-        self._extension_system = self._createExtensionSystem(
-            dynamical_variables, coupling_force
-        )
-        self._dvs = dynamical_variables
-        self._coupling_force = coupling_force
-
-    def _validateCouplingForce(
-        self,
-        coupling_force: CouplingForce,
-        dynamical_variables: t.Sequence[DynamicalVariable],
-    ) -> None:
-        if not isinstance(coupling_force, CouplingForce):
-            raise TypeError("The coupling force must be an instance of CouplingForce.")
-        missing_parameters = [
-            dv.name
-            for dv in dynamical_variables
-            if dv.name not in coupling_force.getParameterDefaultValues()
-        ]
-        if missing_parameters:
-            raise ValueError(
-                "These dynamical variables are not coupling force parameters: "
-                + ", ".join(missing_parameters)
-            )
-
-    def _createExtensionSystem(
-        self,
-        dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_force: CouplingForce,
-    ) -> mm.System:
-        extension_system = mm.System()
-        for dv in dynamical_variables:
-            extension_system.addParticle(dv.mass / dv.mass.unit)
-        flipped_potential = coupling_force.flip(dynamical_variables)
-        flipped_potential.addToSystem(extension_system)
-        return extension_system
+    def __init__(self, system: mm.System, coupling: Coupling) -> None:
+        self._coupling = coupling
+        coupling.addToPhysicalSystem(system)
+        self.this = system.this
+        self._extension_system = mm.System()
+        for dv in coupling.getDynamicalVariables():
+            self._extension_system.addParticle(dv.mass / dv.mass.unit)
+        coupling.addToExtensionSystem(self._extension_system)
 
     def getDynamicalVariables(self) -> tuple[DynamicalVariable]:
         """
@@ -117,18 +66,18 @@ class ExtendedSpaceSystem(mm.System):
         t.Tuple[DynamicalVariable]
             A tuple containing the dynamical variables.
         """
-        return self._dvs
+        return tuple(self._coupling.getDynamicalVariables())
 
-    def getCouplingForce(self) -> CouplingForce:
+    def getCoupling(self) -> Coupling:
         """
-        Get the coupling force included in the extended phase-space system.
+        Get the coupling included in the extended phase-space system.
 
         Returns
         -------
-        CouplingForce
-            The coupling force.
+        Coupling
+            The coupling.
         """
-        return self._coupling_force
+        return self._coupling
 
     def getExtensionSystem(self) -> mm.System:
         """
