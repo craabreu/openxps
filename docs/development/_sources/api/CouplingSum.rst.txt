@@ -1,0 +1,14 @@
+CouplingSum
+===========
+
+.. currentmodule:: openxps
+.. autoclass:: CouplingSum
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: addToExtensionSystem
+    .. automethod:: addToPhysicalSystem
+    .. automethod:: getCouplings
+    .. automethod:: updateExtensionContext
+    .. automethod:: updatePhysicalContext

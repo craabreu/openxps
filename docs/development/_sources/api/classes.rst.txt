@@ -5,9 +5,9 @@ Classes
     :titlesonly:
 
     ExtendedSpaceContext
-    CouplingForceSum
-    CustomCouplingForce
-    HarmonicCouplingForce
+    CouplingSum
+    CustomCoupling
+    HarmonicCoupling
     DynamicalVariable
     ExtensionWriter
     LockstepIntegrator

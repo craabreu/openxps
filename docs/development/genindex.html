@@ -43,7 +43,6 @@
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
- | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#H"><strong>H</strong></a>
  | <a href="#I"><strong>I</strong></a>
@@ -63,10 +62,20 @@
 <h2 id="A">A</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/CouplingForceSum.html#openxps.CouplingForceSum.addToSystem">addToSystem() (openxps.CouplingForceSum method)</a>
+      <li><a href="api/CouplingSum.html#openxps.CouplingSum.addToExtensionSystem">addToExtensionSystem() (openxps.CouplingSum method)</a>
+
+      <ul>
+        <li><a href="api/CustomCoupling.html#openxps.CustomCoupling.addToExtensionSystem">(openxps.CustomCoupling method)</a>
 </li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/CouplingSum.html#openxps.CouplingSum.addToPhysicalSystem">addToPhysicalSystem() (openxps.CouplingSum method)</a>
+
+      <ul>
+        <li><a href="api/CustomCoupling.html#openxps.CustomCoupling.addToPhysicalSystem">(openxps.CustomCoupling method)</a>
+</li>
+      </ul></li>
       <li><a href="api/bounds.html#openxps.bounds.Bounds.asQuantity">asQuantity() (openxps.bounds.Bounds method)</a>
 </li>
   </ul></td>
@@ -87,9 +96,11 @@
 <h2 id="C">C</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/SplitIntegrator.html#openxps.SplitIntegrator.configure">configure() (openxps.SplitIntegrator method)</a>
+</li>
       <li><a href="api/bounds.html#openxps.bounds.Bounds.convert">convert() (openxps.bounds.Bounds method)</a>
 </li>
-      <li><a href="api/CouplingForceSum.html#openxps.CouplingForceSum">CouplingForceSum (class in openxps)</a>
+      <li><a href="api/CouplingSum.html#openxps.CouplingSum">CouplingSum (class in openxps)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
@@ -97,7 +108,7 @@
 </li>
       <li><a href="api/DynamicalVariable.html#openxps.DynamicalVariable.createCollectiveVariable">createCollectiveVariable() (openxps.DynamicalVariable method)</a>
 </li>
-      <li><a href="api/CustomCouplingForce.html#openxps.CustomCouplingForce">CustomCouplingForce (class in openxps)</a>
+      <li><a href="api/CustomCoupling.html#openxps.CustomCoupling">CustomCoupling (class in openxps)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -134,26 +145,14 @@
   </ul></td>
 </tr></table>
 
-<h2 id="F">F</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/CouplingForceSum.html#openxps.CouplingForceSum.flip">flip() (openxps.CouplingForceSum method)</a>
-
-      <ul>
-        <li><a href="api/CustomCouplingForce.html#openxps.CustomCouplingForce.flip">(openxps.CustomCouplingForce method)</a>
-</li>
-      </ul></li>
-  </ul></td>
-</tr></table>
-
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/ExtendedSpaceMetadynamics.html#openxps.ExtendedSpaceMetadynamics.getCollectiveVariables">getCollectiveVariables() (openxps.ExtendedSpaceMetadynamics method)</a>
 </li>
-      <li><a href="api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getCouplingForce">getCouplingForce() (openxps.ExtendedSpaceSystem method)</a>
+      <li><a href="api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getCoupling">getCoupling() (openxps.ExtendedSpaceSystem method)</a>
 </li>
-      <li><a href="api/CouplingForceSum.html#openxps.CouplingForceSum.getCouplingForces">getCouplingForces() (openxps.CouplingForceSum method)</a>
+      <li><a href="api/CouplingSum.html#openxps.CouplingSum.getCouplings">getCouplings() (openxps.CouplingSum method)</a>
 </li>
       <li><a href="api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getDynamicalVariables">getDynamicalVariables() (openxps.ExtendedSpaceSystem method)</a>
 </li>
@@ -161,23 +160,15 @@
 </li>
       <li><a href="api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getDynamicalVariableVelocities">getDynamicalVariableVelocities() (openxps.ExtendedSpaceContext method)</a>
 </li>
-      <li><a href="api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getExtensionContext">getExtensionContext() (openxps.ExtendedSpaceContext method)</a>
-</li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/CouplingForceSum.html#openxps.CouplingForceSum.getExtensionParameters">getExtensionParameters() (openxps.CouplingForceSum method)</a>
-
-      <ul>
-        <li><a href="api/CustomCouplingForce.html#openxps.CustomCouplingForce.getExtensionParameters">(openxps.CustomCouplingForce method)</a>
+      <li><a href="api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getExtensionContext">getExtensionContext() (openxps.ExtendedSpaceContext method)</a>
 </li>
-      </ul></li>
       <li><a href="api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getExtensionSystem">getExtensionSystem() (openxps.ExtendedSpaceSystem method)</a>
 </li>
       <li><a href="api/ExtensionWriter.html#openxps.ExtensionWriter.getHeaders">getHeaders() (openxps.ExtensionWriter method)</a>
 </li>
       <li><a href="api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getIntegrator">getIntegrator() (openxps.ExtendedSpaceContext method)</a>
-</li>
-      <li><a href="api/CouplingForceSum.html#openxps.CouplingForceSum.getParameterDefaultValues">getParameterDefaultValues() (openxps.CouplingForceSum method)</a>
 </li>
       <li><a href="api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getSystem">getSystem() (openxps.ExtendedSpaceContext method)</a>
 </li>
@@ -189,7 +180,7 @@
 <h2 id="H">H</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="api/HarmonicCouplingForce.html#openxps.HarmonicCouplingForce">HarmonicCouplingForce (class in openxps)</a>
+      <li><a href="api/HarmonicCoupling.html#openxps.HarmonicCoupling">HarmonicCoupling (class in openxps)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -332,8 +323,20 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="api/bounds.html#openxps.bounds.Bounds.unit">unit (openxps.bounds.Bounds attribute)</a>
 </li>
+      <li><a href="api/CouplingSum.html#openxps.CouplingSum.updateExtensionContext">updateExtensionContext() (openxps.CouplingSum method)</a>
+
+      <ul>
+        <li><a href="api/CustomCoupling.html#openxps.CustomCoupling.updateExtensionContext">(openxps.CustomCoupling method)</a>
+</li>
+      </ul></li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="api/CouplingSum.html#openxps.CouplingSum.updatePhysicalContext">updatePhysicalContext() (openxps.CouplingSum method)</a>
+
+      <ul>
+        <li><a href="api/CustomCoupling.html#openxps.CustomCoupling.updatePhysicalContext">(openxps.CustomCoupling method)</a>
+</li>
+      </ul></li>
       <li><a href="api/bounds.html#openxps.bounds.Bounds.upper">upper (openxps.bounds.Bounds attribute)</a>
 </li>
   </ul></td>

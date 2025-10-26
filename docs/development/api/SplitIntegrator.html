@@ -76,6 +76,25 @@ Default is False.</p></li>
 </dl>
 <p class="rubric">Methods</p>
 <dl class="py method">
+<dt class="sig sig-object py" id="openxps.SplitIntegrator.configure">
+<span class="sig-name descname"><span class="pre">configure</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrator.html#SplitIntegrator.configure"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.SplitIntegrator.configure" title="Link to this definition">¶</a></dt>
+<dd><p>Configure the integrator.</p>
+<p>Store pointers to the given contexts, dynamical variables, and coupling
+potential in the integrator. This allows the integrator to update the contexts
+during the simulation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>physical_context</strong> (<em>Context</em>) – The OpenMM context containing the physical system.</p></li>
+<li><p><strong>extension_context</strong> (<em>Context</em>) – The OpenMM context containing the extension system.</p></li>
+<li><p><strong>dynamical_variables</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – The dynamical variables included in the extended phase-space system.</p></li>
+<li><p><strong>coupling</strong> (<em>Coupling</em>) – The potential that couples the physical and dynamical variables.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="openxps.SplitIntegrator.step">
 <span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">steps</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrator.html#SplitIntegrator.step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.SplitIntegrator.step" title="Link to this definition">¶</a></dt>
 <dd><p>Advance the extended phase-space simulation by integrating the physical and
@@ -116,9 +135,9 @@ extension systems in lockstep over a specified number of time steps.</p>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CouplingForceSum.html">CouplingForceSum</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CustomCouplingForce.html">CustomCouplingForce</a></li>
-<li class="toctree-l3"><a class="reference internal" href="HarmonicCouplingForce.html">HarmonicCouplingForce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CouplingSum.html">CouplingSum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CustomCoupling.html">CustomCoupling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="HarmonicCoupling.html">HarmonicCoupling</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>

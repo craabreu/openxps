@@ -41,20 +41,15 @@
 <h1>ExtendedSpaceSystem<a class="headerlink" href="#extendedspacesystem" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceSystem">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling_force</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/system.html#ExtendedSpaceSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSystem" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/system.html#ExtendedSpaceSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSystem" title="Link to this definition">¶</a></dt>
 <dd><p>An <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> object that includes extra dynamical variables (DVs) and
 allows for extended phase-space (XPS) simulations.</p>
-<p>A given <a class="extlink-CVPack reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> is added to the system to couple the
-physical coordinates and the DVs.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>dynamical_variables</strong> (<em>Iterable</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – A collection of dynamical variables (DVs) to be included in the XPS simulation.</p></li>
-<li><p><strong>coupling_force</strong> (<em>CouplingForce</em>) – A <a class="extlink-CVPack reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> defining the potential energy term that
-couples the DVs to the physical coordinates. It must have units
-of <code class="docutils literal notranslate"><span class="pre">kilojoules_per_mole</span></code>. All DVs must be included as parameters in the
-coupling force.</p></li>
 <li><p><strong>system</strong> (<em>System</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> to be used in the XPS simulation.</p></li>
+<li><p><strong>coupling</strong> (<em>Coupling</em>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">Coupling</span></code> object, required to couple the physical and extended
+phase-space systems. The dynamical variables are obtained from this coupling.</p></li>
 </ul>
 </dd>
 </dl>
@@ -68,12 +63,12 @@ coupling force.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">testsystems</span><span class="o">.</span><span class="n">AlanineDipeptideVacuum</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;phi0&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">harmonic_force</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCouplingForce</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">harmonic_force</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCoupling</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi&quot;</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="n">phi0</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">system</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSystem</span><span class="p">([</span><span class="n">phi0</span><span class="p">],</span> <span class="n">harmonic_force</span><span class="p">,</span> <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">system</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSystem</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">harmonic_force</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">system</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()</span>
 <span class="go">(DynamicalVariable(name=&#39;phi0&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...),)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">system</span><span class="o">.</span><span class="n">getExtensionSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
@@ -82,15 +77,15 @@ coupling force.</p></li>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.ExtendedSpaceSystem.getCouplingForce">
-<span class="sig-name descname"><span class="pre">getCouplingForce</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/system.html#ExtendedSpaceSystem.getCouplingForce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSystem.getCouplingForce" title="Link to this definition">¶</a></dt>
-<dd><p>Get the coupling force included in the extended phase-space system.</p>
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceSystem.getCoupling">
+<span class="sig-name descname"><span class="pre">getCoupling</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/system.html#ExtendedSpaceSystem.getCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSystem.getCoupling" title="Link to this definition">¶</a></dt>
+<dd><p>Get the coupling included in the extended phase-space system.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>The coupling force.</p>
+<dd class="field-odd"><p>The coupling.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>CouplingForce</p>
+<dd class="field-even"><p>Coupling</p>
 </dd>
 </dl>
 </dd></dl>
@@ -152,9 +147,9 @@ coupling force.</p></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CouplingForceSum.html">CouplingForceSum</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CustomCouplingForce.html">CustomCouplingForce</a></li>
-<li class="toctree-l3"><a class="reference internal" href="HarmonicCouplingForce.html">HarmonicCouplingForce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CouplingSum.html">CouplingSum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CustomCoupling.html">CustomCoupling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="HarmonicCoupling.html">HarmonicCoupling</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>

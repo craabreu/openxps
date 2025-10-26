@@ -1,0 +1,13 @@
+CustomCoupling
+==============
+
+.. currentmodule:: openxps
+.. autoclass:: CustomCoupling
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: addToExtensionSystem
+    .. automethod:: addToPhysicalSystem
+    .. automethod:: updateExtensionContext
+    .. automethod:: updatePhysicalContext

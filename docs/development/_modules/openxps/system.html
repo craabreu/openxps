@@ -44,11 +44,9 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
-
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.coupling</span><span class="w"> </span><span class="kn">import</span> <span class="n">CouplingForce</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.coupling</span><span class="w"> </span><span class="kn">import</span> <span class="n">Coupling</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
 
 
@@ -58,20 +56,13 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;An :OpenMM:`System` object that includes extra dynamical variables (DVs) and</span>
 <span class="sd">    allows for extended phase-space (XPS) simulations.</span>
 
-<span class="sd">    A given :CVPack:`MetaCollectiveVariable` is added to the system to couple the</span>
-<span class="sd">    physical coordinates and the DVs.</span>
-
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    dynamical_variables</span>
-<span class="sd">        A collection of dynamical variables (DVs) to be included in the XPS simulation.</span>
-<span class="sd">    coupling_force</span>
-<span class="sd">        A :CVPack:`MetaCollectiveVariable` defining the potential energy term that</span>
-<span class="sd">        couples the DVs to the physical coordinates. It must have units</span>
-<span class="sd">        of ``kilojoules_per_mole``. All DVs must be included as parameters in the</span>
-<span class="sd">        coupling force.</span>
 <span class="sd">    system</span>
 <span class="sd">        The :OpenMM:`System` to be used in the XPS simulation.</span>
+<span class="sd">    coupling</span>
+<span class="sd">        A :class:`Coupling` object, required to couple the physical and extended</span>
+<span class="sd">        phase-space systems. The dynamical variables are obtained from this coupling.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -84,68 +75,26 @@
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
 <span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
-<span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCouplingForce(</span>
+<span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCoupling(</span>
 <span class="sd">    ...     cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;),</span>
 <span class="sd">    ...     phi0,</span>
 <span class="sd">    ...     1000 * unit.kilojoules_per_mole / unit.radian**2,</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; system = xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system)</span>
+<span class="sd">    &gt;&gt;&gt; system = xps.ExtendedSpaceSystem(model.system, harmonic_force)</span>
 <span class="sd">    &gt;&gt;&gt; system.getDynamicalVariables()</span>
 <span class="sd">    (DynamicalVariable(name=&#39;phi0&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...),)</span>
 <span class="sd">    &gt;&gt;&gt; system.getExtensionSystem().getNumParticles()</span>
 <span class="sd">    1</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
-        <span class="n">coupling_force</span><span class="p">:</span> <span class="n">CouplingForce</span><span class="p">,</span>
-        <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">dynamical_variables</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
-                <span class="s2">&quot;All dynamical variables must be instances of DynamicalVariable.&quot;</span>
-            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_validateCouplingForce</span><span class="p">(</span><span class="n">coupling_force</span><span class="p">,</span> <span class="n">dynamical_variables</span><span class="p">)</span>
-        <span class="n">coupling_force</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="n">system</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_createExtensionSystem</span><span class="p">(</span>
-            <span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">coupling_force</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span> <span class="o">=</span> <span class="n">dynamical_variables</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span> <span class="o">=</span> <span class="n">coupling_force</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_validateCouplingForce</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">coupling_force</span><span class="p">:</span> <span class="n">CouplingForce</span><span class="p">,</span>
-        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coupling_force</span><span class="p">,</span> <span class="n">CouplingForce</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;The coupling force must be an instance of CouplingForce.&quot;</span><span class="p">)</span>
-        <span class="n">missing_parameters</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">dv</span><span class="o">.</span><span class="n">name</span>
-            <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span>
-            <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">coupling_force</span><span class="o">.</span><span class="n">getParameterDefaultValues</span><span class="p">()</span>
-        <span class="p">]</span>
-        <span class="k">if</span> <span class="n">missing_parameters</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;These dynamical variables are not coupling force parameters: &quot;</span>
-                <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_parameters</span><span class="p">)</span>
-            <span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_createExtensionSystem</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
-        <span class="n">coupling_force</span><span class="p">:</span> <span class="n">CouplingForce</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">:</span>
-        <span class="n">extension_system</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">:</span>
-            <span class="n">extension_system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
-        <span class="n">flipped_potential</span> <span class="o">=</span> <span class="n">coupling_force</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
-        <span class="n">flipped_potential</span><span class="o">.</span><span class="n">addToSystem</span><span class="p">(</span><span class="n">extension_system</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">extension_system</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">,</span> <span class="n">coupling</span><span class="p">:</span> <span class="n">Coupling</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span> <span class="o">=</span> <span class="n">coupling</span>
+        <span class="n">coupling</span><span class="o">.</span><span class="n">addToPhysicalSystem</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">this</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
+        <span class="n">coupling</span><span class="o">.</span><span class="n">addToExtensionSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span><span class="p">)</span>
 
 <div class="viewcode-block" id="ExtendedSpaceSystem.getDynamicalVariables">
 <a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getDynamicalVariables">[docs]</a>
@@ -158,21 +107,21 @@
 <span class="sd">        t.Tuple[DynamicalVariable]</span>
 <span class="sd">            A tuple containing the dynamical variables.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span></div>
+        <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">())</span></div>
 
 
-<div class="viewcode-block" id="ExtendedSpaceSystem.getCouplingForce">
-<a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getCouplingForce">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">getCouplingForce</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CouplingForce</span><span class="p">:</span>
+<div class="viewcode-block" id="ExtendedSpaceSystem.getCoupling">
+<a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getCoupling">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getCoupling</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Coupling</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Get the coupling force included in the extended phase-space system.</span>
+<span class="sd">        Get the coupling included in the extended phase-space system.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
-<span class="sd">        CouplingForce</span>
-<span class="sd">            The coupling force.</span>
+<span class="sd">        Coupling</span>
+<span class="sd">            The coupling.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span></div>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceSystem.getExtensionSystem">

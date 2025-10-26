@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_8432743c5fc6133b_integrator_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-10-25 18:28 +0000
+            created at 2025-10-26 20:44 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -125,7 +125,7 @@
     <p class="pln"><span class="n"><a id="t43" href="#t43">43</a></span><span class="t"><span class="str">    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t44" href="#t44">44</a></span><span class="t"><span class="str">    >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t45" href="#t45">45</a></span><span class="t"><span class="str">    >>> kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="str">    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t46" href="#t46">46</a></span><span class="t"><span class="str">    >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t47" href="#t47">47</a></span><span class="t"><span class="str">    >>> integrator = openmm.LangevinMiddleIntegrator(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t48" href="#t48">48</a></span><span class="t"><span class="str">    ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t49" href="#t49">49</a></span><span class="t"><span class="str">    ... )</span>&nbsp;</span><span class="r"></span></p>
@@ -133,7 +133,7 @@
     <p class="pln"><span class="n"><a id="t51" href="#t51">51</a></span><span class="t"><span class="str">    >>> platform = openmm.Platform.getPlatformByName("Reference")</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t52" href="#t52">52</a></span><span class="t"><span class="str">    >>> simulation = xps.ExtendedSpaceSimulation(</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t53" href="#t53">53</a></span><span class="t"><span class="str">    ...     model.topology,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">    ...     xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t54" href="#t54">54</a></span><span class="t"><span class="str">    ...     xps.ExtendedSpaceSystem(model.system, harmonic_force),</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">    ...     xps.LockstepIntegrator(integrator),</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">    ...     platform</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="str">    ... )</span>&nbsp;</span><span class="r"></span></p>
@@ -234,7 +234,7 @@
             <a class="nav" href="z_8432743c5fc6133b_integrator_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-10-25 18:28 +0000
+            created at 2025-10-26 20:44 +0000
         </p>
     </div>
 </footer>

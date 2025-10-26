@@ -89,8 +89,8 @@
 <span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
 <span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
 <span class="sd">    &gt;&gt;&gt; kappa = 1000 * unit.kilojoule_per_mole / unit.radian**2</span>
-<span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)</span>
-<span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)</span>
+<span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)</span>
+<span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)</span>
 <span class="sd">    &gt;&gt;&gt; temp = 300 * unit.kelvin</span>
 <span class="sd">    &gt;&gt;&gt; integrator = openmm.LangevinMiddleIntegrator(</span>
 <span class="sd">    ...     temp, 1 / unit.picosecond, 4 * unit.femtosecond</span>
@@ -100,7 +100,7 @@
 <span class="sd">    &gt;&gt;&gt; height = 2 * unit.kilojoule_per_mole</span>
 <span class="sd">    &gt;&gt;&gt; sigma = 18 * unit.degree</span>
 <span class="sd">    &gt;&gt;&gt; context = xps.ExtendedSpaceContext(</span>
-<span class="sd">    ...     xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),</span>
+<span class="sd">    ...     xps.ExtendedSpaceSystem(model.system, harmonic_force),</span>
 <span class="sd">    ...     xps.LockstepIntegrator(integrator),</span>
 <span class="sd">    ...     platform,</span>
 <span class="sd">    ... )</span>
@@ -139,11 +139,11 @@
             <span class="n">physical_context</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
             <span class="n">extension_context</span><span class="o">=</span><span class="n">extension_context</span><span class="p">,</span>
             <span class="n">dynamical_variables</span><span class="o">=</span><span class="n">system</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">(),</span>
-            <span class="n">coupling_force</span><span class="o">=</span><span class="n">system</span><span class="o">.</span><span class="n">getCouplingForce</span><span class="p">(),</span>
+            <span class="n">coupling</span><span class="o">=</span><span class="n">system</span><span class="o">.</span><span class="n">getCoupling</span><span class="p">(),</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_system</span> <span class="o">=</span> <span class="n">system</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getCouplingForce</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getCoupling</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_integrator</span> <span class="o">=</span> <span class="n">integrator</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="n">extension_context</span>
 
@@ -231,8 +231,7 @@
 <span class="sd">            The positions for each particle in the system.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span><span class="o">.</span><span class="n">getInnerValues</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="o">/</span> <span class="n">value</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updateExtensionContext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceContext.setDynamicalVariableValues">

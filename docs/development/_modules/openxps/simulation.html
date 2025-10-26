@@ -102,14 +102,14 @@
 <span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
 <span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
 <span class="sd">    &gt;&gt;&gt; kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2</span>
-<span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)</span>
+<span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)</span>
 <span class="sd">    &gt;&gt;&gt; integrator = openmm.LangevinMiddleIntegrator(</span>
 <span class="sd">    ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator.setRandomNumberSeed(1234)</span>
 <span class="sd">    &gt;&gt;&gt; simulation = xps.ExtendedSpaceSimulation(</span>
 <span class="sd">    ...     model.topology,</span>
-<span class="sd">    ...     xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system),</span>
+<span class="sd">    ...     xps.ExtendedSpaceSystem(model.system, harmonic_force),</span>
 <span class="sd">    ...     xps.LockstepIntegrator(integrator),</span>
 <span class="sd">    ...     openmm.Platform.getPlatformByName(&quot;Reference&quot;),</span>
 <span class="sd">    ... )</span>

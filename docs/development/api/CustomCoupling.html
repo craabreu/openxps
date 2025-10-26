@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>CustomCoupling &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="HarmonicCoupling" href="HarmonicCoupling.html" />
+    <link rel="prev" title="CouplingSum" href="CouplingSum.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="customcoupling">
+<h1>CustomCoupling<a class="headerlink" href="#customcoupling" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="openxps.CustomCoupling">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">CustomCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collective_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CustomCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CustomCoupling" title="Link to this definition">¶</a></dt>
+<dd><p>A custom coupling derived from an algebraic expression.</p>
+<p>This class uses a <a class="extlink-CVPack reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> object to create a flexible
+coupling defined by a mathematical expression. It automatically handles the
+transformation needed for extended phase-space simulations.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>function</strong> (<em>str</em>) – An algebraic expression that defines the coupling energy as a function of
+collective variables and parameters.</p></li>
+<li><p><strong>collective_variables</strong> (<em>Iterable</em><em>[</em><em>CollectiveVariable</em><em>]</em>) – The collective variables used in the coupling function.</p></li>
+<li><p><strong>dynamical_variables</strong> (<em>Iterable</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – The dynamical variables used in the coupling function.</p></li>
+<li><p><strong>**parameters</strong> (<em>Any</em>) – Named parameters that appear in the function expression. These can include
+extended dynamical variable names that will be promoted to context parameters.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">copy</span><span class="w"> </span><span class="kn">import</span> <span class="n">copy</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">pi</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;phi0&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xps</span><span class="o">.</span><span class="n">CustomCoupling</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="sa">f</span><span class="s2">&quot;0.5*kappa*min(delta,</span><span class="si">{</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="si">}</span><span class="s2">-delta)^2; delta=abs(phi-phi0)&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="n">phi</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="n">kappa</span><span class="o">=</span><span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="go">CustomCoupling(&quot;0.5*kappa*min(delta,6.28...-delta)^2; delta=abs(phi-phi0)&quot;)</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.CustomCoupling.addToExtensionSystem">
+<span class="sig-name descname"><span class="pre">addToExtensionSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">extension_system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CustomCoupling.addToExtensionSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CustomCoupling.addToExtensionSystem" title="Link to this definition">¶</a></dt>
+<dd><p>Add the flipped version of this coupling to the extension system.</p>
+<p>The flipped force replaces dynamical variable parameters with collective
+variables that represent the dynamical variables as particles. Physical
+collective variables become parameters set to zero.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>extension_system</strong> (<em>System</em>) – The extension system to which the flipped coupling should be added.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">pi</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s2">&quot;phi0&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">coupling</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">CustomCoupling</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="s2">&quot;0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="n">phi</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="n">phi0</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="n">kappa</span><span class="o">=</span><span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">extension_system</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">extension_system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">phi0</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">phi0</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
+<span class="go">0</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">coupling</span><span class="o">.</span><span class="n">addToExtensionSystem</span><span class="p">(</span><span class="n">extension_system</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">extension_system</span><span class="o">.</span><span class="n">getNumForces</span><span class="p">()</span>
+<span class="go">1</span>
+</pre></div>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.CustomCoupling.addToPhysicalSystem">
+<span class="sig-name descname"><span class="pre">addToPhysicalSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CustomCoupling.addToPhysicalSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CustomCoupling.addToPhysicalSystem" title="Link to this definition">¶</a></dt>
+<dd><p>Add this coupling to an OpenMM system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>system</strong> (<em>System</em>) – The system to which the coupling should be added.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>NotImplementedError</strong> – This method must be implemented by subclasses.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.CustomCoupling.updateExtensionContext">
+<span class="sig-name descname"><span class="pre">updateExtensionContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CustomCoupling.updateExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CustomCoupling.updateExtensionContext" title="Link to this definition">¶</a></dt>
+<dd><p>Update the extension context with the current physical parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>physical_context</strong> (<em>Context</em>) – The physical context to get the physical parameters from.</p></li>
+<li><p><strong>extension_context</strong> (<em>Context</em>) – The extension context to update with the physical parameters.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.CustomCoupling.updatePhysicalContext">
+<span class="sig-name descname"><span class="pre">updatePhysicalContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CustomCoupling.updatePhysicalContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CustomCoupling.updatePhysicalContext" title="Link to this definition">¶</a></dt>
+<dd><p>Update the physical context with the current extension parameters.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>physical_context</strong> (<em>Context</em>) – The physical context to update with the extension parameters.</p></li>
+<li><p><strong>extension_context</strong> (<em>Context</em>) – The extension context to get the extension parameters from.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CouplingSum.html">CouplingSum</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">CustomCoupling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="HarmonicCoupling.html">HarmonicCoupling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SplitIntegrator.html">SplitIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceBiasVariable.html">ExtendedSpaceBiasVariable</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceMetadynamics.html">ExtendedSpaceMetadynamics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSimulation.html">ExtendedSpaceSimulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">bounds module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators module</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/CustomCoupling.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

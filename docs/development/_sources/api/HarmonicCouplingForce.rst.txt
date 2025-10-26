@@ -1,7 +1,0 @@
-HarmonicCouplingForce
-=====================
-
-.. currentmodule:: openxps
-.. autoclass:: HarmonicCouplingForce
-    :member-order: alphabetical
-

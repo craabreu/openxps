@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_8432743c5fc6133b_simulation_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-10-25 18:28 +0000
+            created at 2025-10-26 20:44 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -211,8 +211,8 @@
     <p class="pln"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t"><span class="str">    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t"><span class="str">    >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t"><span class="str">    >>> kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t"><span class="str">    >>> harmonic_force = xps.HarmonicCouplingForce(phi, phi0, kappa)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t"><span class="str">    >>> system = xps.ExtendedSpaceSystem([phi0], harmonic_force, model.system)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t"><span class="str">    >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t133" href="#t133">133</a></span><span class="t"><span class="str">    >>> system = xps.ExtendedSpaceSystem(model.system, harmonic_force)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t134" href="#t134">134</a></span><span class="t"><span class="str">    >>> bias_variable = xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degrees)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t135" href="#t135">135</a></span><span class="t"><span class="str">    >>> temperature = 300 * unit.kelvin</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t136" href="#t136">136</a></span><span class="t"><span class="str">    >>> metadynamics = xps.ExtendedSpaceMetadynamics(</span>&nbsp;</span><span class="r"></span></p>
@@ -300,7 +300,7 @@
             <a class="nav" href="z_8432743c5fc6133b_simulation_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-10-25 18:28 +0000
+            created at 2025-10-26 20:44 +0000
         </p>
     </div>
 </footer>

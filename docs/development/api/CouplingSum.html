@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>CouplingForceSum &#8212; OpenXPS dev  documentation</title>
+    <title>CouplingSum &#8212; OpenXPS dev  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
@@ -18,7 +18,7 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="CustomCouplingForce" href="CustomCouplingForce.html" />
+    <link rel="next" title="CustomCoupling" href="CustomCoupling.html" />
     <link rel="prev" title="ExtendedSpaceContext" href="ExtendedSpaceContext.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -37,15 +37,15 @@
 
           <div class="body" role="main">
             
-  <section id="couplingforcesum">
-<h1>CouplingForceSum<a class="headerlink" href="#couplingforcesum" title="Link to this heading">¶</a></h1>
+  <section id="couplingsum">
+<h1>CouplingSum<a class="headerlink" href="#couplingsum" title="Link to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="openxps.CouplingForceSum">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">CouplingForceSum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">coupling_forces</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingForceSum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingForceSum" title="Link to this definition">¶</a></dt>
-<dd><p>A sum of coupling forces.</p>
+<dt class="sig sig-object py" id="openxps.CouplingSum">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">CouplingSum</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">couplings</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingSum"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingSum" title="Link to this definition">¶</a></dt>
+<dd><p>A sum of couplings.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>coupling_forces</strong> (<em>Iterable</em><em>[</em><em>CouplingForce</em><em>]</em>) – The coupling forces to be added.</p>
+<dd class="field-odd"><p><strong>couplings</strong> (<em>Iterable</em><em>[</em><em>Coupling</em><em>]</em>) – The couplings to be added.</p>
 </dd>
 </dl>
 <p class="rubric">Examples</p>
@@ -58,21 +58,21 @@
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dvmass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">phi_s</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;phi_s&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">dvmass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">psi_s</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;psi_s&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">dvmass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">coupling_force</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCouplingForce</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">coupling</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCoupling</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">phi</span><span class="p">,</span> <span class="n">phi_s</span><span class="p">,</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span>
-<span class="gp">... </span><span class="p">)</span> <span class="o">+</span> <span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCouplingForce</span><span class="p">(</span>
+<span class="gp">... </span><span class="p">)</span> <span class="o">+</span> <span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCoupling</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">psi</span><span class="p">,</span> <span class="n">psi_s</span><span class="p">,</span> <span class="mi">500</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span>
 <span class="gp">... </span><span class="p">)</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.CouplingForceSum.addToSystem">
-<span class="sig-name descname"><span class="pre">addToSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingForceSum.addToSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingForceSum.addToSystem" title="Link to this definition">¶</a></dt>
-<dd><p>Add this coupling force to an OpenMM system.</p>
+<dt class="sig sig-object py" id="openxps.CouplingSum.addToExtensionSystem">
+<span class="sig-name descname"><span class="pre">addToExtensionSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingSum.addToExtensionSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingSum.addToExtensionSystem" title="Link to this definition">¶</a></dt>
+<dd><p>Add the an appropriate version of this coupling to the extension system.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>system</strong> (<em>openmm.System</em>) – The system to which the coupling force should be added.</p>
+<dd class="field-odd"><p><strong>system</strong> (<em>System</em>) – The extension system to which the coupling should be added.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>NotImplementedError</strong> – This method must be implemented by subclasses.</p>
@@ -81,21 +81,12 @@
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.CouplingForceSum.flip">
-<span class="sig-name descname"><span class="pre">flip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingForceSum.flip"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingForceSum.flip" title="Link to this definition">¶</a></dt>
-<dd><p>Create a flipped version of this coupling force.</p>
-<p>The flipped force swaps the roles of physical collective variables and
-extended dynamical variables, creating a force suitable for the extension
-system where dynamical variables are treated as particles.</p>
+<dt class="sig sig-object py" id="openxps.CouplingSum.addToPhysicalSystem">
+<span class="sig-name descname"><span class="pre">addToPhysicalSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingSum.addToPhysicalSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingSum.addToPhysicalSystem" title="Link to this definition">¶</a></dt>
+<dd><p>Add this coupling to an OpenMM system.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>dynamical_variables</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – The extended dynamical variables to be promoted to collective variables.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A new coupling force with swapped variable roles.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>CouplingForce</p>
+<dd class="field-odd"><p><strong>system</strong> (<em>System</em>) – The system to which the coupling should be added.</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>NotImplementedError</strong> – This method must be implemented by subclasses.</p>
@@ -104,44 +95,40 @@ system where dynamical variables are treated as particles.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.CouplingForceSum.getCouplingForces">
-<span class="sig-name descname"><span class="pre">getCouplingForces</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingForceSum.getCouplingForces"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingForceSum.getCouplingForces" title="Link to this definition">¶</a></dt>
-<dd><p>Get the coupling forces included in the summed coupling force.</p>
+<dt class="sig sig-object py" id="openxps.CouplingSum.getCouplings">
+<span class="sig-name descname"><span class="pre">getCouplings</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingSum.getCouplings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingSum.getCouplings" title="Link to this definition">¶</a></dt>
+<dd><p>Get the couplings included in the summed coupling.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><em>Sequence</em>[<em>CouplingForce</em>]</p>
+<dd class="field-odd"><p><em>Sequence</em>[<em>Coupling</em>]</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.CouplingForceSum.getExtensionParameters">
-<span class="sig-name descname"><span class="pre">getExtensionParameters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingForceSum.getExtensionParameters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingForceSum.getExtensionParameters" title="Link to this definition">¶</a></dt>
-<dd><p>Get parameter names and values to update the extension context with.</p>
+<dt class="sig sig-object py" id="openxps.CouplingSum.updateExtensionContext">
+<span class="sig-name descname"><span class="pre">updateExtensionContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingSum.updateExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingSum.updateExtensionContext" title="Link to this definition">¶</a></dt>
+<dd><p>Update the extension context with the current physical parameters.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>physical_context</strong> (<em>Context</em>) – The physical context to get the extension parameters from.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A dictionary with the names of the parameters as keys and their values in
-the extension context as values.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>dict[str, mmunit.Quantity]</p>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>physical_context</strong> (<em>Context</em>) – The physical context to get the physical parameters from.</p></li>
+<li><p><strong>extension_context</strong> (<em>Context</em>) – The extension context to update with the physical parameters.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.CouplingForceSum.getParameterDefaultValues">
-<span class="sig-name descname"><span class="pre">getParameterDefaultValues</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingForceSum.getParameterDefaultValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingForceSum.getParameterDefaultValues" title="Link to this definition">¶</a></dt>
-<dd><p>Get parameter names and default values from all coupling forces.</p>
+<dt class="sig sig-object py" id="openxps.CouplingSum.updatePhysicalContext">
+<span class="sig-name descname"><span class="pre">updatePhysicalContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CouplingSum.updatePhysicalContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CouplingSum.updatePhysicalContext" title="Link to this definition">¶</a></dt>
+<dd><p>Update the physical context with the current extension parameters.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A dictionary with parameter names as keys and their default values.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>dict[str, mmunit.Quantity]</p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>physical_context</strong> (<em>Context</em>) – The physical context to update with the extension parameters.</p></li>
+<li><p><strong>extension_context</strong> (<em>Context</em>) – The extension context to get the extension parameters from.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
@@ -175,9 +162,9 @@ the extension context as values.</p>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">CouplingForceSum</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CustomCouplingForce.html">CustomCouplingForce</a></li>
-<li class="toctree-l3"><a class="reference internal" href="HarmonicCouplingForce.html">HarmonicCouplingForce</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">CouplingSum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CustomCoupling.html">CustomCoupling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="HarmonicCoupling.html">HarmonicCoupling</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
@@ -217,7 +204,7 @@ the extension context as values.</p>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
-      <a href="../_sources/api/CouplingForceSum.rst.txt"
+      <a href="../_sources/api/CouplingSum.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

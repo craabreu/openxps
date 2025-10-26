@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>HarmonicCouplingForce &#8212; OpenXPS dev  documentation</title>
+    <title>HarmonicCoupling &#8212; OpenXPS dev  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
@@ -20,7 +20,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="DynamicalVariable" href="DynamicalVariable.html" />
-    <link rel="prev" title="CustomCouplingForce" href="CustomCouplingForce.html" />
+    <link rel="prev" title="CustomCoupling" href="CustomCoupling.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -38,23 +38,23 @@
 
           <div class="body" role="main">
             
-  <section id="harmoniccouplingforce">
-<h1>HarmonicCouplingForce<a class="headerlink" href="#harmoniccouplingforce" title="Link to this heading">¶</a></h1>
+  <section id="harmoniccoupling">
+<h1>HarmonicCoupling<a class="headerlink" href="#harmoniccoupling" title="Link to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="openxps.HarmonicCouplingForce">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">HarmonicCouplingForce</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collective_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_constant</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#HarmonicCouplingForce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.HarmonicCouplingForce" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.HarmonicCoupling">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">HarmonicCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collective_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_constant</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#HarmonicCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.HarmonicCoupling" title="Link to this definition">¶</a></dt>
 <dd><p>A harmonic coupling between a dynamical variable and a collective variable.</p>
 <p>The coupling energy is given by:</p>
 <div class="math notranslate nohighlight">
 \[U = \frac{1}{2} \kappa \left(s - q({\bf r})\right)^2\]</div>
 <p>where <span class="math notranslate nohighlight">\(s\)</span> is an extended dynamical variable, <span class="math notranslate nohighlight">\(q({\bf r})\)</span> is a
-physical collective variable, and <span class="math notranslate nohighlight">\(\kappa\)</span> is a coupling force constant.</p>
+physical collective variable, and <span class="math notranslate nohighlight">\(\kappa\)</span> is a coupling constant.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>collective_variable</strong> (<em>CollectiveVariable</em>) – The collective variable used in the coupling force.</p></li>
-<li><p><strong>dynamical_variable</strong> (<a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a>) – The dynamical variable used in the coupling force.</p></li>
-<li><p><strong>force_constant</strong> (<em>Quantity</em>) – The force constant for the coupling force.</p></li>
+<li><p><strong>collective_variable</strong> (<em>CollectiveVariable</em>) – The collective variable used in the coupling.</p></li>
+<li><p><strong>dynamical_variable</strong> (<a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a>) – The dynamical variable used in the coupling.</p></li>
+<li><p><strong>force_constant</strong> (<em>Quantity</em>) – The force constant for the coupling.</p></li>
 </ul>
 </dd>
 </dl>
@@ -67,8 +67,8 @@ physical collective variable, and <span class="math notranslate nohighlight">\(\
 <span class="gp">&gt;&gt;&gt; </span><span class="n">phi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">phi_s</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;phi_s&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">dvmass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">kappa</span> <span class="o">=</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCouplingForce</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">phi_s</span><span class="p">,</span> <span class="n">kappa</span><span class="p">)</span>
-<span class="go">HarmonicCouplingForce(&quot;0.5*kappa_phi_phi_s*((phi-phi_s-6.28...*floor(...))^2)&quot;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCoupling</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">phi_s</span><span class="p">,</span> <span class="n">kappa</span><span class="p">)</span>
+<span class="go">HarmonicCoupling(&quot;0.5*kappa_phi_phi_s*((phi-phi_s-6.28...*floor(...))^2)&quot;)</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -100,9 +100,9 @@ physical collective variable, and <span class="math notranslate nohighlight">\(\
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CouplingForceSum.html">CouplingForceSum</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CustomCouplingForce.html">CustomCouplingForce</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">HarmonicCouplingForce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CouplingSum.html">CouplingSum</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CustomCoupling.html">CustomCoupling</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">HarmonicCoupling</a></li>
 <li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
 <li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
@@ -142,7 +142,7 @@ physical collective variable, and <span class="math notranslate nohighlight">\(\
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
-      <a href="../_sources/api/HarmonicCouplingForce.rst.txt"
+      <a href="../_sources/api/HarmonicCoupling.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

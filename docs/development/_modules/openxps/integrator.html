@@ -54,7 +54,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">integrators</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.coupling</span><span class="w"> </span><span class="kn">import</span> <span class="n">CouplingForce</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.coupling</span><span class="w"> </span><span class="kn">import</span> <span class="n">Coupling</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">STRING_SEPARATOR</span>
 
@@ -138,41 +138,14 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span> <span class="o">=</span> <span class="kc">None</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span> <span class="o">=</span> <span class="kc">None</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_update_physical_context</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the physical context with the current state of the extension system.</span>
-
-<span class="sd">        This function transfers the current positions of particles in the extension</span>
-<span class="sd">        context to the corresponding parameters in the physical context. If a dynamical</span>
-<span class="sd">        variable has bounds, the value is wrapped accordingly.</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">state</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_getState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
-        <span class="n">positions</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">):</span>
-            <span class="n">value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">positions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">_update_extension_context</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Update the extension context with the current collective variable values.</span>
-
-<span class="sd">        This function evaluates the collective variables that define the coupling</span>
-<span class="sd">        potential in the physical context and transfers their values to the</span>
-<span class="sd">        corresponding parameters in the extension context.</span>
-
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span><span class="o">.</span><span class="n">getExtensionParameters</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span>
-        <span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">configure</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
         <span class="n">extension_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
         <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
-        <span class="n">coupling_force</span><span class="p">:</span> <span class="n">CouplingForce</span><span class="p">,</span>
+        <span class="n">coupling</span><span class="p">:</span> <span class="n">Coupling</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Configure the integrator.</span>
 
@@ -188,13 +161,13 @@
 <span class="sd">            The OpenMM context containing the extension system.</span>
 <span class="sd">        dynamical_variables</span>
 <span class="sd">            The dynamical variables included in the extended phase-space system.</span>
-<span class="sd">        coupling_force</span>
+<span class="sd">        coupling</span>
 <span class="sd">            The potential that couples the physical and dynamical variables.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span> <span class="o">=</span> <span class="n">physical_context</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="n">extension_context</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span> <span class="o">=</span> <span class="n">dynamical_variables</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_force</span> <span class="o">=</span> <span class="n">coupling_force</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span> <span class="o">=</span> <span class="n">coupling</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">getPhysicalIntegrator</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the integrator for the physical system.</span>
@@ -338,8 +311,14 @@
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
             <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_physical_context</span><span class="p">()</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_extension_context</span><span class="p">()</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updatePhysicalContext</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updateExtensionContext</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span>
+            <span class="p">)</span></div>
 </div>
 
 
@@ -426,17 +405,33 @@
         <span class="n">extension_step_size</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_getStepSize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">physical_step_size</span> <span class="o">&gt;</span> <span class="n">extension_step_size</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_middle_integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_physical_context</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_extension_context</span>
             <span class="n">ratio</span> <span class="o">=</span> <span class="n">physical_step_size</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">extension_step_size</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_middle_integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_extension_context</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_update_physical_context</span>
             <span class="n">ratio</span> <span class="o">=</span> <span class="n">extension_step_size</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">physical_step_size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">ratio</span><span class="p">))</span>
+
+<div class="viewcode-block" id="SplitIntegrator.configure">
+<a class="viewcode-back" href="../../api/SplitIntegrator.html#openxps.SplitIntegrator.configure">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">configure</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+        <span class="n">extension_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+        <span class="n">coupling</span><span class="p">:</span> <span class="n">Coupling</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span>
+            <span class="n">physical_context</span><span class="p">,</span> <span class="n">extension_context</span><span class="p">,</span> <span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">coupling</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_middle_integrator</span> <span class="ow">is</span> <span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updatePhysicalContext</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updateExtensionContext</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updateExtensionContext</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updatePhysicalContext</span></div>
+
 
 <div class="viewcode-block" id="SplitIntegrator.step">
 <a class="viewcode-back" href="../../api/SplitIntegrator.html#openxps.SplitIntegrator.step">[docs]</a>
@@ -451,11 +446,20 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
             <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_middle_integrator</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span>
+            <span class="p">)</span>
             <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">()</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span>
+            <span class="p">)</span></div>
 </div>
 
 </pre></div>

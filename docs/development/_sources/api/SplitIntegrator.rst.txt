@@ -7,4 +7,5 @@ SplitIntegrator
 
     .. rubric:: Methods
 
+    .. automethod:: configure
     .. automethod:: step
