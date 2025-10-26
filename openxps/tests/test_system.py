@@ -100,7 +100,10 @@ def test_get_coupling():
 
     retrieved_potential = system.getCoupling()
     assert retrieved_potential is coupling
-    assert retrieved_potential.getForce(0).getEnergyFunction() == coupling.getForce(0).getEnergyFunction()
+    assert (
+        retrieved_potential.getForce(0).getEnergyFunction()
+        == coupling.getForce(0).getEnergyFunction()
+    )
 
 
 def test_get_extension_system():

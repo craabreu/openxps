@@ -20,13 +20,14 @@ from .dynamical_variable import DynamicalVariable
 
 
 class Coupling(Serializable):
-    """
-    Abstract base class for couplings between physical and extended phase-space
+    """Abstract base class for couplings between physical and extended phase-space
     systems.
 
-    A coupling connects the physical system's collective variables to the
-    extended phase-space dynamical variables, enabling enhanced sampling simulations.
-    Subclasses must implement the :meth:`addToSystem` and :meth:`flip` methods.
+    A coupling connects the physical system's collective variables to the extended
+    phase-space dynamical variables, enabling enhanced sampling simulations.
+
+    Subclasses must implement the :meth:`addToSystem` and
+    :meth:`addToExtensionSystem` methods.
 
     """
 
@@ -37,14 +38,37 @@ class Coupling(Serializable):
         return CouplingSum([self, other])
 
     def getForces(self) -> list[mm.Force]:
+        """Get the list of OpenMM Force objects associated with this coupling.
+
+        Returns
+        -------
+        list[openmm.Force]
+            A list of Force objects contained within this coupling.
+        """
         return self._forces
 
     def getForce(self, index: int) -> mm.Force:
+        """Retrieve a single OpenMM Force object by its index from this coupling.
+
+        Parameters
+        ----------
+        index : int
+            The index of the Force object to retrieve.
+
+        Returns
+        -------
+        openmm.Force
+            The Force object at the specified index.
+
+        Raises
+        ------
+        IndexError
+            If the index is out of range.
+        """
         return self._forces[index]
 
     def addToSystem(self, system: mm.System) -> None:
-        """
-        Add this coupling to an OpenMM system.
+        """Add this coupling to an OpenMM system.
 
         Parameters
         ----------
@@ -59,12 +83,12 @@ class Coupling(Serializable):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def flip(
+    def addToExtensionSystem(
         self,
+        extension_system: mm.System,
         dynamical_variables: t.Sequence[DynamicalVariable],
-    ) -> "Coupling":
-        """
-        Create a flipped version of this coupling.
+    ) -> None:
+        """Add the flipped version of this coupling to the extension system.
 
         The flipped force swaps the roles of physical collective variables and
         extended dynamical variables, creating a force suitable for the extension
@@ -72,13 +96,10 @@ class Coupling(Serializable):
 
         Parameters
         ----------
+        extension_system : openmm.System
+            The extension system to which the flipped coupling should be added.
         dynamical_variables : Sequence[DynamicalVariable]
             The extended dynamical variables to be promoted to collective variables.
-
-        Returns
-        -------
-        Coupling
-            A new coupling with swapped variable roles.
 
         Raises
         ------
@@ -88,21 +109,36 @@ class Coupling(Serializable):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def getExtensionParameters(
+    def getPhysicalParameters(
         self, physical_context: mm.Context
     ) -> dict[str, mmunit.Quantity]:
-        """Get parameter names and values to update the extension context with.
+        """Get parameter names and values to update the physical context with.
 
         Parameters
         ----------
         physical_context
-            The physical context to get the extension parameters from.
+            The physical context to get the physical parameters from.
 
         Returns
         -------
         dict[str, mmunit.Quantity]
             A dictionary with the names of the parameters as keys and their values in
-            the extension context as values.
+            the physical context as values.
+        """
+        raise NotImplementedError("Subclasses must implement this method.")
+
+    def updateExtensionContext(
+        self, extension_context: mm.Context, physical_context: mm.Context
+    ) -> None:
+        """Update the extension context with the current physical parameters.
+
+        Parameters
+        ----------
+        extension_context
+            The extension context to update with the physical parameters.
+        physical_context
+            The physical context to get the physical parameters from.
+
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -176,51 +212,39 @@ class CouplingSum(Coupling):
         for coupling in self._couplings:
             coupling.addToSystem(system)
 
-    def flip(
+    def addToExtensionSystem(
         self,
+        extension_system: mm.System,
         dynamical_variables: t.Sequence[DynamicalVariable],
-    ) -> "CouplingSum":
-        return CouplingSum(
-            [coupling.flip(dynamical_variables) for coupling in self._couplings]
-        )
+    ) -> None:
+        for coupling in self._couplings:
+            coupling.addToExtensionSystem(extension_system, dynamical_variables)
 
-    def getExtensionParameters(
-        self, physical_context: mm.Context
-    ) -> dict[str, mmunit.Quantity]:
-        parameter_dicts = [
-            coupling.getExtensionParameters(physical_context) for coupling in self._couplings
-        ]
-        parameters = {}
-        for parameter_dict in parameter_dicts:
-            for key, value in parameter_dict.items():
-                if key in parameters and parameters[key] != value:
-                    raise ValueError(
-                        f"Parameter {key} has conflicting values in couplings: "
-                    )
-                parameters[key] = value
-        return parameters
+    def updateExtensionContext(
+        self, extension_context: mm.Context, physical_context: mm.Context
+    ):
+        for coupling in self._couplings:
+            coupling.updateExtensionContext(extension_context, physical_context)
 
 
 CouplingSum.registerTag("!openxps.CouplingSum")
 
 
 class CustomCoupling(Coupling):
-    """
-    A custom coupling that uses an algebraic expression to couple physical
-    collective variables with extended dynamical variables.
+    """A custom coupling derived from an algebraic expression.
 
-    This class extends :CVPack:`MetaCollectiveVariable` to provide a flexible
-    coupling defined by a mathematical expression. It automatically
-    handles the transformation needed for extended phase-space simulations.
+    This class uses a :CVPack:`MetaCollectiveVariable` object to create a flexible
+    coupling defined by a mathematical expression. It automatically handles the
+    transformation needed for extended phase-space simulations.
 
     Parameters
     ----------
-    function : str
+    function
         An algebraic expression that defines the coupling energy as a function of
         collective variables and parameters.
-    collective_variables : Iterable[cvpack.CollectiveVariable]
+    collective_variables
         The collective variables used in the coupling function.
-    **parameters : Any
+    **parameters
         Named parameters that appear in the function expression. These can include
         extended dynamical variable names that will be promoted to context parameters.
 
@@ -247,19 +271,6 @@ class CustomCoupling(Coupling):
         collective_variables: t.Iterable[cvpack.CollectiveVariable],
         **parameters: t.Any,
     ) -> None:
-        """
-        Initialize a custom coupling.
-
-        Parameters
-        ----------
-        function : str
-            An algebraic expression defining the coupling energy.
-        collective_variables : Iterable[cvpack.CollectiveVariable]
-            The collective variables used in the function.
-        **parameters : Any
-            Named parameters appearing in the function expression.
-
-        """
         force = cvpack.MetaCollectiveVariable(
             function,
             collective_variables,
@@ -286,11 +297,13 @@ class CustomCoupling(Coupling):
     def addToSystem(self, system: mm.System) -> None:
         self._forces[0].addToSystem(system)
 
-    def flip(
-        self, dynamical_variables: t.Sequence[DynamicalVariable]
-    ) -> "CustomCoupling":
+    def addToExtensionSystem(
+        self,
+        extension_system: mm.System,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+    ) -> None:
         """
-        Create a flipped version of this coupling for the extension system.
+        Add the flipped version of this coupling to the extension system.
 
         The flipped force replaces dynamical variable parameters with collective
         variables that represent the dynamical variables as particles. Physical
@@ -298,14 +311,10 @@ class CustomCoupling(Coupling):
 
         Parameters
         ----------
-        dynamical_variables : Sequence[DynamicalVariable]
+        extension_system
+            The extension system to which the flipped coupling should be added.
+        dynamical_variables
             The extended dynamical variables to be promoted to collective variables.
-
-        Returns
-        -------
-        CustomCoupling
-            A new coupling with swapped variable roles, suitable for adding
-            to the extension system.
 
         Examples
         --------
@@ -313,6 +322,7 @@ class CustomCoupling(Coupling):
         >>> import openxps as xps
         >>> from openmm import unit
         >>> from math import pi
+        >>> import openmm as mm
         >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
         >>> coupling = xps.CustomCoupling(
         ...     "0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
@@ -326,57 +336,46 @@ class CustomCoupling(Coupling):
         ...     3 * unit.dalton * (unit.nanometer / unit.radian)**2,
         ...     xps.bounds.CIRCULAR
         ... )
-        >>> flipped = coupling.flip([phi0])
-        >>> flipped.getForce(0).getParameterDefaultValues()
-        {'kappa': 1000 kJ/(mol rad**2), 'phi': 0.0 rad}
+        >>> extension_system = mm.System()
+        >>> extension_system.addParticle(phi0.mass / phi0.mass.unit)
+        0
+        >>> coupling.addToExtensionSystem(extension_system, [phi0])
+        >>> extension_system.getNumForces()
+        1
         """
         force = self._forces[0]
         parameters = force.getParameterDefaultValues()
-        # Only pop DVs that are actually parameters in this force
+
         dvs_to_flip = [dv for dv in dynamical_variables if dv.name in parameters]
         for dv in dvs_to_flip:
             parameters.pop(dv.name)
         parameters.update(
             {cv.getName(): 0.0 * cv.getUnit() for cv in force.getInnerVariables()}
         )
-        # Create CVs only for the DVs that were parameters
-        return CustomCoupling(
-            function=force.getEnergyFunction(),
-            collective_variables=[
+
+        flipped_force = cvpack.MetaCollectiveVariable(
+            force.getEnergyFunction(),
+            [
                 dv.createCollectiveVariable(i)
                 for i, dv in enumerate(dynamical_variables)
                 if dv in dvs_to_flip
             ],
+            unit=mmunit.kilojoule_per_mole,
+            name="coupling",
             **parameters,
         )
+        extension_system.addForce(flipped_force)
 
-    def getExtensionParameters(
-        self, physical_context: mm.Context
-    ) -> dict[str, mmunit.Quantity]:
-        """Get parameters to update the extension context.
-
-        This method evaluates the collective variables in the physical context and
-        returns their names and values as parameters.
-
-        Parameters
-        ----------
-        physical_context
-            The physical context to get the extension parameters from.
-
-        Returns
-        -------
-        dict[str, mmunit.Quantity]
-            A dictionary with the names of the parameters as keys and their values in
-            the extension context as values.
-        """
+    def updateExtensionContext(
+        self, extension_context: mm.Context, physical_context: mm.Context
+    ) -> None:
         force = self._forces[0]
         collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
             force, physical_context
         )
-        return {
-            mmswig.CustomCVForce_getCollectiveVariableName(force, index): value
-            for index, value in enumerate(collective_variables)
-        }
+        for index, value in enumerate(collective_variables):
+            name = mmswig.CustomCVForce_getCollectiveVariableName(force, index)
+            mmswig.Context_setParameter(extension_context, name, value)
 
 
 CustomCoupling.registerTag("!openxps.CustomCoupling")

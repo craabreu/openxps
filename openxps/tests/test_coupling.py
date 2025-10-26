@@ -74,8 +74,8 @@ def test_custom_coupling_repr():
     assert "0.5*kappa*(phi-phi0)^2" in repr_str
 
 
-def test_custom_coupling_flip():
-    """Test flipping a CustomCoupling."""
+def test_custom_coupling_add_to_extension_system():
+    """Test adding a CustomCoupling to the extension system."""
 
     phi = create_test_cv()
     coupling = CustomCoupling(
@@ -86,19 +86,31 @@ def test_custom_coupling_flip():
     )
     phi0 = create_test_dv("phi0")
 
-    flipped = coupling.flip([phi0])
+    # Create extension system and add coupling
+    extension_system = mm.System()
+    extension_system.addParticle(phi0.mass / phi0.mass.unit)
+    coupling.addToExtensionSystem(extension_system, [phi0])
 
-    # Check that phi0 is now a collective variable (not a parameter)
-    assert "phi0" not in flipped.getParameterDefaultValues()
-    # Check that phi is now a parameter set to zero
-    params = flipped.getParameterDefaultValues()
-    assert "phi" in params
-    assert params["phi"].value_in_unit(mmunit.radian) == 0.0
-    assert "kappa" in params
+    # Check that a force was added to the extension system
+    assert extension_system.getNumForces() == 1
+    flipped_force = extension_system.getForce(0)
+
+    # Verify it's a CustomCVForce
+    assert isinstance(flipped_force, mm.CustomCVForce)
+    # Check that phi0 is now a collective variable
+    assert flipped_force.getNumCollectiveVariables() == 1
+    assert flipped_force.getCollectiveVariableName(0) == "phi0"
+    # Check that phi and kappa are parameters
+    param_names = [
+        flipped_force.getGlobalParameterName(i)
+        for i in range(flipped_force.getNumGlobalParameters())
+    ]
+    assert "phi" in param_names
+    assert "kappa" in param_names
 
 
 def test_custom_coupling_get_extension_parameters():
-    """Test getExtensionParameters method."""
+    """Test updateExtensionContext method."""
     model = create_test_system()
     phi = create_test_cv()
     phi0 = create_test_dv("phi0")
@@ -111,14 +123,21 @@ def test_custom_coupling_get_extension_parameters():
     )
 
     system = ExtendedSpaceSystem([phi0], coupling, model.system)
-    integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
-    context = mm.Context(system, integrator)
-    context.setPositions(model.positions)
+    physical_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    physical_context = mm.Context(system, physical_integrator)
+    physical_context.setPositions(model.positions)
 
-    params = coupling.getExtensionParameters(context)
-    assert "phi" in params
-    # Values are returned as floats (in MD units)
-    assert isinstance(params["phi"], float)
+    # Create extension context
+    extension_system = system.getExtensionSystem()
+    extension_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    extension_context = mm.Context(extension_system, extension_integrator)
+
+    # Update extension context with physical parameters
+    coupling.updateExtensionContext(extension_context, physical_context)
+
+    # Verify that phi parameter was set in extension context
+    phi_value = extension_context.getParameter("phi")
+    assert isinstance(phi_value, float)
 
 
 def test_custom_coupling_serialization():
@@ -134,9 +153,13 @@ def test_custom_coupling_serialization():
     serialized = yaml.safe_dump(coupling)
     deserialized = yaml.safe_load(serialized)
 
-    assert deserialized.getForce(0).getEnergyFunction() == coupling.getForce(0).getEnergyFunction()
     assert (
-        deserialized.getForce(0).getNumCollectiveVariables() == coupling.getForce(0).getNumCollectiveVariables()
+        deserialized.getForce(0).getEnergyFunction()
+        == coupling.getForce(0).getEnergyFunction()
+    )
+    assert (
+        deserialized.getForce(0).getNumCollectiveVariables()
+        == coupling.getForce(0).getNumCollectiveVariables()
     )
 
 
@@ -217,20 +240,34 @@ def test_harmonic_coupling_incompatible_force_constant():
         HarmonicCoupling(phi, phi_s, kappa)
 
 
-def test_harmonic_coupling_flip():
-    """Test flipping a HarmonicCoupling."""
+def test_harmonic_coupling_add_to_extension_system():
+    """Test adding a HarmonicCoupling to the extension system."""
     phi = create_test_cv()
     phi_s = create_test_dv()
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
     coupling = HarmonicCoupling(phi, phi_s, kappa)
-    flipped = coupling.flip([phi_s])
 
-    # Check that phi_s is now a CV (not a parameter)
-    assert "phi_s" not in flipped.getParameterDefaultValues()
+    # Create extension system and add coupling
+    extension_system = mm.System()
+    extension_system.addParticle(phi_s.mass / phi_s.mass.unit)
+    coupling.addToExtensionSystem(extension_system, [phi_s])
+
+    # Check that a force was added to the extension system
+    assert extension_system.getNumForces() == 1
+    flipped_force = extension_system.getForce(0)
+
+    # Verify it's a CustomCVForce
+    assert isinstance(flipped_force, mm.CustomCVForce)
+    # Check that phi_s is now a collective variable
+    assert flipped_force.getNumCollectiveVariables() == 1
+    assert flipped_force.getCollectiveVariableName(0) == "phi_s"
     # Check that phi is now a parameter
-    params = flipped.getParameterDefaultValues()
-    assert "phi" in params
+    param_names = [
+        flipped_force.getGlobalParameterName(i)
+        for i in range(flipped_force.getNumGlobalParameters())
+    ]
+    assert "phi" in param_names
 
 
 def test_harmonic_coupling_repr():
@@ -256,7 +293,10 @@ def test_harmonic_coupling_serialization():
     serialized = yaml.safe_dump(coupling)
     deserialized = yaml.safe_load(serialized)
 
-    assert deserialized.getForce(0).getEnergyFunction() == coupling.getForce(0).getEnergyFunction()
+    assert (
+        deserialized.getForce(0).getEnergyFunction()
+        == coupling.getForce(0).getEnergyFunction()
+    )
 
 
 # CouplingSum Tests
@@ -338,8 +378,8 @@ def test_coupling_sum_add_to_system():
     assert model.system.getNumForces() == initial_forces + 2
 
 
-def test_coupling_sum_flip():
-    """Test flipping a CouplingSum."""
+def test_coupling_sum_add_to_extension_system():
+    """Test adding a CouplingSum to the extension system."""
     phi = create_test_cv("phi")
     phi_s = create_test_dv("phi_s")
     psi_s = create_test_dv("psi_s")
@@ -365,15 +405,19 @@ def test_coupling_sum_flip():
     )
 
     force_sum = coupling + coupling2
-    flipped = force_sum.flip([phi_s, psi_s])
 
-    assert isinstance(flipped, CouplingSum)
-    flipped_forces = flipped.getCouplings()
-    assert len(flipped_forces) == 2
+    # Create extension system and add coupling
+    extension_system = mm.System()
+    extension_system.addParticle(phi_s.mass / phi_s.mass.unit)
+    extension_system.addParticle(psi_s.mass / psi_s.mass.unit)
+    force_sum.addToExtensionSystem(extension_system, [phi_s, psi_s])
+
+    # Check that 2 forces were added to the extension system
+    assert extension_system.getNumForces() == 2
 
 
 def test_coupling_sum_get_extension_parameters():
-    """Test getExtensionParameters with non-overlapping CVs."""
+    """Test updateExtensionContext with non-overlapping CVs."""
     model = create_test_system()
     phi = create_test_cv("phi")
     psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
@@ -386,15 +430,23 @@ def test_coupling_sum_get_extension_parameters():
     force_sum = force1 + force2
 
     system = ExtendedSpaceSystem([phi_s, psi_s], force_sum, model.system)
-    integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
-    context = mm.Context(system, integrator)
-    context.setPositions(model.positions)
+    physical_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    physical_context = mm.Context(system, physical_integrator)
+    physical_context.setPositions(model.positions)
 
-    params = force_sum.getExtensionParameters(context)
+    # Create extension context
+    extension_system = system.getExtensionSystem()
+    extension_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    extension_context = mm.Context(extension_system, extension_integrator)
 
-    # Should have parameters for both phi and psi
-    assert "phi" in params
-    assert "psi" in params
+    # Update extension context with physical parameters
+    force_sum.updateExtensionContext(extension_context, physical_context)
+
+    # Should have parameters for both phi and psi set in extension context
+    phi_value = extension_context.getParameter("phi")
+    psi_value = extension_context.getParameter("psi")
+    assert isinstance(phi_value, float)
+    assert isinstance(psi_value, float)
 
 
 def test_coupling_sum_conflicting_parameters():

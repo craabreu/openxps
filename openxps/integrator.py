@@ -125,10 +125,9 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         corresponding parameters in the extension context.
 
         """
-        for name, value in self._coupling.getExtensionParameters(
-            self._physical_context
-        ).items():
-            mmswig.Context_setParameter(self._extension_context, name, value)
+        self._coupling.updateExtensionContext(
+            self._extension_context, self._physical_context
+        )
 
     def configure(
         self,
