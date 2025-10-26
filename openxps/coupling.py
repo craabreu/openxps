@@ -109,21 +109,23 @@ class Coupling(Serializable):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def getPhysicalParameters(
-        self, physical_context: mm.Context
-    ) -> dict[str, mmunit.Quantity]:
-        """Get parameter names and values to update the physical context with.
+    def updatePhysicalContext(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+    ) -> None:
+        """Update the physical context with the current extension parameters.
 
         Parameters
         ----------
         physical_context
-            The physical context to get the physical parameters from.
+            The physical context to update with the extension parameters.
+        extension_context
+            The extension context to get the extension parameters from.
+        dynamical_variables
+            The dynamical variables corresponding to the extension system particles.
 
-        Returns
-        -------
-        dict[str, mmunit.Quantity]
-            A dictionary with the names of the parameters as keys and their values in
-            the physical context as values.
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
@@ -225,6 +227,17 @@ class CouplingSum(Coupling):
     ):
         for coupling in self._couplings:
             coupling.updateExtensionContext(extension_context, physical_context)
+
+    def updatePhysicalContext(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+    ):
+        for coupling in self._couplings:
+            coupling.updatePhysicalContext(
+                physical_context, extension_context, dynamical_variables
+            )
 
 
 CouplingSum.registerTag("!openxps.CouplingSum")
@@ -376,6 +389,18 @@ class CustomCoupling(Coupling):
         for index, value in enumerate(collective_variables):
             name = mmswig.CustomCVForce_getCollectiveVariableName(force, index)
             mmswig.Context_setParameter(extension_context, name, value)
+
+    def updatePhysicalContext(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+    ) -> None:
+        state = mmswig.Context_getState(extension_context, mm.State.Positions)
+        positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
+        for i, dv in enumerate(dynamical_variables):
+            value, _ = dv.bounds.wrap(positions[i].x, 0)
+            mmswig.Context_setParameter(physical_context, dv.name, value)
 
 
 CustomCoupling.registerTag("!openxps.CustomCoupling")
