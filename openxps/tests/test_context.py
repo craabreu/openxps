@@ -190,7 +190,7 @@ def test_consistency():
 
         # Check the consistency of the potential energy
         x1 = extension_state.getPotentialEnergy() / mmunit.kilojoule_per_mole
-        x2 = coupling.getValue(context) / mmunit.kilojoule_per_mole
+        x2 = coupling.getForce(0).getValue(context) / mmunit.kilojoule_per_mole
         assert x1 == pytest.approx(x2)
 
 

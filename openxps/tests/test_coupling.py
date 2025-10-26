@@ -52,9 +52,9 @@ def test_custom_coupling_initialization():
         phi0=np.pi * mmunit.radian,
     )
 
-    assert coupling.getEnergyFunction() == "0.5*kappa*(phi-phi0)^2"
-    assert coupling.getNumCollectiveVariables() == 1
-    params = coupling.getParameterDefaultValues()
+    assert coupling.getForce(0).getEnergyFunction() == "0.5*kappa*(phi-phi0)^2"
+    assert coupling.getForce(0).getNumCollectiveVariables() == 1
+    params = coupling.getForce(0).getParameterDefaultValues()
     assert "kappa" in params
     assert "phi0" in params
 
@@ -134,9 +134,9 @@ def test_custom_coupling_serialization():
     serialized = yaml.safe_dump(coupling)
     deserialized = yaml.safe_load(serialized)
 
-    assert deserialized.getEnergyFunction() == coupling.getEnergyFunction()
+    assert deserialized.getForce(0).getEnergyFunction() == coupling.getForce(0).getEnergyFunction()
     assert (
-        deserialized.getNumCollectiveVariables() == coupling.getNumCollectiveVariables()
+        deserialized.getForce(0).getNumCollectiveVariables() == coupling.getForce(0).getNumCollectiveVariables()
     )
 
 
@@ -165,8 +165,8 @@ def test_harmonic_coupling_initialization():
 
     coupling = HarmonicCoupling(phi, phi_s, kappa)
 
-    assert coupling.getNumCollectiveVariables() == 1
-    params = coupling.getParameterDefaultValues()
+    assert coupling.getForce(0).getNumCollectiveVariables() == 1
+    params = coupling.getForce(0).getParameterDefaultValues()
     assert "kappa_phi_phi_s" in params
     assert "phi_s" in params
 
@@ -256,7 +256,7 @@ def test_harmonic_coupling_serialization():
     serialized = yaml.safe_dump(coupling)
     deserialized = yaml.safe_load(serialized)
 
-    assert deserialized.getEnergyFunction() == coupling.getEnergyFunction()
+    assert deserialized.getForce(0).getEnergyFunction() == coupling.getForce(0).getEnergyFunction()
 
 
 # CouplingSum Tests

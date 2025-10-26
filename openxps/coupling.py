@@ -39,6 +39,9 @@ class Coupling(Serializable):
     def getForces(self) -> list[mm.Force]:
         return self._forces
 
+    def getForce(self, index: int) -> mm.Force:
+        return self._forces[index]
+
     def addToSystem(self, system: mm.System) -> None:
         """
         Add this coupling to an OpenMM system.
@@ -154,13 +157,13 @@ class CouplingSum(Coupling):
         super().__init__(forces)
 
     def __repr__(self) -> str:
-        return "+".join(f"({repr(force)})" for force in self._couplings)
+        return "+".join(f"({repr(coupling)})" for coupling in self._couplings)
 
     def __copy__(self) -> "CouplingSum":
         return CouplingSum(map(copy, self._couplings))
 
     def __getstate__(self) -> dict[str, Coupling]:
-        return {f"force{i}": force for i, force in enumerate(self._couplings)}
+        return {f"coupling{i}": coupling for i, coupling in enumerate(self._couplings)}
 
     def __setstate__(self, keywords: dict[str, Coupling]) -> None:
         self._couplings = list(keywords.values())
@@ -169,43 +172,23 @@ class CouplingSum(Coupling):
         """Get the couplings included in the summed coupling."""
         return self._couplings
 
-    def getParameterDefaultValues(self) -> dict[str, mmunit.Quantity]:
-        """Get parameter names and default values from all couplings.
-
-        Returns
-        -------
-        dict[str, mmunit.Quantity]
-            A dictionary with parameter names as keys and their default values.
-        """
-        parameters = {}
-        for force in self._couplings:
-            force_params = force.getParameterDefaultValues()
-            for key, value in force_params.items():
-                if key in parameters and parameters[key] != value:
-                    raise ValueError(
-                        f"Parameter {key} has conflicting default values in "
-                        f"couplings: {parameters[key]} != {value}"
-                    )
-                parameters[key] = value
-        return parameters
-
     def addToSystem(self, system: mm.System) -> None:
-        for force in self._couplings:
-            force.addToSystem(system)
+        for coupling in self._couplings:
+            coupling.addToSystem(system)
 
     def flip(
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> "CouplingSum":
         return CouplingSum(
-            [force.flip(dynamical_variables) for force in self._couplings]
+            [coupling.flip(dynamical_variables) for coupling in self._couplings]
         )
 
     def getExtensionParameters(
         self, physical_context: mm.Context
     ) -> dict[str, mmunit.Quantity]:
         parameter_dicts = [
-            force.getExtensionParameters(physical_context) for force in self._couplings
+            coupling.getExtensionParameters(physical_context) for coupling in self._couplings
         ]
         parameters = {}
         for parameter_dict in parameter_dicts:
@@ -303,18 +286,6 @@ class CustomCoupling(Coupling):
     def addToSystem(self, system: mm.System) -> None:
         self._forces[0].addToSystem(system)
 
-    def getInnerValues(self, context: mm.Context) -> dict[str, mmunit.Quantity]:
-        return self._forces[0].getInnerValues(context)
-
-    def getEnergyFunction(self) -> str:
-        return self._forces[0].getEnergyFunction()
-
-    def getValue(self, context: mm.Context) -> mmunit.Quantity:
-        return self._forces[0].getValue(context)
-
-    def getNumCollectiveVariables(self) -> int:
-        return self._forces[0].getNumCollectiveVariables()
-
     def flip(
         self, dynamical_variables: t.Sequence[DynamicalVariable]
     ) -> "CustomCoupling":
@@ -356,7 +327,7 @@ class CustomCoupling(Coupling):
         ...     xps.bounds.CIRCULAR
         ... )
         >>> flipped = coupling.flip([phi0])
-        >>> flipped.getForces()[0].getParameterDefaultValues()
+        >>> flipped.getForce(0).getParameterDefaultValues()
         {'kappa': 1000 kJ/(mol rad**2), 'phi': 0.0 rad}
         """
         force = self._forces[0]

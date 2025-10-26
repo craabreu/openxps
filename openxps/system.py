@@ -19,18 +19,13 @@ class ExtendedSpaceSystem(mm.System):
     """An :OpenMM:`System` object that includes extra dynamical variables (DVs) and
     allows for extended phase-space (XPS) simulations.
 
-    A given :CVPack:`MetaCollectiveVariable` is added to the system to couple the
-    physical coordinates and the DVs.
-
     Parameters
     ----------
     dynamical_variables
         A collection of dynamical variables (DVs) to be included in the XPS simulation.
     coupling
-        A :CVPack:`MetaCollectiveVariable` defining the potential energy term that
-        couples the DVs to the physical coordinates. It must have units
-        of ``kilojoules_per_mole``. All DVs must be included as parameters in the
-        coupling.
+        A :class:`Coupling` object, required to couple the physical and extended
+        phase-space systems.
     system
         The :OpenMM:`System` to be used in the XPS simulation.
 
