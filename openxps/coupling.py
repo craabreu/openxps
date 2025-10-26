@@ -26,7 +26,7 @@ class Coupling(Serializable):
     A coupling connects the physical system's collective variables to the extended
     phase-space dynamical variables, enabling enhanced sampling simulations.
 
-    Subclasses must implement the :meth:`addToSystem` and
+    Subclasses must implement the :meth:`addToPhysicalSystem` and
     :meth:`addToExtensionSystem` methods.
 
     """
@@ -67,7 +67,7 @@ class Coupling(Serializable):
         """
         return self._forces[index]
 
-    def addToSystem(self, system: mm.System) -> None:
+    def addToPhysicalSystem(self, system: mm.System) -> None:
         """Add this coupling to an OpenMM system.
 
         Parameters
@@ -210,9 +210,9 @@ class CouplingSum(Coupling):
         """Get the couplings included in the summed coupling."""
         return self._couplings
 
-    def addToSystem(self, system: mm.System) -> None:
+    def addToPhysicalSystem(self, system: mm.System) -> None:
         for coupling in self._couplings:
-            coupling.addToSystem(system)
+            coupling.addToPhysicalSystem(system)
 
     def addToExtensionSystem(
         self,
@@ -307,7 +307,7 @@ class CustomCoupling(Coupling):
     def __setstate__(self, keywords: dict[str, t.Any]) -> None:
         self._forces = [cvpack.MetaCollectiveVariable(**keywords)]
 
-    def addToSystem(self, system: mm.System) -> None:
+    def addToPhysicalSystem(self, system: mm.System) -> None:
         self._forces[0].addToSystem(system)
 
     def addToExtensionSystem(

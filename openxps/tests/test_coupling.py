@@ -175,7 +175,7 @@ def test_custom_coupling_add_to_system():
     )
 
     initial_forces = model.system.getNumForces()
-    coupling.addToSystem(model.system)
+    coupling.addToPhysicalSystem(model.system)
     assert model.system.getNumForces() == initial_forces + 1
 
 
@@ -372,7 +372,7 @@ def test_coupling_sum_add_to_system():
     force_sum = force1 + force2
 
     initial_forces = model.system.getNumForces()
-    force_sum.addToSystem(model.system)
+    force_sum.addToPhysicalSystem(model.system)
 
     # Should add 2 forces
     assert model.system.getNumForces() == initial_forces + 2

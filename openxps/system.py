@@ -65,7 +65,7 @@ class ExtendedSpaceSystem(mm.System):
                 "All dynamical variables must be instances of DynamicalVariable."
             ) from e
         self._validateCoupling(coupling, dynamical_variables)
-        coupling.addToSystem(system)
+        coupling.addToPhysicalSystem(system)
         self.this = system
         self._extension_system = self._createExtensionSystem(
             dynamical_variables, coupling
