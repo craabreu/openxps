@@ -19,7 +19,7 @@ from openmm import unit as mmunit
 from .dynamical_variable import DynamicalVariable
 
 
-class CouplingForce(mm.Force):
+class CouplingForce(Serializable):
     """
     Abstract base class for coupling forces between physical and extended phase-space
     systems.
@@ -30,8 +30,14 @@ class CouplingForce(mm.Force):
 
     """
 
+    def __init__(self, forces: t.Iterable[mm.Force]) -> None:
+        self._forces = list(forces)
+
     def __add__(self, other: "CouplingForce") -> "CouplingForceSum":
         return CouplingForceSum([self, other])
+
+    def getForces(self) -> list[mm.Force]:
+        return self._forces
 
     def addToSystem(self, system: mm.System) -> None:
         """
@@ -97,8 +103,20 @@ class CouplingForce(mm.Force):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
+    def getParameterDefaultValues(self) -> dict[str, mmunit.Quantity]:
+        parameters = {}
+        for force in self._forces:
+            for key, value in force.getParameterDefaultValues().items():
+                if key in parameters and parameters[key] != value:
+                    raise ValueError(
+                        f"Parameter {key} has conflicting default values in "
+                        f"coupling force: {parameters[key]} != {value}"
+                    )
+                parameters[key] = value
+        return parameters
 
-class CouplingForceSum(CouplingForce, Serializable):
+
+class CouplingForceSum(CouplingForce):
     """A sum of coupling forces.
 
     Parameters
@@ -126,11 +144,14 @@ class CouplingForceSum(CouplingForce, Serializable):
 
     def __init__(self, coupling_forces: t.Iterable[CouplingForce]) -> None:
         self._coupling_forces = []
-        for force in coupling_forces:
-            if isinstance(force, CouplingForceSum):
-                self._coupling_forces.extend(force.getCouplingForces())
+        forces = []
+        for coupling_force in coupling_forces:
+            if isinstance(coupling_force, CouplingForceSum):
+                self._coupling_forces.extend(coupling_force.getCouplingForces())
             else:
-                self._coupling_forces.append(force)
+                self._coupling_forces.append(coupling_force)
+            forces.extend(coupling_force.getForces())
+        super().__init__(forces)
 
     def __repr__(self) -> str:
         return "+".join(f"({repr(force)})" for force in self._coupling_forces)
@@ -201,7 +222,7 @@ class CouplingForceSum(CouplingForce, Serializable):
 CouplingForceSum.registerTag("!openxps.CouplingForceSum")
 
 
-class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
+class CustomCouplingForce(CouplingForce):
     """
     A custom coupling force that uses an algebraic expression to couple physical
     collective variables with extended dynamical variables.
@@ -257,20 +278,43 @@ class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
             Named parameters appearing in the function expression.
 
         """
-        super().__init__(
+        force = cvpack.MetaCollectiveVariable(
             function,
             collective_variables,
             unit=mmunit.kilojoule_per_mole,
             name="coupling_force",
             **parameters,
         )
+        super().__init__([force])
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}("{self.getEnergyFunction()}")'
+        return f'{self.__class__.__name__}("{self._forces[0].getEnergyFunction()}")'
+
+    def __copy__(self) -> "CustomCouplingForce":
+        new = CustomCouplingForce.__new__(CustomCouplingForce)
+        new.__setstate__(self.__getstate__())
+        return new
+
+    def __getstate__(self) -> dict[str, t.Any]:
+        return self._forces[0].__getstate__()
 
     def __setstate__(self, keywords: dict[str, t.Any]) -> None:
-        """Restore the object state during deserialization."""
-        super().__init__(**keywords)
+        self._forces = [cvpack.MetaCollectiveVariable(**keywords)]
+
+    def addToSystem(self, system: mm.System) -> None:
+        self._forces[0].addToSystem(system)
+
+    def getInnerValues(self, context: mm.Context) -> dict[str, mmunit.Quantity]:
+        return self._forces[0].getInnerValues(context)
+
+    def getEnergyFunction(self) -> str:
+        return self._forces[0].getEnergyFunction()
+
+    def getValue(self, context: mm.Context) -> mmunit.Quantity:
+        return self._forces[0].getValue(context)
+
+    def getNumCollectiveVariables(self) -> int:
+        return self._forces[0].getNumCollectiveVariables()
 
     def flip(
         self, dynamical_variables: t.Sequence[DynamicalVariable]
@@ -313,20 +357,21 @@ class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
         ...     xps.bounds.CIRCULAR
         ... )
         >>> flipped = coupling.flip([phi0])
-        >>> flipped.getParameterDefaultValues()
+        >>> flipped.getForces()[0].getParameterDefaultValues()
         {'kappa': 1000 kJ/(mol rad**2), 'phi': 0.0 rad}
         """
-        parameters = self.getParameterDefaultValues()
+        force = self._forces[0]
+        parameters = force.getParameterDefaultValues()
         # Only pop DVs that are actually parameters in this force
         dvs_to_flip = [dv for dv in dynamical_variables if dv.name in parameters]
         for dv in dvs_to_flip:
             parameters.pop(dv.name)
         parameters.update(
-            {cv.getName(): 0.0 * cv.getUnit() for cv in self.getInnerVariables()}
+            {cv.getName(): 0.0 * cv.getUnit() for cv in force.getInnerVariables()}
         )
         # Create CVs only for the DVs that were parameters
         return CustomCouplingForce(
-            function=self.getEnergyFunction(),
+            function=force.getEnergyFunction(),
             collective_variables=[
                 dv.createCollectiveVariable(i)
                 for i, dv in enumerate(dynamical_variables)
@@ -354,11 +399,12 @@ class CustomCouplingForce(cvpack.MetaCollectiveVariable, CouplingForce):
             A dictionary with the names of the parameters as keys and their values in
             the extension context as values.
         """
+        force = self._forces[0]
         collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
-            self, physical_context
+            force, physical_context
         )
         return {
-            mmswig.CustomCVForce_getCollectiveVariableName(self, index): value
+            mmswig.CustomCVForce_getCollectiveVariableName(force, index): value
             for index, value in enumerate(collective_variables)
         }
 
