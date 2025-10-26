@@ -8,7 +8,6 @@
 """
 
 import typing as t
-from copy import copy
 
 import cvpack
 import openmm as mm
@@ -44,18 +43,33 @@ class Coupling(Serializable):
         self._forces = list(forces)
         self._dynamical_variables = [dv.in_md_units() for dv in dynamical_variables]
 
-        self._parameters = {}
+        parameters = {}
         for force in self._forces:
             for key, value in force.getParameterDefaultValues().items():
-                if key in self._parameters and self._parameters[key] != value:
+                if key in parameters and parameters[key] != value:
                     raise ValueError(
                         f"Parameter {key} has conflicting default values in "
-                        f"coupling: {self._parameters[key]} != {value}"
+                        f"coupling: {parameters[key]} != {value}"
                     )
-                self._parameters[key] = value
+                parameters[key] = value
 
     def __add__(self, other: "Coupling") -> "CouplingSum":
         return CouplingSum([self, other])
+
+    def __copy__(self) -> "CustomCoupling":
+        new = CustomCoupling.__new__(CustomCoupling)
+        new.__setstate__(self.__getstate__())
+        return new
+
+    def __getstate__(self) -> dict[str, t.Any]:
+        return {
+            "forces": self._forces,
+            "dynamical_variables": self._dynamical_variables,
+        }
+
+    def __setstate__(self, state: dict[str, t.Any]) -> None:
+        self._forces = state["forces"]
+        self._dynamical_variables = state["dynamical_variables"]
 
     def getForces(self) -> list[mm.Force]:
         """Get the list of OpenMM Force objects associated with this coupling.
@@ -183,16 +197,6 @@ class Coupling(Serializable):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def getParameterDefaultValues(self) -> dict[str, mmunit.Quantity]:
-        """Get the default values of the parameters of this coupling.
-
-        Returns
-        -------
-        dict[str, openmm.unit.Quantity]
-            A dictionary of parameter names and their default values.
-        """
-        return self._parameters
-
 
 class CouplingSum(Coupling):
     """A sum of couplings.
@@ -237,13 +241,15 @@ class CouplingSum(Coupling):
         return "+".join(f"({repr(coupling)})" for coupling in self._couplings)
 
     def __copy__(self) -> "CouplingSum":
-        return CouplingSum(map(copy, self._couplings))
+        new = CouplingSum.__new__(CouplingSum)
+        new.__setstate__(self.__getstate__())
+        return new
 
-    def __getstate__(self) -> dict[str, Coupling]:
-        return {f"coupling{i}": coupling for i, coupling in enumerate(self._couplings)}
+    def __getstate__(self) -> dict[str, t.Any]:
+        return {"couplings": self._couplings}
 
-    def __setstate__(self, keywords: dict[str, Coupling]) -> None:
-        self._couplings = list(keywords.values())
+    def __setstate__(self, state: dict[str, t.Any]) -> None:
+        self.__init__(state["couplings"])
 
     def getCouplings(self) -> t.Sequence[Coupling]:
         """Get the couplings included in the summed coupling."""
@@ -339,26 +345,6 @@ class CustomCoupling(Coupling):
 
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}("{self._forces[0].getEnergyFunction()}")'
-
-    def __copy__(self) -> "CustomCoupling":
-        new = CustomCoupling.__new__(CustomCoupling)
-        new.__setstate__(self.__getstate__())
-        return new
-
-    def __getstate__(self) -> dict[str, t.Any]:
-        state = self._forces[0].__getstate__()
-        state["_dynamical_variables"] = self._dynamical_variables
-        return state
-
-    def __setstate__(self, keywords: dict[str, t.Any]) -> None:
-        dvs = keywords.pop("_dynamical_variables", [])
-        force = cvpack.MetaCollectiveVariable(**keywords)
-        self._forces = [force]
-        self._dynamical_variables = dvs
-        # Initialize parameters
-        self._parameters = {}
-        for key, value in force.getParameterDefaultValues().items():
-            self._parameters[key] = value
 
     def addToPhysicalSystem(self, system: mm.System) -> None:
         self._forces[0].addToSystem(system)

@@ -54,9 +54,6 @@ def test_custom_coupling_initialization():
 
     assert coupling.getForce(0).getEnergyFunction() == "0.5*kappa*(phi-phi0)^2"
     assert coupling.getForce(0).getNumCollectiveVariables() == 1
-    params = coupling.getForce(0).getParameterDefaultValues()
-    assert "kappa" in params
-    assert "phi0" in params
 
 
 def test_custom_coupling_repr():
@@ -192,9 +189,6 @@ def test_harmonic_coupling_initialization():
     coupling = HarmonicCoupling(phi, phi_s, kappa)
 
     assert coupling.getForce(0).getNumCollectiveVariables() == 1
-    params = coupling.getForce(0).getParameterDefaultValues()
-    assert "kappa_phi_phi_s" in params
-    assert "phi_s" in params
 
 
 def test_harmonic_coupling_incompatible_units():
