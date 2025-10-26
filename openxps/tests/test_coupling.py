@@ -13,7 +13,7 @@ from openmm import unit as mmunit
 from openmmtools import testsystems
 
 from openxps import (
-    CustomCoupling,
+    CollectiveVariableCoupling,
     DynamicalVariable,
     ExtendedSpaceSystem,
     HarmonicCoupling,
@@ -40,12 +40,12 @@ def create_test_system():
     return testsystems.AlanineDipeptideVacuum()
 
 
-# CustomCoupling Tests
+# CollectiveVariableCoupling Tests
 def test_custom_coupling_initialization():
-    """Test basic initialization of CustomCoupling."""
+    """Test basic initialization of CollectiveVariableCoupling."""
     phi = create_test_cv()
     phi0 = create_test_dv("phi0")
-    coupling = CustomCoupling(
+    coupling = CollectiveVariableCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
@@ -57,10 +57,10 @@ def test_custom_coupling_initialization():
 
 
 def test_custom_coupling_repr():
-    """Test string representation of CustomCoupling."""
+    """Test string representation of CollectiveVariableCoupling."""
     phi = create_test_cv()
     phi0 = create_test_dv("phi0")
-    coupling = CustomCoupling(
+    coupling = CollectiveVariableCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
@@ -68,16 +68,16 @@ def test_custom_coupling_repr():
     )
 
     repr_str = repr(coupling)
-    assert "CustomCoupling" in repr_str
+    assert "CollectiveVariableCoupling" in repr_str
     assert "0.5*kappa*(phi-phi0)^2" in repr_str
 
 
 def test_custom_coupling_add_to_extension_system():
-    """Test adding a CustomCoupling to the extension system."""
+    """Test adding a CollectiveVariableCoupling to the extension system."""
 
     phi = create_test_cv()
     phi0 = create_test_dv("phi0")
-    coupling = CustomCoupling(
+    coupling = CollectiveVariableCoupling(
         f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
         [phi],
         [phi0],
@@ -113,7 +113,7 @@ def test_custom_coupling_get_extension_parameters():
     phi = create_test_cv()
     phi0 = create_test_dv("phi0")
 
-    coupling = CustomCoupling(
+    coupling = CollectiveVariableCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
@@ -139,10 +139,10 @@ def test_custom_coupling_get_extension_parameters():
 
 
 def test_custom_coupling_serialization():
-    """Test YAML serialization and deserialization of CustomCoupling."""
+    """Test YAML serialization and deserialization of CollectiveVariableCoupling."""
     phi = create_test_cv()
     phi0 = create_test_dv("phi0")
-    coupling = CustomCoupling(
+    coupling = CollectiveVariableCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
@@ -163,11 +163,11 @@ def test_custom_coupling_serialization():
 
 
 def test_custom_coupling_add_to_system():
-    """Test adding CustomCoupling to a system."""
+    """Test adding CollectiveVariableCoupling to a system."""
     model = create_test_system()
     phi = create_test_cv()
     phi0 = create_test_dv("phi0")
-    coupling = CustomCoupling(
+    coupling = CollectiveVariableCoupling(
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
@@ -383,7 +383,7 @@ def test_coupling_sum_add_to_extension_system():
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
     # Create a custom coupling with both DVs
-    coupling = CustomCoupling(
+    coupling = CollectiveVariableCoupling(
         "0.5*kappa1*(phi-phi_s)^2 + 0.5*kappa2*(phi-psi_s)^2",
         [phi],
         [phi_s, psi_s],
@@ -393,7 +393,7 @@ def test_coupling_sum_add_to_extension_system():
 
     # Create another one for the sum
     psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
-    coupling2 = CustomCoupling(
+    coupling2 = CollectiveVariableCoupling(
         "0.5*kappa*(psi-phi_s)^2",
         [psi],
         [phi_s],
@@ -519,12 +519,12 @@ def test_coupling_sum_serialization():
 
 # Integration Tests
 def test_coupling_with_extended_space_system():
-    """Test CustomCoupling with ExtendedSpaceSystem."""
+    """Test CollectiveVariableCoupling with ExtendedSpaceSystem."""
     model = create_test_system()
     phi = create_test_cv()
     phi_s = create_test_dv("phi_s")
 
-    coupling = CustomCoupling(
+    coupling = CollectiveVariableCoupling(
         "0.5*kappa*(phi-phi_s)^2",
         [phi],
         [phi_s],

@@ -10,7 +10,7 @@ from openmm import unit as mmunit
 from openmmtools import testsystems
 
 from openxps import (
-    CustomCoupling,
+    CollectiveVariableCoupling,
     DynamicalVariable,
     ExtendedSpaceContext,
     ExtendedSpaceSystem,
@@ -56,7 +56,7 @@ def create_coupling(phi0=180 * mmunit.degrees):
     # Always include x0 and y0 as parameters (they're in the expression)
     kwargs["x0"] = 1 * mmunit.nanometer
     kwargs["y0"] = 1 * mmunit.nanometer
-    return CustomCoupling(
+    return CollectiveVariableCoupling(
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],

@@ -56,8 +56,8 @@ class Coupling(Serializable):
     def __add__(self, other: "Coupling") -> "CouplingSum":
         return CouplingSum([self, other])
 
-    def __copy__(self) -> "CustomCoupling":
-        new = CustomCoupling.__new__(CustomCoupling)
+    def __copy__(self) -> "CollectiveVariableCoupling":
+        new = CollectiveVariableCoupling.__new__(CollectiveVariableCoupling)
         new.__setstate__(self.__getstate__())
         return new
 
@@ -263,14 +263,6 @@ class CouplingSum(Coupling):
         for coupling in self._couplings:
             coupling.addToExtensionSystem(system)
 
-    def updateExtensionContext(
-        self,
-        physical_context: mm.Context,
-        extension_context: mm.Context,
-    ):
-        for coupling in self._couplings:
-            coupling.updateExtensionContext(physical_context, extension_context)
-
     def updatePhysicalContext(
         self,
         physical_context: mm.Context,
@@ -279,29 +271,35 @@ class CouplingSum(Coupling):
         for coupling in self._couplings:
             coupling.updatePhysicalContext(physical_context, extension_context)
 
+    def updateExtensionContext(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+    ):
+        for coupling in self._couplings:
+            coupling.updateExtensionContext(physical_context, extension_context)
+
 
 CouplingSum.registerTag("!openxps.CouplingSum")
 
 
-class CustomCoupling(Coupling):
-    """A custom coupling derived from an algebraic expression.
+class CollectiveVariableCoupling(Coupling):
+    """Coupling between physical collective variables and dynamical variables.
 
-    This class uses a :CVPack:`MetaCollectiveVariable` object to create a flexible
-    coupling defined by a mathematical expression. It automatically handles the
-    transformation needed for extended phase-space simulations.
+    This class uses a :CVPack:`MetaCollectiveVariable` to create a coupling defined by
+    a mathematical expression involving physical collective variables and parameters.
 
     Parameters
     ----------
     function
-        An algebraic expression that defines the coupling energy as a function of
+        A mathematical expression that defines the coupling energy as a function of
         collective variables and parameters.
     collective_variables
-        The collective variables used in the coupling function.
+        The physical collective variables used in the coupling function.
     dynamical_variables
-        The dynamical variables used in the coupling function.
+        The extended dynamical variables used in the coupling function.
     **parameters
-        Named parameters that appear in the function expression. These can include
-        extended dynamical variable names that will be promoted to context parameters.
+        Named parameters that appear in the mathematical expression.
 
     Examples
     --------
@@ -313,13 +311,13 @@ class CustomCoupling(Coupling):
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     >>> mass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
-    >>> xps.CustomCoupling(
+    >>> xps.CollectiveVariableCoupling(
     ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
     ...     [phi],
     ...     [phi0],
     ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
     ... )
-    CustomCoupling("0.5*kappa*min(delta,6.28...-delta)^2; delta=abs(phi-phi0)")
+    CollectiveVariableCoupling("0.5*kappa*min(delta,6.28...-delta)^2; ...")
     """
 
     def __init__(
@@ -329,7 +327,6 @@ class CustomCoupling(Coupling):
         dynamical_variables: t.Iterable[DynamicalVariable],
         **parameters: t.Any,
     ) -> None:
-        # Filter out dynamical variable names from parameters to avoid conflicts
         dv_names = {dv.name for dv in dynamical_variables}
         filtered_params = {k: v for k, v in parameters.items() if k not in dv_names}
 
@@ -379,7 +376,7 @@ class CustomCoupling(Coupling):
         ...     3 * unit.dalton * (unit.nanometer / unit.radian)**2,
         ...     xps.bounds.CIRCULAR
         ... )
-        >>> coupling = xps.CustomCoupling(
+        >>> coupling = xps.CollectiveVariableCoupling(
         ...     "0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
         ...     [phi],
         ...     [phi0],
@@ -440,10 +437,10 @@ class CustomCoupling(Coupling):
             mmswig.Context_setParameter(physical_context, dv.name, value)
 
 
-CustomCoupling.registerTag("!openxps.CustomCoupling")
+CollectiveVariableCoupling.registerTag("!openxps.CollectiveVariableCoupling")
 
 
-class HarmonicCoupling(CustomCoupling):
+class HarmonicCoupling(CollectiveVariableCoupling):
     r"""A harmonic coupling between a dynamical variable and a collective variable.
 
     The coupling energy is given by:
