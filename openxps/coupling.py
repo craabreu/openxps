@@ -19,12 +19,12 @@ from openmm import unit as mmunit
 from .dynamical_variable import DynamicalVariable
 
 
-class CouplingForce(Serializable):
+class Coupling(Serializable):
     """
-    Abstract base class for coupling forces between physical and extended phase-space
+    Abstract base class for couplings between physical and extended phase-space
     systems.
 
-    A coupling force connects the physical system's collective variables to the
+    A coupling connects the physical system's collective variables to the
     extended phase-space dynamical variables, enabling enhanced sampling simulations.
     Subclasses must implement the :meth:`addToSystem` and :meth:`flip` methods.
 
@@ -33,20 +33,20 @@ class CouplingForce(Serializable):
     def __init__(self, forces: t.Iterable[mm.Force]) -> None:
         self._forces = list(forces)
 
-    def __add__(self, other: "CouplingForce") -> "CouplingForceSum":
-        return CouplingForceSum([self, other])
+    def __add__(self, other: "Coupling") -> "CouplingSum":
+        return CouplingSum([self, other])
 
     def getForces(self) -> list[mm.Force]:
         return self._forces
 
     def addToSystem(self, system: mm.System) -> None:
         """
-        Add this coupling force to an OpenMM system.
+        Add this coupling to an OpenMM system.
 
         Parameters
         ----------
         system : openmm.System
-            The system to which the coupling force should be added.
+            The system to which the coupling should be added.
 
         Raises
         ------
@@ -59,9 +59,9 @@ class CouplingForce(Serializable):
     def flip(
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
-    ) -> "CouplingForce":
+    ) -> "Coupling":
         """
-        Create a flipped version of this coupling force.
+        Create a flipped version of this coupling.
 
         The flipped force swaps the roles of physical collective variables and
         extended dynamical variables, creating a force suitable for the extension
@@ -74,8 +74,8 @@ class CouplingForce(Serializable):
 
         Returns
         -------
-        CouplingForce
-            A new coupling force with swapped variable roles.
+        Coupling
+            A new coupling with swapped variable roles.
 
         Raises
         ------
@@ -110,19 +110,19 @@ class CouplingForce(Serializable):
                 if key in parameters and parameters[key] != value:
                     raise ValueError(
                         f"Parameter {key} has conflicting default values in "
-                        f"coupling force: {parameters[key]} != {value}"
+                        f"coupling: {parameters[key]} != {value}"
                     )
                 parameters[key] = value
         return parameters
 
 
-class CouplingForceSum(CouplingForce):
-    """A sum of coupling forces.
+class CouplingSum(Coupling):
+    """A sum of couplings.
 
     Parameters
     ----------
-    coupling_forces
-        The coupling forces to be added.
+    couplings
+        The couplings to be added.
 
     Examples
     --------
@@ -135,42 +135,42 @@ class CouplingForceSum(CouplingForce):
     >>> dvmass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2
     >>> phi_s = xps.DynamicalVariable("phi_s", unit.radian, dvmass, xps.bounds.CIRCULAR)
     >>> psi_s = xps.DynamicalVariable("psi_s", unit.radian, dvmass, xps.bounds.CIRCULAR)
-    >>> coupling_force = xps.HarmonicCouplingForce(
+    >>> coupling = xps.HarmonicCoupling(
     ...     phi, phi_s, 1000 * unit.kilojoule_per_mole / unit.radian**2
-    ... ) + xps.HarmonicCouplingForce(
+    ... ) + xps.HarmonicCoupling(
     ...     psi, psi_s, 500 * unit.kilojoule_per_mole / unit.radian**2
     ... )
     """
 
-    def __init__(self, coupling_forces: t.Iterable[CouplingForce]) -> None:
-        self._coupling_forces = []
+    def __init__(self, couplings: t.Iterable[Coupling]) -> None:
+        self._couplings = []
         forces = []
-        for coupling_force in coupling_forces:
-            if isinstance(coupling_force, CouplingForceSum):
-                self._coupling_forces.extend(coupling_force.getCouplingForces())
+        for coupling in couplings:
+            if isinstance(coupling, CouplingSum):
+                self._couplings.extend(coupling.getCouplings())
             else:
-                self._coupling_forces.append(coupling_force)
-            forces.extend(coupling_force.getForces())
+                self._couplings.append(coupling)
+            forces.extend(coupling.getForces())
         super().__init__(forces)
 
     def __repr__(self) -> str:
-        return "+".join(f"({repr(force)})" for force in self._coupling_forces)
+        return "+".join(f"({repr(force)})" for force in self._couplings)
 
-    def __copy__(self) -> "CouplingForceSum":
-        return CouplingForceSum(map(copy, self._coupling_forces))
+    def __copy__(self) -> "CouplingSum":
+        return CouplingSum(map(copy, self._couplings))
 
-    def __getstate__(self) -> dict[str, CouplingForce]:
-        return {f"force{i}": force for i, force in enumerate(self._coupling_forces)}
+    def __getstate__(self) -> dict[str, Coupling]:
+        return {f"force{i}": force for i, force in enumerate(self._couplings)}
 
-    def __setstate__(self, keywords: dict[str, CouplingForce]) -> None:
-        self._coupling_forces = list(keywords.values())
+    def __setstate__(self, keywords: dict[str, Coupling]) -> None:
+        self._couplings = list(keywords.values())
 
-    def getCouplingForces(self) -> t.Sequence[CouplingForce]:
-        """Get the coupling forces included in the summed coupling force."""
-        return self._coupling_forces
+    def getCouplings(self) -> t.Sequence[Coupling]:
+        """Get the couplings included in the summed coupling."""
+        return self._couplings
 
     def getParameterDefaultValues(self) -> dict[str, mmunit.Quantity]:
-        """Get parameter names and default values from all coupling forces.
+        """Get parameter names and default values from all couplings.
 
         Returns
         -------
@@ -178,57 +178,56 @@ class CouplingForceSum(CouplingForce):
             A dictionary with parameter names as keys and their default values.
         """
         parameters = {}
-        for force in self._coupling_forces:
+        for force in self._couplings:
             force_params = force.getParameterDefaultValues()
             for key, value in force_params.items():
                 if key in parameters and parameters[key] != value:
                     raise ValueError(
                         f"Parameter {key} has conflicting default values in "
-                        f"coupling forces: {parameters[key]} != {value}"
+                        f"couplings: {parameters[key]} != {value}"
                     )
                 parameters[key] = value
         return parameters
 
     def addToSystem(self, system: mm.System) -> None:
-        for force in self._coupling_forces:
+        for force in self._couplings:
             force.addToSystem(system)
 
     def flip(
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
-    ) -> "CouplingForceSum":
-        return CouplingForceSum(
-            [force.flip(dynamical_variables) for force in self._coupling_forces]
+    ) -> "CouplingSum":
+        return CouplingSum(
+            [force.flip(dynamical_variables) for force in self._couplings]
         )
 
     def getExtensionParameters(
         self, physical_context: mm.Context
     ) -> dict[str, mmunit.Quantity]:
         parameter_dicts = [
-            force.getExtensionParameters(physical_context)
-            for force in self._coupling_forces
+            force.getExtensionParameters(physical_context) for force in self._couplings
         ]
         parameters = {}
         for parameter_dict in parameter_dicts:
             for key, value in parameter_dict.items():
                 if key in parameters and parameters[key] != value:
                     raise ValueError(
-                        f"Parameter {key} has conflicting values in coupling forces: "
+                        f"Parameter {key} has conflicting values in couplings: "
                     )
                 parameters[key] = value
         return parameters
 
 
-CouplingForceSum.registerTag("!openxps.CouplingForceSum")
+CouplingSum.registerTag("!openxps.CouplingSum")
 
 
-class CustomCouplingForce(CouplingForce):
+class CustomCoupling(Coupling):
     """
-    A custom coupling force that uses an algebraic expression to couple physical
+    A custom coupling that uses an algebraic expression to couple physical
     collective variables with extended dynamical variables.
 
     This class extends :CVPack:`MetaCollectiveVariable` to provide a flexible
-    coupling force defined by a mathematical expression. It automatically
+    coupling defined by a mathematical expression. It automatically
     handles the transformation needed for extended phase-space simulations.
 
     Parameters
@@ -250,13 +249,13 @@ class CustomCouplingForce(CouplingForce):
     >>> from openmm import unit
     >>> from math import pi
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
-    >>> xps.CustomCouplingForce(
+    >>> xps.CustomCoupling(
     ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
     ...     [phi],
     ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
     ...     phi0=pi * unit.radian,
     ... )
-    CustomCouplingForce("0.5*kappa*min(delta,6.28318...-delta)^2; delta=abs(phi-phi0)")
+    CustomCoupling("0.5*kappa*min(delta,6.28318...-delta)^2; delta=abs(phi-phi0)")
     """
 
     def __init__(
@@ -266,7 +265,7 @@ class CustomCouplingForce(CouplingForce):
         **parameters: t.Any,
     ) -> None:
         """
-        Initialize a custom coupling force.
+        Initialize a custom coupling.
 
         Parameters
         ----------
@@ -282,7 +281,7 @@ class CustomCouplingForce(CouplingForce):
             function,
             collective_variables,
             unit=mmunit.kilojoule_per_mole,
-            name="coupling_force",
+            name="coupling",
             **parameters,
         )
         super().__init__([force])
@@ -290,8 +289,8 @@ class CustomCouplingForce(CouplingForce):
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}("{self._forces[0].getEnergyFunction()}")'
 
-    def __copy__(self) -> "CustomCouplingForce":
-        new = CustomCouplingForce.__new__(CustomCouplingForce)
+    def __copy__(self) -> "CustomCoupling":
+        new = CustomCoupling.__new__(CustomCoupling)
         new.__setstate__(self.__getstate__())
         return new
 
@@ -318,9 +317,9 @@ class CustomCouplingForce(CouplingForce):
 
     def flip(
         self, dynamical_variables: t.Sequence[DynamicalVariable]
-    ) -> "CustomCouplingForce":
+    ) -> "CustomCoupling":
         """
-        Create a flipped version of this coupling force for the extension system.
+        Create a flipped version of this coupling for the extension system.
 
         The flipped force replaces dynamical variable parameters with collective
         variables that represent the dynamical variables as particles. Physical
@@ -333,8 +332,8 @@ class CustomCouplingForce(CouplingForce):
 
         Returns
         -------
-        CustomCouplingForce
-            A new coupling force with swapped variable roles, suitable for adding
+        CustomCoupling
+            A new coupling with swapped variable roles, suitable for adding
             to the extension system.
 
         Examples
@@ -344,7 +343,7 @@ class CustomCouplingForce(CouplingForce):
         >>> from openmm import unit
         >>> from math import pi
         >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
-        >>> coupling = xps.CustomCouplingForce(
+        >>> coupling = xps.CustomCoupling(
         ...     "0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
         ...     [phi],
         ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
@@ -370,7 +369,7 @@ class CustomCouplingForce(CouplingForce):
             {cv.getName(): 0.0 * cv.getUnit() for cv in force.getInnerVariables()}
         )
         # Create CVs only for the DVs that were parameters
-        return CustomCouplingForce(
+        return CustomCoupling(
             function=force.getEnergyFunction(),
             collective_variables=[
                 dv.createCollectiveVariable(i)
@@ -409,10 +408,10 @@ class CustomCouplingForce(CouplingForce):
         }
 
 
-CustomCouplingForce.registerTag("!openxps.CustomCouplingForce")
+CustomCoupling.registerTag("!openxps.CustomCoupling")
 
 
-class HarmonicCouplingForce(CustomCouplingForce):
+class HarmonicCoupling(CustomCoupling):
     r"""A harmonic coupling between a dynamical variable and a collective variable.
 
     The coupling energy is given by:
@@ -422,16 +421,16 @@ class HarmonicCouplingForce(CustomCouplingForce):
         U = \frac{1}{2} \kappa \left(s - q({\bf r})\right)^2
 
     where :math:`s` is an extended dynamical variable, :math:`q({\bf r})` is a
-    physical collective variable, and :math:`\kappa` is a coupling force constant.
+    physical collective variable, and :math:`\kappa` is a coupling constant.
 
     Parameters
     ----------
     collective_variable
-        The collective variable used in the coupling force.
+        The collective variable used in the coupling.
     dynamical_variable
-        The dynamical variable used in the coupling force.
+        The dynamical variable used in the coupling.
     force_constant
-        The force constant for the coupling force.
+        The force constant for the coupling.
 
     Examples
     --------
@@ -443,8 +442,8 @@ class HarmonicCouplingForce(CustomCouplingForce):
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     >>> phi_s = xps.DynamicalVariable("phi_s", unit.radian, dvmass, xps.bounds.CIRCULAR)
     >>> kappa = 1000 * unit.kilojoule_per_mole / unit.radian**2
-    >>> xps.HarmonicCouplingForce(phi, phi_s, kappa)
-    HarmonicCouplingForce("0.5*kappa_phi_phi_s*((phi-phi_s-6.28...*floor(...))^2)")
+    >>> xps.HarmonicCoupling(phi, phi_s, kappa)
+    HarmonicCoupling("0.5*kappa_phi_phi_s*((phi-phi_s-6.28...*floor(...))^2)")
     """
 
     def __init__(
@@ -479,4 +478,4 @@ class HarmonicCouplingForce(CustomCouplingForce):
             raise ValueError(f"Incompatible force constant units for {pair}.")
 
 
-HarmonicCouplingForce.registerTag("!openxps.HarmonicCouplingForce")
+HarmonicCoupling.registerTag("!openxps.HarmonicCoupling")

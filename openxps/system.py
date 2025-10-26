@@ -11,7 +11,7 @@ import typing as t
 
 import openmm as mm
 
-from .coupling import CouplingForce
+from .coupling import Coupling
 from .dynamical_variable import DynamicalVariable
 
 
@@ -26,11 +26,11 @@ class ExtendedSpaceSystem(mm.System):
     ----------
     dynamical_variables
         A collection of dynamical variables (DVs) to be included in the XPS simulation.
-    coupling_force
+    coupling
         A :CVPack:`MetaCollectiveVariable` defining the potential energy term that
         couples the DVs to the physical coordinates. It must have units
         of ``kilojoules_per_mole``. All DVs must be included as parameters in the
-        coupling force.
+        coupling.
     system
         The :OpenMM:`System` to be used in the XPS simulation.
 
@@ -45,7 +45,7 @@ class ExtendedSpaceSystem(mm.System):
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
     >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
-    >>> harmonic_force = xps.HarmonicCouplingForce(
+    >>> harmonic_force = xps.HarmonicCoupling(
     ...     cvpack.Torsion(6, 8, 14, 16, name="phi"),
     ...     phi0,
     ...     1000 * unit.kilojoules_per_mole / unit.radian**2,
@@ -60,7 +60,7 @@ class ExtendedSpaceSystem(mm.System):
     def __init__(
         self,
         dynamical_variables: t.Iterable[DynamicalVariable],
-        coupling_force: CouplingForce,
+        coupling: Coupling,
         system: mm.System,
     ) -> None:
         try:
@@ -69,42 +69,42 @@ class ExtendedSpaceSystem(mm.System):
             raise TypeError(
                 "All dynamical variables must be instances of DynamicalVariable."
             ) from e
-        self._validateCouplingForce(coupling_force, dynamical_variables)
-        coupling_force.addToSystem(system)
+        self._validateCoupling(coupling, dynamical_variables)
+        coupling.addToSystem(system)
         self.this = system
         self._extension_system = self._createExtensionSystem(
-            dynamical_variables, coupling_force
+            dynamical_variables, coupling
         )
         self._dvs = dynamical_variables
-        self._coupling_force = coupling_force
+        self._coupling = coupling
 
-    def _validateCouplingForce(
+    def _validateCoupling(
         self,
-        coupling_force: CouplingForce,
+        coupling: Coupling,
         dynamical_variables: t.Sequence[DynamicalVariable],
     ) -> None:
-        if not isinstance(coupling_force, CouplingForce):
-            raise TypeError("The coupling force must be an instance of CouplingForce.")
+        if not isinstance(coupling, Coupling):
+            raise TypeError("The coupling must be an instance of Coupling.")
         missing_parameters = [
             dv.name
             for dv in dynamical_variables
-            if dv.name not in coupling_force.getParameterDefaultValues()
+            if dv.name not in coupling.getParameterDefaultValues()
         ]
         if missing_parameters:
             raise ValueError(
-                "These dynamical variables are not coupling force parameters: "
+                "These dynamical variables are not coupling parameters: "
                 + ", ".join(missing_parameters)
             )
 
     def _createExtensionSystem(
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
-        coupling_force: CouplingForce,
+        coupling: Coupling,
     ) -> mm.System:
         extension_system = mm.System()
         for dv in dynamical_variables:
             extension_system.addParticle(dv.mass / dv.mass.unit)
-        flipped_potential = coupling_force.flip(dynamical_variables)
+        flipped_potential = coupling.flip(dynamical_variables)
         flipped_potential.addToSystem(extension_system)
         return extension_system
 
@@ -119,16 +119,16 @@ class ExtendedSpaceSystem(mm.System):
         """
         return self._dvs
 
-    def getCouplingForce(self) -> CouplingForce:
+    def getCoupling(self) -> Coupling:
         """
-        Get the coupling force included in the extended phase-space system.
+        Get the coupling included in the extended phase-space system.
 
         Returns
         -------
-        CouplingForce
-            The coupling force.
+        Coupling
+            The coupling.
         """
-        return self._coupling_force
+        return self._coupling
 
     def getExtensionSystem(self) -> mm.System:
         """
