@@ -273,12 +273,10 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
             self._coupling.updatePhysicalContext(
                 self._physical_context,
                 self._extension_context,
-                self._dynamical_variables,
             )
             self._coupling.updateExtensionContext(
                 self._physical_context,
                 self._extension_context,
-                self._dynamical_variables,
             )
 
 
@@ -401,17 +399,14 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             self._update_middle_context(
                 self._physical_context,
                 self._extension_context,
-                self._dynamical_variables,
             )
             mmswig.Integrator_step(self._middle_integrator, 1)
             self._update_end_context(
                 self._physical_context,
                 self._extension_context,
-                self._dynamical_variables,
             )
             mmswig.Integrator_step(self._end_integrator, self._num_substeps)
             self._update_middle_context(
                 self._physical_context,
                 self._extension_context,
-                self._dynamical_variables,
             )

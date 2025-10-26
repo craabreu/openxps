@@ -280,6 +280,7 @@ def test_missing_dv_in_coupling():
     coupling = xps.CustomCoupling(
         "0.5*kappa*phi^2",
         [phi],
+        [],
         kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 

@@ -99,7 +99,7 @@ class ExtendedSpaceSystem(mm.System):
         extension_system = mm.System()
         for dv in dynamical_variables:
             extension_system.addParticle(dv.mass / dv.mass.unit)
-        coupling.addToExtensionSystem(extension_system, dynamical_variables)
+        coupling.addToExtensionSystem(extension_system)
         return extension_system
 
     def getDynamicalVariables(self) -> tuple[DynamicalVariable]:

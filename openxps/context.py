@@ -181,7 +181,7 @@ class ExtendedSpaceContext(mm.Context):
             The positions for each particle in the system.
         """
         super().setPositions(positions)
-        self._coupling.updateExtensionContext(self, self._extension_context, self._dvs)
+        self._coupling.updateExtensionContext(self, self._extension_context)
 
     def setDynamicalVariableValues(self, values: t.Iterable[mmunit.Quantity]) -> None:
         """

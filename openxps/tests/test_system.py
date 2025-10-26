@@ -28,6 +28,7 @@ def create_dvs():
 
 def create_coupling(phi0=180 * mmunit.degrees):
     """Helper function to create a MetaCollectiveVariable object."""
+    dvs = create_dvs()
     kwargs = {
         "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radians**2,
         "alpha": 0.01 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
@@ -40,6 +41,7 @@ def create_coupling(phi0=180 * mmunit.degrees):
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
+        dvs if phi0 is not None else [],
         **kwargs,
     )
 

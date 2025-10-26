@@ -9,6 +9,7 @@ import pytest
 from openmm import unit as mmunit
 from openmmtools import testsystems
 
+import openxps as xps
 from openxps import (
     CustomCoupling,
     DynamicalVariable,
@@ -46,6 +47,12 @@ def create_dvs():
 
 def create_coupling(phi0=180 * mmunit.degrees):
     """Helper function to create a MetaCollectiveVariable object."""
+    phi0_dv = xps.DynamicalVariable(
+        "phi0",
+        mmunit.radian,
+        50 * mmunit.amu * mmunit.nanometer**2 / mmunit.radian**2,
+        xps.bounds.CIRCULAR,
+    )
     kwargs = {
         "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radians**2,
         "alpha": 0.01 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
@@ -58,6 +65,7 @@ def create_coupling(phi0=180 * mmunit.degrees):
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
+        [phi0_dv] if phi0 is not None else [],
         **kwargs,
     )
 
