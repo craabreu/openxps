@@ -396,17 +396,8 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         """
         for _ in range(steps):
             mmswig.Integrator_step(self._end_integrator, self._num_substeps)
-            self._update_middle_context(
-                self._physical_context,
-                self._extension_context,
-            )
+            self._update_middle_context(self._physical_context, self._extension_context)
             mmswig.Integrator_step(self._middle_integrator, 1)
-            self._update_end_context(
-                self._physical_context,
-                self._extension_context,
-            )
+            self._update_end_context(self._physical_context, self._extension_context)
             mmswig.Integrator_step(self._end_integrator, self._num_substeps)
-            self._update_middle_context(
-                self._physical_context,
-                self._extension_context,
-            )
+            self._update_middle_context(self._physical_context, self._extension_context)

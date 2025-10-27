@@ -7,6 +7,7 @@
 
 """
 
+import re
 import typing as t
 
 import cvpack
@@ -14,6 +15,8 @@ import openmm as mm
 from cvpack.serialization import Serializable
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
+
+from openxps.utils import preprocess_args
 
 from .dynamical_variable import DynamicalVariable
 
@@ -42,16 +45,7 @@ class Coupling(Serializable):
     ) -> None:
         self._forces = list(forces)
         self._dynamical_variables = [dv.in_md_units() for dv in dynamical_variables]
-
-        parameters = {}
-        for force in self._forces:
-            for key, value in force.getParameterDefaultValues().items():
-                if key in parameters and parameters[key] != value:
-                    raise ValueError(
-                        f"Parameter {key} has conflicting default values in "
-                        f"coupling: {parameters[key]} != {value}"
-                    )
-                parameters[key] = value
+        self._parameters = self._getAllGlobalParameters()
 
     def __add__(self, other: "Coupling") -> "CouplingSum":
         return CouplingSum([self, other])
@@ -70,6 +64,19 @@ class Coupling(Serializable):
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self._forces = state["forces"]
         self._dynamical_variables = state["dynamical_variables"]
+        self._parameters = self._getAllGlobalParameters()
+
+    def _getAllGlobalParameters(self) -> dict[str, mmunit.Quantity]:
+        parameters = {}
+        for force in self._forces:
+            for key, value in force.getParameterDefaultValues().items():
+                if key in parameters and parameters[key] != value:
+                    raise ValueError(
+                        f"Parameter {key} has conflicting default values in "
+                        f"coupling: {parameters[key]} != {value}"
+                    )
+                parameters[key] = value
+        return parameters
 
     def getForces(self) -> list[mm.Force]:
         """Get the list of OpenMM Force objects associated with this coupling.
@@ -284,7 +291,7 @@ CouplingSum.registerTag("!openxps.CouplingSum")
 
 
 class CollectiveVariableCoupling(Coupling):
-    """Coupling between physical collective variables and dynamical variables.
+    """Coupling between dynamical variables and physical collective variables.
 
     This class uses a :CVPack:`MetaCollectiveVariable` to create a coupling defined by
     a mathematical expression involving physical collective variables and parameters.
@@ -320,12 +327,13 @@ class CollectiveVariableCoupling(Coupling):
     CollectiveVariableCoupling("0.5*kappa*min(delta,6.28...-delta)^2; ...")
     """
 
+    @preprocess_args
     def __init__(
         self,
         function: str,
         collective_variables: t.Iterable[cvpack.CollectiveVariable],
         dynamical_variables: t.Iterable[DynamicalVariable],
-        **parameters: t.Any,
+        **parameters: mmunit.Quantity,
     ) -> None:
         dv_names = {dv.name for dv in dynamical_variables}
         filtered_params = {k: v for k, v in parameters.items() if k not in dv_names}
@@ -346,10 +354,7 @@ class CollectiveVariableCoupling(Coupling):
     def addToPhysicalSystem(self, system: mm.System) -> None:
         self._forces[0].addToSystem(system)
 
-    def addToExtensionSystem(
-        self,
-        extension_system: mm.System,
-    ) -> None:
+    def addToExtensionSystem(self, extension_system: mm.System) -> None:
         """
         Add the flipped version of this coupling to the extension system.
 
@@ -508,3 +513,140 @@ class HarmonicCoupling(CollectiveVariableCoupling):
 
 
 HarmonicCoupling.registerTag("!openxps.HarmonicCoupling")
+
+
+class InnerProductCoupling(Coupling):
+    r"""Coupling defined by the inner product of two separable vector-valued functions.
+
+    Use this class if the coupling energy is the inner product of a vector-valued
+    function :math:`{\boldsymbol \lambda}` of the extended dynamical variables
+    :math:`{\bf s}` and a vector-valued function :math:`{\bf u}` of the physical
+    coordinates :math:`{\bf r}`, i.e.,
+
+    .. math::
+
+        U = {\boldsymbol \lambda}({\bf s}) \cdot {\bf u}({\bf r})
+          = \sum_{i=1}^n \lambda_i({\bf s}) u_i({\bf r})
+
+    where :math:`n` is the dimensionality of the vector-valued functions.
+
+    Parameters
+    ----------
+    forces
+        A sequence of :OpenMM:`Force` objects whose sum depends linearly on a vector of
+        :math:`n` global context parameters.
+    dynamical_variables
+        The dynamical variables of the extended phase-space system.
+    functions
+        A dictionary defining global context parameters (keys) as mathematical functions
+        (values) of the dynamical variables. It is not necessary to include identity
+        functions (i.e., ``key=value``).
+    **parameters
+        Named parameters that appear in the mathematical expressions.
+    """
+
+    @preprocess_args
+    def __init__(
+        self,
+        forces: t.Iterable[mm.Force],
+        dynamical_variables: t.Iterable[DynamicalVariable],
+        functions: dict[str, str],
+        **parameters: mmunit.Quantity,
+    ) -> None:
+        super().__init__(forces, dynamical_variables)
+        self._functions = functions
+        self._extra_parameters = parameters
+        self._validate()
+
+    def __getstate__(self) -> dict[str, t.Any]:
+        return {
+            "forces": self._forces,
+            "dynamical_variables": self._dynamical_variables,
+            "functions": self._functions,
+            "extra_parameters": self._extra_parameters,
+        }
+
+    def __setstate__(self, state: dict[str, t.Any]) -> None:
+        super().__setstate__(state["forces"], state["dynamical_variables"])
+        self._functions = state["functions"]
+        self._extra_parameters = state["extra_parameters"]
+
+    def _validate(self) -> None:
+        for name in self._functions.keys():
+            if name not in self._parameters:
+                raise ValueError(f"Parameter {name} not found in the provided forces.")
+
+        all_dvs = {dv.name for dv in self._dynamical_variables}
+        dvs_in_parameters = all_dvs & self._parameters.keys()
+
+        dvs_in_functions = set()
+        for name, expression in self._functions.items():
+            function_variables = {
+                dv for dv in all_dvs if re.search(rf"\b{dv}\b", expression)
+            }
+            if function_variables:
+                dvs_in_functions |= function_variables
+            else:
+                raise ValueError(
+                    f"Function {name} does not depend on any dynamical variable: "
+                    f"{expression}"
+                )
+        dvs_in_both = dvs_in_functions & dvs_in_parameters
+        if dvs_in_both:
+            raise ValueError(
+                f"Dynamical variables {dvs_in_both} are both function variables and "
+                "global parameters"
+            )
+        dvs_in_neither = all_dvs - (dvs_in_functions | dvs_in_parameters)
+        if dvs_in_neither:
+            raise ValueError(
+                f"Dynamical variables {dvs_in_neither} are neither function variables "
+                "nor global parameters."
+            )
+
+        require_derivative = set(self._functions.keys()) | dvs_in_parameters
+        for force in self._forces:
+            force_parameters = {
+                force.getGlobalParameterName(index)
+                for index in range(force.getNumGlobalParameters())
+            }
+            derivative_requested = {
+                force.getEnergyParameterDerivativeName(index)
+                for index in range(force.getNumEnergyParameterDerivatives())
+            }
+            for parameter in require_derivative & force_parameters:
+                if parameter not in derivative_requested:
+                    raise ValueError(
+                        f"Parameter {parameter} requires a derivative and is present "
+                        f"in force {force.getName()}, but no derivative was requested."
+                    )
+
+    def addToPhysicalSystem(self, system: mm.System) -> None:
+        for force in self._forces:
+            if isinstance(force, cvpack.CollectiveVariable):
+                force.addToSystem(system)
+            else:
+                system.addForce(force)
+
+    def addToExtensionSystem(self, system: mm.System) -> None:
+        dynamic_parameters = set(self._functions.keys()) | {
+            dv.name for dv in self._dynamical_variables if dv.name in self._parameters
+        }
+        inner_product = "+".join(
+            f"{parameter}*derivative_with_respect_to_{parameter}"
+            for parameter in dynamic_parameters
+        )
+        energy_function = ";".join(
+            [inner_product]
+            + [f"{name}={expression}" for name, expression in self._functions.items()]
+            + [f"{name}=x{i}" for i, name in enumerate(self._dynamical_variables)]
+        )
+        num_particles = len(self._dynamical_variables)
+        flipped_force = mm.CustomCompoundBondForce(energy_function, num_particles)
+        for name, value in self._extra_parameters.items():
+            flipped_force.addGlobalParameter(name, value)
+        flipped_force.addBond(range(num_particles), [])
+        system.addForce(flipped_force)
+
+
+InnerProductCoupling.registerTag("!openxps.InnerProductCoupling")
