@@ -69,7 +69,11 @@ class Coupling(Serializable):
     def _getAllGlobalParameters(self) -> dict[str, mmunit.Quantity]:
         parameters = {}
         for force in self._forces:
-            for key, value in force.getParameterDefaultValues().items():
+            force_parameters = {}
+            for index in range(force.getNumGlobalParameters()):
+                name = force.getGlobalParameterName(index)
+                force_parameters[name] = force.getGlobalParameterDefaultValue(index)
+            for key, value in force_parameters.items():
                 if key in parameters and parameters[key] != value:
                     raise ValueError(
                         f"Parameter {key} has conflicting default values in "
@@ -543,6 +547,67 @@ class InnerProductCoupling(Coupling):
         functions (i.e., ``key=value``).
     **parameters
         Named parameters that appear in the mathematical expressions.
+
+    Examples
+    --------
+    >>> from copy import copy
+    >>> from collections import namedtuple
+    >>> import cvpack
+    >>> import openxps as xps
+    >>> from openmm import unit
+    >>> from math import pi
+    >>> import openmm as mm
+    >>> from openmmtools import testsystems
+    >>> model = testsystems.AlanineDipeptideVacuum()
+
+    Remove Coulomb interactions from the system:
+
+    >>> index = next(
+    ...     i for i, f in enumerate(model.system.getForces())
+    ...     if isinstance(f, mm.NonbondedForce)
+    ... )
+    >>> nbforce = model.system.getForce(index)
+    >>> Parameter = namedtuple("Parameter", ["charge", "sigma", "epsilon"])
+    >>> O5 = Parameter(*nbforce.getParticleParameters(5))
+    >>> H7 = Parameter(*nbforce.getParticleParameters(7))
+    >>> O15 = Parameter(*nbforce.getParticleParameters(15))
+    >>> H17 = Parameter(*nbforce.getParticleParameters(17))
+    >>> def sigma(p1: Parameter, p2: Parameter) -> float:
+    ...     return (p1.sigma + p2.sigma)/2
+    >>> def epsilon(p1: Parameter, p2: Parameter) -> float:
+    ...     return (p1.epsilon * p2.epsilon).sqrt()
+    >>> e1 = nbforce.addException(5, 17, 0.0, sigma(O5, O15), epsilon(O5, O15))
+    >>> e2 = nbforce.addException(7, 15, 0.0, sigma(H7, H17), epsilon(H7, H17))
+
+    Add scaled Coulomb interactions:
+
+    >>> def scaledCoulombForce(
+    ...    parameter: str,
+    ...    idx1: int,
+    ...    p1: Parameter,
+    ...    idx2: int,
+    ...    p2: Parameter,
+    ... ) -> mm.CustomBondForce:
+    ...     force = mm.CustomBondForce(f"{parameter}*chargeProd/r")
+    ...     force.addGlobalParameter(parameter, 1.0)
+    ...     force.addEnergyParameterDerivative(parameter)
+    ...     force.addPerBondParameter("chargeProd")
+    ...     force.addBond(idx1, idx2, [p1.charge*p2.charge])
+    ...     return force
+    >>> force1 = scaledCoulombForce("scaling1", 5, O5, 17, O15)
+    >>> force2 = scaledCoulombForce("scaling2", 7, H7, 15, H17)
+
+    Create a coupling between the dynamical variable and the nonbonded force:
+
+    >>> mass = 1.0 * unit.dalton * unit.nanometer**2
+    >>> bounds = xps.bounds.Reflective(0, 1, unit.dimensionless)
+    >>> lambda1 = xps.DynamicalVariable("lambda1", unit.dimensionless,mass, bounds)
+    >>> lambda2 = xps.DynamicalVariable("lambda2", unit.dimensionless,mass, bounds)
+    >>> coupling = xps.InnerProductCoupling(
+    ...     [force1, force2],
+    ...     [lambda1, lambda2],
+    ...     {"scaling1": "lambda1", "scaling2": "lambda2"},
+    ... )
     """
 
     @preprocess_args
