@@ -7,7 +7,6 @@
 
 """
 
-import re
 import typing as t
 
 import cvpack
@@ -50,8 +49,8 @@ class Coupling(Serializable):
     def __add__(self, other: "Coupling") -> "CouplingSum":
         return CouplingSum([self, other])
 
-    def __copy__(self) -> "CollectiveVariableCoupling":
-        new = CollectiveVariableCoupling.__new__(CollectiveVariableCoupling)
+    def __copy__(self) -> "Coupling":
+        new = self.__class__.__new__(self.__class__)
         new.__setstate__(self.__getstate__())
         return new
 
@@ -608,9 +607,15 @@ class InnerProductCoupling(Coupling):
     >>> coupling = xps.InnerProductCoupling(
     ...     [force],
     ...     [lambda_dv],
-    ...     functions={"scaling": "(1-cos(pi*lambda))/2"},
-    ...     pi=pi,
+    ...     functions={"scaling": "(1-cos(alpha*lambda))/2"},
+    ...     alpha=pi*unit.radian,
     ... )
+    >>> context = xps.ExtendedSpaceContext(
+    ...     xps.ExtendedSpaceSystem(model.system, coupling),
+    ...     xps.LockstepIntegrator(mm.VerletIntegrator(1.0 * mmunit.femtosecond)),
+    ...     mm.Platform.getPlatformByName("Reference"),
+    ... )
+    >>> context.setPositions(model.positions)
     """
 
     @preprocess_args
@@ -622,52 +627,27 @@ class InnerProductCoupling(Coupling):
         **parameters: mmunit.Quantity,
     ) -> None:
         super().__init__(forces, dynamical_variables)
-        self._function_objects = [
+        self._functions = [
             Function(name, expression, **parameters)
             for name, expression in (functions or {}).items()
         ]
-        self._functions = functions or {}
-        self._extra_parameters = parameters
-        self._function_variables = self._findFunctionVariables()
-        self._function_parameters = self._findFunctionParameters()
+        self._parameters = parameters
         self._dynamic_parameters = self._getDynamicParameters()
-        self._flipped_force = self._createFlippedForce()
-
-    def _findFunctionVariables(self) -> dict[str, set[DynamicalVariable]]:
-        function_variables = {}
-        for name, expression in self._functions.items():
-            function_variables[name] = {
-                dv.name
-                for dv in self._dynamical_variables
-                if re.search(rf"\b{dv.name}\b", expression)
-            }
-        return function_variables
-
-    def _findFunctionParameters(self) -> dict[str, set[str]]:
-        function_parameters = {}
-        for name, expression in self._functions.items():
-            function_parameters[name] = {
-                param
-                for param in self._extra_parameters.keys()
-                if re.search(rf"\b{param}\b", expression)
-            }
-        return function_parameters
 
     def __getstate__(self) -> dict[str, t.Any]:
         return {
             "forces": self._forces,
             "dynamical_variables": self._dynamical_variables,
             "functions": self._functions,
-            "parameters": self._extra_parameters,
+            "parameters": self._parameters,
+            "dynamic_parameters": self._dynamic_parameters,
         }
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
-        super().__setstate__(state["forces"], state["dynamical_variables"])
+        super().__setstate__(state)
         self._functions = state["functions"]
-        self._extra_parameters = state["parameters"]
-        self._function_variables = self._findFunctionVariables()
-        self._function_parameters = self._findFunctionParameters()
-        self._flipped_force = self._createFlippedForce()
+        self._parameters = state["parameters"]
+        self._dynamic_parameters = state["dynamic_parameters"]
 
     def _getDynamicParameters(self) -> set[str]:
         all_force_parameters = {
@@ -675,9 +655,9 @@ class InnerProductCoupling(Coupling):
             for force in self._forces
             for index in range(force.getNumGlobalParameters())
         }
-        function_names = {fn.getName() for fn in self._function_objects}
+        function_names = {fn.getName() for fn in self._functions}
         function_variables = set.union(
-            *(fn.getVariables() for fn in self._function_objects),
+            *(fn.getVariables() for fn in self._functions),
         )
 
         if missing := function_names - all_force_parameters:
@@ -689,9 +669,7 @@ class InnerProductCoupling(Coupling):
         all_dvs = {dv.name for dv in self._dynamical_variables}
 
         if functions_missing_dvs := [
-            fn.getName()
-            for fn in self._function_objects
-            if not (fn.getVariables() & all_dvs)
+            fn.getName() for fn in self._functions if not (fn.getVariables() & all_dvs)
         ]:
             raise ValueError(
                 "These functions do not depend on any dynamical variables: "
@@ -743,20 +721,20 @@ class InnerProductCoupling(Coupling):
             else:
                 system.addForce(force)
 
-    def _createFlippedForce(self) -> mm.CustomCVForce:
+    def addToExtensionSystem(self, system: mm.System) -> None:
         inner_product = "+".join(
             f"{parameter}*{self._derivativeName(parameter)}"
             for parameter in self._dynamic_parameters
         )
         energy_function = ";".join(
             [inner_product]
-            + [f"{name}={expression}" for name, expression in self._functions.items()]
+            + [f"{fn.getName()}={fn.getExpression()}" for fn in self._functions]
         )
         flipped_force = mm.CustomCVForce(energy_function)
         all_dvs = [dv.name for dv in self._dynamical_variables]
         for parameter in self._dynamic_parameters:
             flipped_force.addGlobalParameter(self._derivativeName(parameter), 0.0)
-        for fn in self._function_objects:
+        for fn in self._functions:
             flipped_force.addCollectiveVariable(
                 fn.getName(), fn.createCollectiveVariable(all_dvs)
             )
@@ -765,10 +743,7 @@ class InnerProductCoupling(Coupling):
                 flipped_force.addCollectiveVariable(
                     dv.name, dv.createCollectiveVariable(index)
                 )
-        return flipped_force
-
-    def addToExtensionSystem(self, system: mm.System) -> None:
-        system.addForce(self._flipped_force)
+        system.addForce(flipped_force)
 
     def updatePhysicalContext(
         self,
