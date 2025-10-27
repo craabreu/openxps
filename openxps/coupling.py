@@ -608,7 +608,8 @@ class InnerProductCoupling(Coupling):
     >>> coupling = xps.InnerProductCoupling(
     ...     [force],
     ...     [lambda_dv],
-    ...     functions={"scaling": "(1-cos({pi}*lambda))/2"},
+    ...     functions={"scaling": "(1-cos(pi*lambda))/2"},
+    ...     pi=pi,
     ... )
     """
 
@@ -629,8 +630,8 @@ class InnerProductCoupling(Coupling):
         self._extra_parameters = parameters
         self._function_variables = self._findFunctionVariables()
         self._function_parameters = self._findFunctionParameters()
-        self._validate()
-        # self._flipped_force = self._createFlippedForce()
+        self._dynamic_parameters = self._getDynamicParameters()
+        self._flipped_force = self._createFlippedForce()
 
     def _findFunctionVariables(self) -> dict[str, set[DynamicalVariable]]:
         function_variables = {}
@@ -668,7 +669,7 @@ class InnerProductCoupling(Coupling):
         self._function_parameters = self._findFunctionParameters()
         self._flipped_force = self._createFlippedForce()
 
-    def _validate(self) -> None:
+    def _getDynamicParameters(self) -> set[str]:
         all_force_parameters = {
             force.getGlobalParameterName(index)
             for force in self._forces
@@ -713,22 +714,23 @@ class InnerProductCoupling(Coupling):
                 "context parameters: " + ", ".join(dvs_in_neither)
             )
 
-        derivatives_required = dvs_in_force_parameters | function_names
+        dynamic_parameters = dvs_in_force_parameters | function_names
         for force in self._forces:
             force_parameters = {
                 force.getGlobalParameterName(index)
                 for index in range(force.getNumGlobalParameters())
             }
-            requested = {
+            has_derivatives = {
                 force.getEnergyParameterDerivativeName(index)
                 for index in range(force.getNumEnergyParameterDerivatives())
             }
-            if (missing := force_parameters & derivatives_required - requested):
+            if missing := force_parameters & dynamic_parameters - has_derivatives:
                 raise ValueError(
                     "The following parameters require a derivative and are present in "
                     f"force {force.getName()}, but no derivative was requested: "
                     + ", ".join(missing)
                 )
+        return dynamic_parameters
 
     @staticmethod
     def _derivativeName(parameter: str) -> str:
@@ -742,45 +744,27 @@ class InnerProductCoupling(Coupling):
                 system.addForce(force)
 
     def _createFlippedForce(self) -> mm.CustomCVForce:
-        function_names = set(self._functions.keys())
-        dvs_in_parameters = {
-            dv.name for dv in self._dynamical_variables if dv.name in self._parameters
-        }
-        dynamic_parameters = function_names | dvs_in_parameters
         inner_product = "+".join(
             f"{parameter}*{self._derivativeName(parameter)}"
-            for parameter in dynamic_parameters
+            for parameter in self._dynamic_parameters
         )
         energy_function = ";".join(
             [inner_product]
             + [f"{name}={expression}" for name, expression in self._functions.items()]
         )
         flipped_force = mm.CustomCVForce(energy_function)
-        for parameter in dynamic_parameters:
+        all_dvs = [dv.name for dv in self._dynamical_variables]
+        for parameter in self._dynamic_parameters:
             flipped_force.addGlobalParameter(self._derivativeName(parameter), 0.0)
-        for name, value in self._extra_parameters.items():
-            flipped_force.addGlobalParameter(name, value)
-        dv_indices = {dv.name: i for i, dv in enumerate(self._dynamical_variables)}
-        for name in function_names:
-            expression = self._functions[name]
-            variables = self._function_variables[name]
-            parameters = self._function_parameters[name]
-            energy_function = ";".join(
-                [expression] + [f"{dv}=x{i}" for i, dv in enumerate(variables)]
+        for fn in self._function_objects:
+            flipped_force.addCollectiveVariable(
+                fn.getName(), fn.createCollectiveVariable(all_dvs)
             )
-            num_particles = len(variables)
-            cv = mm.CustomCompoundBondForce(energy_function, num_particles)
-            for parameter in parameters:
-                cv.addGlobalParameter(parameter, self._extra_parameters[parameter])
-            for dv in variables:
-                cv.addPerParticleParameter(dv.name)
-            cv.addBond([dv_indices[variable] for variable in variables], [])
-            flipped_force.addCollectiveVariable(name, cv)
-        for name in dvs_in_parameters:
-            index = dv_indices[name]
-            dv = self._dynamical_variables[index]
-            cv = dv.createCollectiveVariable(index)
-            flipped_force.addCollectiveVariable(name, cv)
+        for index, dv in enumerate(self._dynamical_variables):
+            if dv.name in self._dynamic_parameters:
+                flipped_force.addCollectiveVariable(
+                    dv.name, dv.createCollectiveVariable(index)
+                )
         return flipped_force
 
     def addToExtensionSystem(self, system: mm.System) -> None:
