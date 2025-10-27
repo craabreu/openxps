@@ -559,6 +559,7 @@ class InnerProductCoupling(Coupling):
         self._function_variables = self._findFunctionVariables()
         self._function_parameters = self._findFunctionParameters()
         self._validate()
+        self._flipped_force = self._createFlippedForce()
 
     def _findFunctionVariables(self) -> dict[str, set[DynamicalVariable]]:
         function_variables = {}
@@ -594,6 +595,7 @@ class InnerProductCoupling(Coupling):
         self._extra_parameters = state["parameters"]
         self._function_variables = self._findFunctionVariables()
         self._function_parameters = self._findFunctionParameters()
+        self._flipped_force = self._createFlippedForce()
 
     def _validate(self) -> None:
         for name in self._functions.keys():
@@ -652,7 +654,7 @@ class InnerProductCoupling(Coupling):
             else:
                 system.addForce(force)
 
-    def addToExtensionSystem(self, system: mm.System) -> None:
+    def _createFlippedForce(self) -> mm.CustomCVForce:
         function_names = set(self._functions.keys())
         dvs_in_parameters = {
             dv.name for dv in self._dynamical_variables if dv.name in self._parameters
@@ -692,7 +694,33 @@ class InnerProductCoupling(Coupling):
             dv = self._dynamical_variables[index]
             cv = dv.createCollectiveVariable(index)
             flipped_force.addCollectiveVariable(name, cv)
-        system.addForce(flipped_force)
+        return flipped_force
+
+    def addToExtensionSystem(self, system: mm.System) -> None:
+        system.addForce(self._flipped_force)
+
+    def updatePhysicalContext(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+    ) -> None:
+        collective_variables = mmswig.CustomCVForce_getCollectiveVariableValues(
+            self._flipped_force, extension_context
+        )
+        for index, value in enumerate(collective_variables):
+            name = self._flipped_force.getCollectiveVariableName(index)
+            mmswig.Context_setParameter(physical_context, name, value)
+
+    def updateExtensionContext(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+    ) -> None:
+        state = mmswig.Context_getState(physical_context, mm.State.ParameterDerivatives)
+        for name, value in mmswig.State_getEnergyParameterDerivatives(state).items():
+            mmswig.Context_setParameter(
+                extension_context, self._derivativeName(name), value
+            )
 
 
 InnerProductCoupling.registerTag("!openxps.InnerProductCoupling")
