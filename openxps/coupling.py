@@ -556,20 +556,44 @@ class InnerProductCoupling(Coupling):
         super().__init__(forces, dynamical_variables)
         self._functions = functions
         self._extra_parameters = parameters
+        self._function_variables = self._findFunctionVariables()
+        self._function_parameters = self._findFunctionParameters()
         self._validate()
+
+    def _findFunctionVariables(self) -> dict[str, set[DynamicalVariable]]:
+        function_variables = {}
+        for name, expression in self._functions.items():
+            function_variables[name] = {
+                dv.name
+                for dv in self._dynamical_variables
+                if re.search(rf"\b{dv.name}\b", expression)
+            }
+        return function_variables
+
+    def _findFunctionParameters(self) -> dict[str, set[str]]:
+        function_parameters = {}
+        for name, expression in self._functions.items():
+            function_parameters[name] = {
+                param
+                for param in self._extra_parameters.keys()
+                if re.search(rf"\b{param}\b", expression)
+            }
+        return function_parameters
 
     def __getstate__(self) -> dict[str, t.Any]:
         return {
             "forces": self._forces,
             "dynamical_variables": self._dynamical_variables,
             "functions": self._functions,
-            "extra_parameters": self._extra_parameters,
+            "parameters": self._extra_parameters,
         }
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         super().__setstate__(state["forces"], state["dynamical_variables"])
         self._functions = state["functions"]
-        self._extra_parameters = state["extra_parameters"]
+        self._extra_parameters = state["parameters"]
+        self._function_variables = self._findFunctionVariables()
+        self._function_parameters = self._findFunctionParameters()
 
     def _validate(self) -> None:
         for name in self._functions.keys():
@@ -579,18 +603,14 @@ class InnerProductCoupling(Coupling):
         all_dvs = {dv.name for dv in self._dynamical_variables}
         dvs_in_parameters = all_dvs & self._parameters.keys()
 
-        dvs_in_functions = set()
-        for name, expression in self._functions.items():
-            function_variables = {
-                dv for dv in all_dvs if re.search(rf"\b{dv}\b", expression)
-            }
-            if function_variables:
-                dvs_in_functions |= function_variables
-            else:
+        for name, variables in self._function_variables.items():
+            if not variables:
                 raise ValueError(
                     f"Function {name} does not depend on any dynamical variable: "
-                    f"{expression}"
+                    f"{self._functions[name]}"
                 )
+
+        dvs_in_functions = set.union(*self._function_variables.values())
         dvs_in_both = dvs_in_functions & dvs_in_parameters
         if dvs_in_both:
             raise ValueError(
@@ -621,6 +641,10 @@ class InnerProductCoupling(Coupling):
                         f"in force {force.getName()}, but no derivative was requested."
                     )
 
+    @staticmethod
+    def _derivativeName(parameter: str) -> str:
+        return "derivative_with_respect_to_" + parameter
+
     def addToPhysicalSystem(self, system: mm.System) -> None:
         for force in self._forces:
             if isinstance(force, cvpack.CollectiveVariable):
@@ -629,23 +653,45 @@ class InnerProductCoupling(Coupling):
                 system.addForce(force)
 
     def addToExtensionSystem(self, system: mm.System) -> None:
-        dynamic_parameters = set(self._functions.keys()) | {
+        function_names = set(self._functions.keys())
+        dvs_in_parameters = {
             dv.name for dv in self._dynamical_variables if dv.name in self._parameters
         }
+        dynamic_parameters = function_names | dvs_in_parameters
         inner_product = "+".join(
-            f"{parameter}*derivative_with_respect_to_{parameter}"
+            f"{parameter}*{self._derivativeName(parameter)}"
             for parameter in dynamic_parameters
         )
         energy_function = ";".join(
             [inner_product]
             + [f"{name}={expression}" for name, expression in self._functions.items()]
-            + [f"{name}=x{i}" for i, name in enumerate(self._dynamical_variables)]
         )
-        num_particles = len(self._dynamical_variables)
-        flipped_force = mm.CustomCompoundBondForce(energy_function, num_particles)
+        flipped_force = mm.CustomCVForce(energy_function)
+        for parameter in dynamic_parameters:
+            flipped_force.addGlobalParameter(self._derivativeName(parameter), 0.0)
         for name, value in self._extra_parameters.items():
             flipped_force.addGlobalParameter(name, value)
-        flipped_force.addBond(range(num_particles), [])
+        dv_indices = {dv.name: i for i, dv in enumerate(self._dynamical_variables)}
+        for name in function_names:
+            expression = self._functions[name]
+            variables = self._function_variables[name]
+            parameters = self._function_parameters[name]
+            energy_function = ";".join(
+                [expression] + [f"{dv}=x{i}" for i, dv in enumerate(variables)]
+            )
+            num_particles = len(variables)
+            cv = mm.CustomCompoundBondForce(energy_function, num_particles)
+            for parameter in parameters:
+                cv.addGlobalParameter(parameter, self._extra_parameters[parameter])
+            for dv in variables:
+                cv.addPerParticleParameter(dv.name)
+            cv.addBond([dv_indices[variable] for variable in variables], [])
+            flipped_force.addCollectiveVariable(name, cv)
+        for name in dvs_in_parameters:
+            index = dv_indices[name]
+            dv = self._dynamical_variables[index]
+            cv = dv.createCollectiveVariable(index)
+            flipped_force.addCollectiveVariable(name, cv)
         system.addForce(flipped_force)
 
 
