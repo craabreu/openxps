@@ -16,7 +16,7 @@ from cvpack.serialization import Serializable
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
-from openxps.utils import preprocess_args
+from openxps.utils import Function, preprocess_args
 
 from .dynamical_variable import DynamicalVariable
 
@@ -45,7 +45,7 @@ class Coupling(Serializable):
     ) -> None:
         self._forces = list(forces)
         self._dynamical_variables = [dv.in_md_units() for dv in dynamical_variables]
-        self._parameters = self._getAllGlobalParameters()
+        self._checkGlobalParameters()
 
     def __add__(self, other: "Coupling") -> "CouplingSum":
         return CouplingSum([self, other])
@@ -64,9 +64,8 @@ class Coupling(Serializable):
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self._forces = state["forces"]
         self._dynamical_variables = state["dynamical_variables"]
-        self._parameters = self._getAllGlobalParameters()
 
-    def _getAllGlobalParameters(self) -> dict[str, mmunit.Quantity]:
+    def _checkGlobalParameters(self) -> dict[str, mmunit.Quantity]:
         parameters = {}
         for force in self._forces:
             force_parameters = {}
@@ -80,7 +79,6 @@ class Coupling(Serializable):
                         f"coupling: {parameters[key]} != {value}"
                     )
                 parameters[key] = value
-        return parameters
 
     def getForces(self) -> list[mm.Force]:
         """Get the list of OpenMM Force objects associated with this coupling.
@@ -560,53 +558,57 @@ class InnerProductCoupling(Coupling):
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
 
-    Remove Coulomb interactions from the system:
+    A function to remove Coulomb interactions:
 
-    >>> index = next(
-    ...     i for i, f in enumerate(model.system.getForces())
+    >>> Parameters = namedtuple(
+    ...     "Parameters",
+    ...     ["index", "charge", "sigma", "epsilon"],
+    ... )
+    >>> def remove_coulomb_interaction(
+    ...     force: mm.NonbondedForce, p1: Parameters, p2: Parameters
+    ... ) -> None:
+    ...     force.addException(
+    ...         p1.index,
+    ...         p2.index,
+    ...         0.0,
+    ...         (p1.sigma + p2.sigma)/2,
+    ...         (p1.epsilon * p2.epsilon).sqrt(),
+    ...     )
+
+    Remove carbonyl oxygen <=> amide hydrogen interactions:
+
+    >>> nbforce = next(
+    ...     f for f in model.system.getForces()
     ...     if isinstance(f, mm.NonbondedForce)
     ... )
-    >>> nbforce = model.system.getForce(index)
-    >>> Parameter = namedtuple("Parameter", ["charge", "sigma", "epsilon"])
-    >>> O5 = Parameter(*nbforce.getParticleParameters(5))
-    >>> H7 = Parameter(*nbforce.getParticleParameters(7))
-    >>> O15 = Parameter(*nbforce.getParticleParameters(15))
-    >>> H17 = Parameter(*nbforce.getParticleParameters(17))
-    >>> def sigma(p1: Parameter, p2: Parameter) -> float:
-    ...     return (p1.sigma + p2.sigma)/2
-    >>> def epsilon(p1: Parameter, p2: Parameter) -> float:
-    ...     return (p1.epsilon * p2.epsilon).sqrt()
-    >>> e1 = nbforce.addException(5, 17, 0.0, sigma(O5, O15), epsilon(O5, O15))
-    >>> e2 = nbforce.addException(7, 15, 0.0, sigma(H7, H17), epsilon(H7, H17))
+    >>> O1 = Parameters(5, *nbforce.getParticleParameters(5))
+    >>> H1 = Parameters(7, *nbforce.getParticleParameters(7))
+    >>> O2 = Parameters(15, *nbforce.getParticleParameters(15))
+    >>> H2 = Parameters(17, *nbforce.getParticleParameters(17))
+    >>> remove_coulomb_interaction(nbforce, O1, H2)
+    >>> remove_coulomb_interaction(nbforce, O2, H1)
 
     Add scaled Coulomb interactions:
 
-    >>> def scaledCoulombForce(
-    ...    parameter: str,
-    ...    idx1: int,
-    ...    p1: Parameter,
-    ...    idx2: int,
-    ...    p2: Parameter,
-    ... ) -> mm.CustomBondForce:
-    ...     force = mm.CustomBondForce(f"{parameter}*chargeProd/r")
-    ...     force.addGlobalParameter(parameter, 1.0)
-    ...     force.addEnergyParameterDerivative(parameter)
-    ...     force.addPerBondParameter("chargeProd")
-    ...     force.addBond(idx1, idx2, [p1.charge*p2.charge])
-    ...     return force
-    >>> force1 = scaledCoulombForce("scaling1", 5, O5, 17, O15)
-    >>> force2 = scaledCoulombForce("scaling2", 7, H7, 15, H17)
+    >>> force = mm.CustomBondForce(f"scaling*chargeProd/r")
+    >>> _ = force.addGlobalParameter("scaling", 1.0)
+    >>> _ = force.addEnergyParameterDerivative("scaling")
+    >>> _ = force.addPerBondParameter("chargeProd")
+    >>> _ = force.addBond(O1.index, H2.index, [O1.charge*H2.charge])
+    >>> _ = force.addBond(O2.index, H1.index, [O2.charge*H1.charge])
 
     Create a coupling between the dynamical variable and the nonbonded force:
 
-    >>> mass = 1.0 * unit.dalton * unit.nanometer**2
-    >>> bounds = xps.bounds.Reflective(0, 1, unit.dimensionless)
-    >>> lambda1 = xps.DynamicalVariable("lambda1", unit.dimensionless,mass, bounds)
-    >>> lambda2 = xps.DynamicalVariable("lambda2", unit.dimensionless,mass, bounds)
+    >>> lambda_dv = xps.DynamicalVariable(
+    ...     name="lambda",
+    ...     unit=unit.dimensionless,
+    ...     mass=1.0 * unit.dalton * unit.nanometer**2,
+    ...     bounds=xps.bounds.Reflective(0.0, 1.0, unit.dimensionless),
+    ... )
     >>> coupling = xps.InnerProductCoupling(
-    ...     [force1, force2],
-    ...     [lambda1, lambda2],
-    ...     {"scaling1": "lambda1", "scaling2": "lambda2"},
+    ...     [force],
+    ...     [lambda_dv],
+    ...     functions={"scaling": "(1-cos({pi}*lambda))/2"},
     ... )
     """
 
@@ -615,16 +617,20 @@ class InnerProductCoupling(Coupling):
         self,
         forces: t.Iterable[mm.Force],
         dynamical_variables: t.Iterable[DynamicalVariable],
-        functions: dict[str, str],
+        functions: t.Optional[dict[str, str]] = None,
         **parameters: mmunit.Quantity,
     ) -> None:
         super().__init__(forces, dynamical_variables)
-        self._functions = functions
+        self._function_objects = [
+            Function(name, expression, **parameters)
+            for name, expression in (functions or {}).items()
+        ]
+        self._functions = functions or {}
         self._extra_parameters = parameters
         self._function_variables = self._findFunctionVariables()
         self._function_parameters = self._findFunctionParameters()
         self._validate()
-        self._flipped_force = self._createFlippedForce()
+        # self._flipped_force = self._createFlippedForce()
 
     def _findFunctionVariables(self) -> dict[str, set[DynamicalVariable]]:
         function_variables = {}
@@ -663,50 +669,66 @@ class InnerProductCoupling(Coupling):
         self._flipped_force = self._createFlippedForce()
 
     def _validate(self) -> None:
-        for name in self._functions.keys():
-            if name not in self._parameters:
-                raise ValueError(f"Parameter {name} not found in the provided forces.")
+        all_force_parameters = {
+            force.getGlobalParameterName(index)
+            for force in self._forces
+            for index in range(force.getNumGlobalParameters())
+        }
+        function_names = {fn.getName() for fn in self._function_objects}
+        function_variables = set.union(
+            *(fn.getVariables() for fn in self._function_objects),
+        )
+
+        if missing := function_names - all_force_parameters:
+            raise ValueError(
+                "These functions are not global parameters in the provided forces: "
+                + ", ".join(missing)
+            )
 
         all_dvs = {dv.name for dv in self._dynamical_variables}
-        dvs_in_parameters = all_dvs & self._parameters.keys()
 
-        for name, variables in self._function_variables.items():
-            if not variables:
-                raise ValueError(
-                    f"Function {name} does not depend on any dynamical variable: "
-                    f"{self._functions[name]}"
-                )
-
-        dvs_in_functions = set.union(*self._function_variables.values())
-        dvs_in_both = dvs_in_functions & dvs_in_parameters
-        if dvs_in_both:
+        if functions_missing_dvs := [
+            fn.getName()
+            for fn in self._function_objects
+            if not (fn.getVariables() & all_dvs)
+        ]:
             raise ValueError(
-                f"Dynamical variables {dvs_in_both} are both function variables and "
-                "global parameters"
-            )
-        dvs_in_neither = all_dvs - (dvs_in_functions | dvs_in_parameters)
-        if dvs_in_neither:
-            raise ValueError(
-                f"Dynamical variables {dvs_in_neither} are neither function variables "
-                "nor global parameters."
+                "These functions do not depend on any dynamical variables: "
+                + ", ".join(functions_missing_dvs)
             )
 
-        require_derivative = set(self._functions.keys()) | dvs_in_parameters
+        dvs_in_force_parameters = all_dvs & all_force_parameters
+        dvs_in_function_variables = all_dvs & function_variables
+
+        if dvs_in_both := dvs_in_function_variables & dvs_in_force_parameters:
+            raise ValueError(
+                "These dynamical variables are both function variables and global "
+                f"context parameters: {', '.join(dvs_in_both)}"
+            )
+        if dvs_in_neither := all_dvs - (
+            dvs_in_function_variables | dvs_in_force_parameters
+        ):
+            raise ValueError(
+                "These dynamical variables are neither function variables nor global "
+                "context parameters: " + ", ".join(dvs_in_neither)
+            )
+
+        derivatives_required = dvs_in_force_parameters | function_names
         for force in self._forces:
             force_parameters = {
                 force.getGlobalParameterName(index)
                 for index in range(force.getNumGlobalParameters())
             }
-            derivative_requested = {
+            requested = {
                 force.getEnergyParameterDerivativeName(index)
                 for index in range(force.getNumEnergyParameterDerivatives())
             }
-            for parameter in require_derivative & force_parameters:
-                if parameter not in derivative_requested:
-                    raise ValueError(
-                        f"Parameter {parameter} requires a derivative and is present "
-                        f"in force {force.getName()}, but no derivative was requested."
-                    )
+            if (missing := force_parameters & derivatives_required - requested):
+                raise ValueError(
+                    "The following parameters require a derivative and are present in "
+                    f"force {force.getName()}, but no derivative was requested: "
+                    + ", ".join(missing)
+                )
 
     @staticmethod
     def _derivativeName(parameter: str) -> str:
