@@ -200,9 +200,8 @@ class ExtendedSpaceContext(mm.Context):
             else:
                 value = quantity
             positions.append(mm.Vec3(value, 0, 0))
-            wrapped_value, _ = dv.bounds.wrap(value, 0)
-            super().setParameter(dv.name, wrapped_value)
         self._extension_context.setPositions(positions)
+        self._coupling.updatePhysicalContext(self, self._extension_context)
 
     def getDynamicalVariableValues(self) -> tuple[mmunit.Quantity]:
         """

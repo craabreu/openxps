@@ -616,6 +616,7 @@ class InnerProductCoupling(Coupling):
     ...     mm.Platform.getPlatformByName("Reference"),
     ... )
     >>> context.setPositions(model.positions)
+    >>> context.setDynamicalVariableValues([0.0])
     """
 
     @preprocess_args
@@ -633,6 +634,7 @@ class InnerProductCoupling(Coupling):
         ]
         self._parameters = parameters
         self._dynamic_parameters = self._getDynamicParameters()
+        self._flipped_force = self._createFlippedForce()
 
     def __getstate__(self) -> dict[str, t.Any]:
         return {
@@ -648,6 +650,7 @@ class InnerProductCoupling(Coupling):
         self._functions = state["functions"]
         self._parameters = state["parameters"]
         self._dynamic_parameters = state["dynamic_parameters"]
+        self._flipped_force = self._createFlippedForce()
 
     def _getDynamicParameters(self) -> set[str]:
         all_force_parameters = {
@@ -710,18 +713,7 @@ class InnerProductCoupling(Coupling):
                 )
         return dynamic_parameters
 
-    @staticmethod
-    def _derivativeName(parameter: str) -> str:
-        return "derivative_with_respect_to_" + parameter
-
-    def addToPhysicalSystem(self, system: mm.System) -> None:
-        for force in self._forces:
-            if isinstance(force, cvpack.CollectiveVariable):
-                force.addToSystem(system)
-            else:
-                system.addForce(force)
-
-    def addToExtensionSystem(self, system: mm.System) -> None:
+    def _createFlippedForce(self) -> mm.CustomCVForce:
         inner_product = "+".join(
             f"{parameter}*{self._derivativeName(parameter)}"
             for parameter in self._dynamic_parameters
@@ -743,7 +735,21 @@ class InnerProductCoupling(Coupling):
                 flipped_force.addCollectiveVariable(
                     dv.name, dv.createCollectiveVariable(index)
                 )
-        system.addForce(flipped_force)
+        return flipped_force
+
+    @staticmethod
+    def _derivativeName(parameter: str) -> str:
+        return "derivative_with_respect_to_" + parameter
+
+    def addToPhysicalSystem(self, system: mm.System) -> None:
+        for force in self._forces:
+            if isinstance(force, cvpack.CollectiveVariable):
+                force.addToSystem(system)
+            else:
+                system.addForce(force)
+
+    def addToExtensionSystem(self, system: mm.System) -> None:
+        system.addForce(self._flipped_force)
 
     def updatePhysicalContext(
         self,
