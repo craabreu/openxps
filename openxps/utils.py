@@ -12,6 +12,7 @@ import inspect
 import re
 import typing as t
 
+import cvpack
 from cvpack.serialization import Serializable
 from cvpack.units import Quantity, Unit
 from openmm import unit as mmunit
@@ -185,16 +186,67 @@ class Function(Serializable):
         return variables, parameters
 
     def getName(self) -> str:
+        """Return the name of the function."""
         return self._name
 
     def getExpression(self) -> str:
+        """Return the expression string of the function."""
         return self._expression
 
     def getVariables(self) -> set[str]:
+        """Return the set of variable names in the function."""
         return self._variables
 
     def getParameters(self) -> dict[str, mmunit.Quantity]:
+        """Return the dictionary of parameter names and their values."""
         return self._parameters
+
+    def createCollectiveVariable(
+        self,
+        all_variables: list[str],
+    ) -> cvpack.AtomicFunction:
+        """
+        Create a collective variable from the function.
+
+        Parameters
+        ----------
+        all_variables
+            The list of all variables in the system.
+
+        Returns
+        -------
+        cvpack.AtomicFunction
+            The collective variable object.
+
+        Examples
+        --------
+        >>> from openxps.utils import Function
+        >>> import openmm as mm
+        >>> from math import exp, cos, pi
+        >>> fn = Function("g", "exp(-x)*cos(2*pi*y)", pi=3.14159)
+        >>> cv = fn.createCollectiveVariable(["x", "y"])
+        >>> system = mm.System()
+        >>> for _ in range(2):
+        ...     _ = system.addParticle(1.0)
+        >>> cv.addToSystem(system)
+        >>> context = mm.Context(system, mm.VerletIntegrator(0.0))
+        >>> x, y = 2, 1
+        >>> exp(-x)*cos(2*pi*y)
+        0.13533528...
+        >>> context.setPositions([mm.Vec3(x, 0.0, 0.0), mm.Vec3(y, 0.0, 0.0)])
+        >>> context.getState(getEnergy=True).getPotentialEnergy()
+        0.13533528... kJ/mol
+        """
+        return cvpack.AtomicFunction(
+            function=";".join(
+                [self._expression]
+                + [f"{variable}=x{i + 1}" for i, variable in enumerate(self._variables)]
+            ),
+            unit=mmunit.kilojoule_per_mole,
+            groups=[[all_variables.index(variable) for variable in self._variables]],
+            name=self._name,
+            **self._parameters,
+        )
 
 
 Function.registerTag("!openxps.utils.Function")
