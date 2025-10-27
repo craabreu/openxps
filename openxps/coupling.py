@@ -84,7 +84,8 @@ class Coupling(Serializable):
     def _createFlippedForce(self) -> mm.Force | None:
         return None
 
-    def _addForceToSystem(self, force: mm.Force, system: mm.System) -> None:
+    @staticmethod
+    def _addForceToSystem(force: mm.Force, system: mm.System) -> None:
         if isinstance(force, cvpack.CollectiveVariable):
             force.addToSystem(system)
         else:
@@ -149,6 +150,19 @@ class Coupling(Serializable):
             If the index is out of range.
         """
         return self._dynamical_variables[index]
+
+    def getProtectedParameters(self) -> set[str]:
+        """Get parameters of the physical context that should not be manually modified.
+
+        Returns
+        -------
+        set[str]
+            The protected parameters.
+        """
+        return {
+            self._flipped_force.getCollectiveVariableName(index)
+            for index in range(self._flipped_force.getNumCollectiveVariables())
+        }
 
     def addToPhysicalSystem(self, system: mm.System) -> None:
         """Add this coupling to an OpenMM system.
@@ -307,10 +321,6 @@ class CouplingSum(Coupling):
     def getCouplings(self) -> t.Sequence[Coupling]:
         """Get the couplings included in the summed coupling."""
         return self._couplings
-
-    def addToPhysicalSystem(self, system: mm.System) -> None:
-        for coupling in self._couplings:
-            coupling.addToPhysicalSystem(system)
 
     def addToExtensionSystem(self, system: mm.System) -> None:
         for coupling in self._couplings:

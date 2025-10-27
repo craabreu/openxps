@@ -366,24 +366,21 @@ def test_invalid_integrator_type():
         )
 
 
-def test_set_parameter_for_dv():
+def test_set_protected_parameter():
     """Test setParameter for dynamical variables."""
     model = testsystems.AlanineDipeptideVacuum()
     context = create_extended_context(model)
 
-    # Initialize context
-    context.setPositions(model.positions)
-    context.setDynamicalVariableValues(
-        [1.0 * mmunit.radian, 0.5 * mmunit.nanometer, -0.3 * mmunit.nanometer]
-    )
-
-    # Set a dynamical variable parameter
-    context.setParameter("phi0", 2.0 * mmunit.radian)
-    assert context.getParameter("phi0") == pytest.approx(2.0)
-
-    # Verify it updated the DV value
-    dv_values = context.getDynamicalVariableValues()
-    assert dv_values[0].value_in_unit(mmunit.radian) == pytest.approx(2.0)
+    # The parameter name matches a dynamical variable (i.e., it is protected)
+    protected_param = "phi0"
+    with pytest.raises(
+        ValueError,
+        match=(
+            f'Cannot manually set the parameter "{protected_param}". '
+            "This parameter is set automatically via setDynamicalVariableValues."
+        ),
+    ):
+        context.setParameter(protected_param, 2.0)
 
 
 def test_set_parameter_for_regular_param():

@@ -158,18 +158,12 @@ class ExtendedSpaceContext(mm.Context):
         value
             The value of the parameter.
         """
-        dv_names = [dv.name for dv in self._dvs]
-        if name in dv_names:
-            i = dv_names.index(name)
-            dv = self._dvs[i]
-            wrapped_value, _ = dv.bounds.wrap(value.value_in_unit(dv.unit), 0)
-            state = mmswig.Context_getState(self._extension_context, mm.State.Positions)
-            positions = list(mmswig.State__getVectorAsVec3(state, mm.State.Positions))
-            positions[i] = mm.Vec3(wrapped_value, 0, 0)
-            self._extension_context.setPositions(positions)
-            super().setParameter(name, wrapped_value)
-        else:
-            super().setParameter(name, value)
+        if name in self._coupling.getProtectedParameters():
+            raise ValueError(
+                f'Cannot manually set the parameter "{name}". This parameter is '
+                "set automatically via setDynamicalVariableValues."
+            )
+        super().setParameter(name, value)
 
     def setPositions(self, positions: mmunit.Quantity) -> None:
         """
