@@ -392,11 +392,12 @@ def test_coupling_sum_add_to_extension_system():
     )
 
     # Create another one for the sum
-    psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
+    psi2 = cvpack.Torsion(4, 6, 8, 14, name="psi2")
+    psi_s2 = create_test_dv("psi_s2")
     coupling2 = CollectiveVariableCoupling(
-        "0.5*kappa*(psi-phi_s)^2",
-        [psi],
-        [phi_s],
+        "0.5*kappa*(psi2-psi_s2)^2",
+        [psi2],
+        [psi_s2],
         kappa=kappa,
     )
 

@@ -45,6 +45,9 @@ class Coupling(Serializable):
     ) -> None:
         self._forces = list(forces)
         self._dynamical_variables = [dv.in_md_units() for dv in dynamical_variables]
+        unique_names = {dv.name for dv in self._dynamical_variables}
+        if len(unique_names) != len(self._dynamical_variables):
+            raise ValueError("The dynamical variables must have unique names.")
         self._dv_indices = {
             dv.name: index for index, dv in enumerate(self._dynamical_variables)
         }
@@ -339,15 +342,22 @@ class CouplingSum(Coupling):
     def __init__(self, couplings: t.Iterable[Coupling]) -> None:
         self._couplings = []
         forces = []
-        dynamical_variables = []
+        dv_dict = {}
         for coupling in couplings:
             if isinstance(coupling, CouplingSum):
                 self._couplings.extend(coupling.getCouplings())
             else:
                 self._couplings.append(coupling)
             forces.extend(coupling.getForces())
-            dynamical_variables.extend(coupling.getDynamicalVariables())
-        super().__init__(forces, dynamical_variables)
+            for dv in coupling.getDynamicalVariables():
+                if dv.name not in dv_dict:
+                    dv_dict[dv.name] = dv
+                elif dv_dict[dv.name] != dv:
+                    raise ValueError(
+                        f'The dynamical variable "{dv.name}" has '
+                        "conflicting definitions in the couplings."
+                    )
+        super().__init__(forces, sorted(dv_dict.values(), key=lambda dv: dv.name))
         self._broadcastDynamicalVariableIndices()
         self._checkCollectiveVariables()
 
