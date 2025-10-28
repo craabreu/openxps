@@ -779,7 +779,9 @@
                 <span class="n">force</span><span class="p">,</span>
                 <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
                 <span class="n">name</span><span class="o">=</span><span class="n">force</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span>
-            <span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">)</span> <span class="k">else</span> <span class="n">force</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">force</span>
             <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">forces</span>
         <span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span> <span class="o">=</span> <span class="p">[</span>

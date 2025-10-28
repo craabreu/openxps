@@ -36,19 +36,21 @@
             
   <h1>Source code for openxps.extension_writer</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">.. module:: openxps.state_data_writer</span>
+<span class="sd">.. module:: openxps.extension_writer</span>
 <span class="sd">   :platform: Linux, MacOS, Windows</span>
-<span class="sd">   :synopsis: A custom writer for reporting state data from an external context.</span>
+<span class="sd">   :synopsis: A custom writer for reporting state data from an extension context.</span>
 
 <span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">cvpack.reporting.custom_writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomWriter</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span> <span class="k">as</span> <span class="n">mmapp</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceSimulation</span>
 
 
 <div class="viewcode-block" id="ExtensionWriter">
@@ -57,21 +59,36 @@
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A custom writer for reporting state data from an extension context.</span>
 
+<span class="sd">    This writer can be used with :class:`cvpack.reporting.StateDataReporter` to</span>
+<span class="sd">    report various properties of the extension context in an extended phase-space</span>
+<span class="sd">    simulation. The extension context contains the dynamical variables and their</span>
+<span class="sd">    associated properties.</span>
+
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
-<span class="sd">    potential</span>
-<span class="sd">        If ``True``, the potential energy of the extension context will be reported.</span>
-<span class="sd">    kinetic</span>
-<span class="sd">        If ``True``, the kinetic energy of the extension context will be reported.</span>
-<span class="sd">    total</span>
-<span class="sd">        If ``True``, the total energy of the extension context will be reported.</span>
-<span class="sd">    temperature</span>
-<span class="sd">        If ``True``, the temperature of the extension context will be reported.</span>
+<span class="sd">    kinetic : bool, optional, default=False</span>
+<span class="sd">        If ``True``, the kinetic energy of the extension context will be reported</span>
+<span class="sd">        in units of kJ/mol.</span>
+<span class="sd">    temperature : bool, optional, default=False</span>
+<span class="sd">        If ``True``, the temperature of the extension context will be reported</span>
+<span class="sd">        in units of Kelvin.</span>
+<span class="sd">    dynamical_variables : bool, optional, default=False</span>
+<span class="sd">        If ``True``, the current values of all dynamical variables will be reported.</span>
+<span class="sd">        Each variable will be reported with its name and unit.</span>
+<span class="sd">    forces : bool, optional, default=False</span>
+<span class="sd">        If ``True``, the forces acting on each dynamical variable will be reported</span>
+<span class="sd">        in units of kJ/(mol*unit), where unit is the unit of the corresponding</span>
+<span class="sd">        dynamical variable.</span>
+<span class="sd">    collective_variables : bool, optional, default=False</span>
+<span class="sd">        If ``True``, the current values of collective variables that are part of</span>
+<span class="sd">        collective variable couplings will be reported.</span>
+<span class="sd">    coupling_functions : bool, optional, default=False</span>
+<span class="sd">        If ``True``, the current values of functions in inner product couplings</span>
+<span class="sd">        will be reported.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
-<span class="sd">    &gt;&gt;&gt; from math import pi</span>
 <span class="sd">    &gt;&gt;&gt; from sys import stdout</span>
 <span class="sd">    &gt;&gt;&gt; import openmm</span>
 <span class="sd">    &gt;&gt;&gt; import cvpack</span>
@@ -105,74 +122,109 @@
 <span class="sd">    ...     10,</span>
 <span class="sd">    ...     step=True,</span>
 <span class="sd">    ...     kineticEnergy=True,</span>
-<span class="sd">    ...     writers=[xps.ExtensionWriter(kinetic=True)],</span>
+<span class="sd">    ...     writers=[xps.ExtensionWriter(</span>
+<span class="sd">    ...         kinetic=True,</span>
+<span class="sd">    ...         temperature=True,</span>
+<span class="sd">    ...         dynamical_variables=True</span>
+<span class="sd">    ...     )],</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; simulation.reporters.append(reporter)</span>
 <span class="sd">    &gt;&gt;&gt; simulation.step(100)  # doctest: +SKIP</span>
-<span class="sd">    #&quot;Step&quot;,&quot;Kinetic Energy (kJ/mole)&quot;,&quot;Extension Kinetic Energy (kJ/mole)&quot;</span>
-<span class="sd">    10,60.512...,1.7013...</span>
-<span class="sd">    20,75.765...,2.5089...</span>
-<span class="sd">    30,61.116...,1.3375...</span>
-<span class="sd">    40,52.359...,0.4791...</span>
-<span class="sd">    50,61.382...,0.7065...</span>
-<span class="sd">    60,48.674...,0.6520...</span>
-<span class="sd">    70,60.771...,1.3525...</span>
-<span class="sd">    80,46.518...,2.0280...</span>
-<span class="sd">    90,66.111...,0.9597...</span>
-<span class="sd">    100,60.94...,0.9695...</span>
+<span class="sd">    #&quot;Step&quot;,&quot;Kinetic Energy (kJ/mole)&quot;,&quot;Extension Kinetic Energy (kJ/mole)&quot;,\</span>
+<span class="sd">    &quot;Extension Temperature (K)&quot;,&quot;phi0 (rad)&quot;</span>
+<span class="sd">    10,60.512...,1.7013...,123.456...,3.1415...</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
-        <span class="n">potential</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">kinetic</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">total</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">temperature</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">forces</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">collective_variables</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">coupling_functions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_potential</span> <span class="o">=</span> <span class="n">potential</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_kinetic</span> <span class="o">=</span> <span class="n">kinetic</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_total</span> <span class="o">=</span> <span class="n">total</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span> <span class="o">=</span> <span class="n">temperature</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span> <span class="o">=</span> <span class="n">potential</span> <span class="ow">or</span> <span class="n">kinetic</span> <span class="ow">or</span> <span class="n">total</span> <span class="ow">or</span> <span class="n">temperature</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span> <span class="o">=</span> <span class="n">dynamical_variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span> <span class="o">=</span> <span class="n">forces</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span> <span class="o">=</span> <span class="n">collective_variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_functions</span> <span class="o">=</span> <span class="n">coupling_functions</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span> <span class="o">=</span> <span class="n">kinetic</span> <span class="ow">or</span> <span class="n">temperature</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span> <span class="o">=</span> <span class="n">kinetic</span> <span class="ow">or</span> <span class="n">temperature</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_needs_positions</span> <span class="o">=</span> <span class="n">dynamical_variables</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_needs_forces</span> <span class="o">=</span> <span class="n">forces</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">_temp_factor</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cv_units</span> <span class="o">=</span> <span class="p">{}</span>
 
 <div class="viewcode-block" id="ExtensionWriter.initialize">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.initialize">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">mmapp</span><span class="o">.</span><span class="n">Simulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">ExtendedSpaceSimulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">extended_space_context</span>
+        <span class="n">coupling</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getCoupling</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span> <span class="o">=</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()</span>
+
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span><span class="p">:</span>
-            <span class="n">number</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">())</span>
+            <span class="n">number</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">())</span>
             <span class="n">kb</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span>
                 <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">kelvin</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_temp_factor</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">number</span> <span class="o">*</span> <span class="n">kb</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_temp_factor</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">number</span> <span class="o">*</span> <span class="n">kb</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cv_units</span> <span class="o">=</span> <span class="p">{}</span>
+            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getForces</span><span class="p">():</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">):</span>
+                    <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">force</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cv_units</span><span class="p">:</span>
+                            <span class="bp">self</span><span class="o">.</span><span class="n">_cv_units</span><span class="p">[</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()]</span> <span class="o">=</span> <span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_functions</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">dv_names</span> <span class="o">=</span> <span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">}</span>
+            <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getProtectedParameters</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">parameter</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dv_names</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parameter</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ExtensionWriter.getHeaders">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getHeaders">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getHeaders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
         <span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_potential</span><span class="p">:</span>
-            <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Extension Potential Energy (kJ/mole)&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kinetic</span><span class="p">:</span>
             <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Extension Kinetic Energy (kJ/mole)&quot;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_total</span><span class="p">:</span>
-            <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Extension Total Energy (kJ/mole)&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span><span class="p">:</span>
             <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Extension Temperature (K)&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">:</span>
+                <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">:</span>
+                <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Force on </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (kJ/(mol*</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="si">}</span><span class="s2">))&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">unit</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cv_units</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">unit</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_functions</span><span class="p">:</span>
+            <span class="n">headers</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">headers</span></div>
 
 
 <div class="viewcode-block" id="ExtensionWriter.getValues">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getValues">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">getValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">mmapp</span><span class="o">.</span><span class="n">Simulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">ExtendedSpaceSimulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>  <span class="c1"># noqa: PLR0912</span>
         <span class="n">context</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">extended_space_context</span>
-        <span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
-            <span class="n">getEnergy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">,</span> <span class="n">getVelocities</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span>
+        <span class="n">extension_context</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">extension_context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
+            <span class="n">getEnergy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">,</span>
+            <span class="n">getPositions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_positions</span><span class="p">,</span>
+            <span class="n">getVelocities</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span><span class="p">,</span>
+            <span class="n">getForces</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_forces</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">:</span>
-            <span class="n">potential_energy</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State_getPotentialEnergy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
             <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State_getKineticEnergy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span><span class="p">:</span>
             <span class="n">velocities</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Velocities</span><span class="p">)</span>
@@ -181,15 +233,28 @@
             <span class="p">):</span>
                 <span class="n">mass</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">_value</span>
                 <span class="n">kinetic_energy</span> <span class="o">-=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">mass</span> <span class="o">*</span> <span class="p">(</span><span class="n">velocity</span><span class="o">.</span><span class="n">y</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="n">velocity</span><span class="o">.</span><span class="n">z</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_positions</span><span class="p">:</span>
+            <span class="n">positions</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">:</span>
+            <span class="n">forces</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Forces</span><span class="p">)</span>
         <span class="n">values</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_potential</span><span class="p">:</span>
-            <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">potential_energy</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kinetic</span><span class="p">:</span>
             <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">kinetic_energy</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_total</span><span class="p">:</span>
-            <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">potential_energy</span> <span class="o">+</span> <span class="n">kinetic_energy</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span><span class="p">:</span>
             <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_temp_factor</span> <span class="o">*</span> <span class="n">kinetic_energy</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">):</span>
+                <span class="n">value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">positions</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">forces</span><span class="p">:</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cv_units</span><span class="p">:</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extension_context</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_functions</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span><span class="p">:</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>
         <span class="k">return</span> <span class="n">values</span></div>
 </div>
 

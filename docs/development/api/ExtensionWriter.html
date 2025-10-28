@@ -41,21 +41,33 @@
 <h1>ExtensionWriter<a class="headerlink" href="#extensionwriter" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtensionWriter">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtensionWriter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">potential</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kinetic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extension_writer.html#ExtensionWriter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtensionWriter" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtensionWriter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">kinetic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">temperature</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forces</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collective_variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling_functions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/extension_writer.html#ExtensionWriter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtensionWriter" title="Link to this definition">¶</a></dt>
 <dd><p>A custom writer for reporting state data from an extension context.</p>
+<p>This writer can be used with <code class="xref py py-class docutils literal notranslate"><span class="pre">cvpack.reporting.StateDataReporter</span></code> to
+report various properties of the extension context in an extended phase-space
+simulation. The extension context contains the dynamical variables and their
+associated properties.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>potential</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the potential energy of the extension context will be reported.</p></li>
-<li><p><strong>kinetic</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the kinetic energy of the extension context will be reported.</p></li>
-<li><p><strong>total</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the total energy of the extension context will be reported.</p></li>
-<li><p><strong>temperature</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the temperature of the extension context will be reported.</p></li>
+<li><p><strong>kinetic</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the kinetic energy of the extension context will be reported
+in units of kJ/mol.</p></li>
+<li><p><strong>temperature</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the temperature of the extension context will be reported
+in units of Kelvin.</p></li>
+<li><p><strong>dynamical_variables</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the current values of all dynamical variables will be reported.
+Each variable will be reported with its name and unit.</p></li>
+<li><p><strong>forces</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the forces acting on each dynamical variable will be reported
+in units of kJ/(mol*unit), where unit is the unit of the corresponding
+dynamical variable.</p></li>
+<li><p><strong>collective_variables</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the current values of collective variables that are part of
+collective variable couplings will be reported.</p></li>
+<li><p><strong>coupling_functions</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the current values of functions in inner product couplings
+will be reported.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">pi</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">sys</span><span class="w"> </span><span class="kn">import</span> <span class="n">stdout</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
@@ -89,21 +101,16 @@
 <span class="gp">... </span>    <span class="mi">10</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">step</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">kineticEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">writers</span><span class="o">=</span><span class="p">[</span><span class="n">xps</span><span class="o">.</span><span class="n">ExtensionWriter</span><span class="p">(</span><span class="n">kinetic</span><span class="o">=</span><span class="kc">True</span><span class="p">)],</span>
+<span class="gp">... </span>    <span class="n">writers</span><span class="o">=</span><span class="p">[</span><span class="n">xps</span><span class="o">.</span><span class="n">ExtensionWriter</span><span class="p">(</span>
+<span class="gp">... </span>        <span class="n">kinetic</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="n">temperature</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="gp">... </span>        <span class="n">dynamical_variables</span><span class="o">=</span><span class="kc">True</span>
+<span class="gp">... </span>    <span class="p">)],</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">simulation</span><span class="o">.</span><span class="n">reporters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">reporter</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">simulation</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
-<span class="go">#&quot;Step&quot;,&quot;Kinetic Energy (kJ/mole)&quot;,&quot;Extension Kinetic Energy (kJ/mole)&quot;</span>
-<span class="go">10,60.512...,1.7013...</span>
-<span class="go">20,75.765...,2.5089...</span>
-<span class="go">30,61.116...,1.3375...</span>
-<span class="go">40,52.359...,0.4791...</span>
-<span class="go">50,61.382...,0.7065...</span>
-<span class="go">60,48.674...,0.6520...</span>
-<span class="go">70,60.771...,1.3525...</span>
-<span class="go">80,46.518...,2.0280...</span>
-<span class="go">90,66.111...,0.9597...</span>
-<span class="go">100,60.94...,0.9695...</span>
+<span class="go">#&quot;Step&quot;,&quot;Kinetic Energy (kJ/mole)&quot;,&quot;Extension Kinetic Energy (kJ/mole)&quot;,    &quot;Extension Temperature (K)&quot;,&quot;phi0 (rad)&quot;</span>
+<span class="go">10,60.512...,1.7013...,123.456...,3.1415...</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
@@ -124,7 +131,7 @@
 <dd><p>Gets a list of floats containing the values to be added to the report.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>simulation</strong> (<em>Simulation</em>) – The simulation object.</p>
+<dd class="field-odd"><p><strong>simulation</strong> (<a class="reference internal" href="ExtendedSpaceSimulation.html#openxps.ExtendedSpaceSimulation" title="openxps.simulation.ExtendedSpaceSimulation"><em>ExtendedSpaceSimulation</em></a>) – The simulation object.</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>list[float]</p>
@@ -139,7 +146,7 @@
 can be used to perform any necessary setup.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>simulation</strong> (<em>Simulation</em>) – The simulation object.</p>
+<dd class="field-odd"><p><strong>simulation</strong> (<a class="reference internal" href="ExtendedSpaceSimulation.html#openxps.ExtendedSpaceSimulation" title="openxps.simulation.ExtendedSpaceSimulation"><em>ExtendedSpaceSimulation</em></a>) – The simulation object.</p>
 </dd>
 </dl>
 </dd></dl>
