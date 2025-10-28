@@ -786,13 +786,10 @@ def test_coupling_sum_integration():
 # InnerProductCoupling Tests
 def test_inner_product_coupling_initialization():
     """Test basic initialization of InnerProductCoupling."""
-    # Create a simple force with a global parameter that can be a DV
-    # When DV is a global parameter and there are no functions,
-    # we need at least one function to avoid the set.union issue
-    # So we use a dummy identity function
-    force = mm.CustomBondForce("scaling*energy/r")
-    force.addGlobalParameter("scaling", 1.0)
-    force.addEnergyParameterDerivative("scaling")
+    # Create a simple force with a global parameter that is also a DV
+    force = mm.CustomBondForce("lambda*energy/r")
+    force.addGlobalParameter("lambda", 1.0)
+    force.addEnergyParameterDerivative("lambda")
     force.addPerBondParameter("energy")
     force.addBond(0, 1, [1.0])  # Add a dummy bond
 
@@ -803,12 +800,8 @@ def test_inner_product_coupling_initialization():
         bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
     )
 
-    # Use an identity function so lambda appears in functions
-    coupling = InnerProductCoupling(
-        [force],
-        [lambda_dv],
-        functions={"scaling": "lambda"},  # Identity function
-    )
+    # When DV is a global parameter, no functions are needed
+    coupling = InnerProductCoupling([force], [lambda_dv])
 
     assert len(coupling.getForces()) == 1
     assert len(coupling.getDynamicalVariables()) == 1
@@ -843,9 +836,9 @@ def test_inner_product_coupling_with_functions():
 
 def test_inner_product_coupling_repr():
     """Test string representation of InnerProductCoupling."""
-    force = mm.CustomBondForce("scaling*energy/r")
-    force.addGlobalParameter("scaling", 1.0)
-    force.addEnergyParameterDerivative("scaling")
+    force = mm.CustomBondForce("lambda*energy/r")
+    force.addGlobalParameter("lambda", 1.0)
+    force.addEnergyParameterDerivative("lambda")
     force.addPerBondParameter("energy")
     force.addBond(0, 1, [1.0])
 
@@ -856,11 +849,7 @@ def test_inner_product_coupling_repr():
         bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
     )
 
-    coupling = InnerProductCoupling(
-        [force],
-        [lambda_dv],
-        functions={"scaling": "lambda"},
-    )
+    coupling = InnerProductCoupling([force], [lambda_dv])
     repr_str = repr(coupling)
 
     # InnerProductCoupling doesn't have a custom __repr__, so it uses base class

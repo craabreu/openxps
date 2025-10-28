@@ -735,9 +735,12 @@ class InnerProductCoupling(Coupling):
             for index in range(force.getNumGlobalParameters())
         }
         function_names = {fn.getName() for fn in self._functions}
-        function_variables = set.union(
-            *(fn.getVariables() for fn in self._functions),
-        )
+        if self._functions:
+            function_variables = set.union(
+                *(fn.getVariables() for fn in self._functions),
+            )
+        else:
+            function_variables = set()
 
         if missing := function_names - all_force_parameters:
             raise ValueError(
