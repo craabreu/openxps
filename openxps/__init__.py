@@ -6,9 +6,10 @@ from . import bounds  # noqa: F401
 from ._version import __version__  # noqa: F401
 from .context import ExtendedSpaceContext  # noqa: F401
 from .coupling import (
+    CollectiveVariableCoupling,  # noqa: F401
     CouplingSum,  # noqa: F401
-    CustomCoupling,  # noqa: F401
     HarmonicCoupling,  # noqa: F401
+    InnerProductCoupling,  # noqa: F401
 )
 from .dynamical_variable import DynamicalVariable  # noqa: F401
 from .extension_writer import ExtensionWriter  # noqa: F401
@@ -22,9 +23,10 @@ from .system import ExtendedSpaceSystem  # noqa: F401
 
 __all__ = [
     "bounds",
-    "CustomCoupling",
+    "CollectiveVariableCoupling",
     "HarmonicCoupling",
     "CouplingSum",
+    "InnerProductCoupling",
     "ExtendedSpaceContext",
     "ExtendedSpaceSystem",
     "ExtensionWriter",

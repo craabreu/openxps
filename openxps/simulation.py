@@ -94,35 +94,25 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         platformProperties: t.Optional[dict] = None,
         state: t.Optional[mm.State] = None,
     ) -> None:
-        # Store the topology and system
         self.topology = topology
         self.system = system
 
-        # Determine if the system uses periodic boundary conditions
-        self._usesPBC = False
-        for force in system.getForces():
-            if hasattr(force, "usesPeriodicBoundaryConditions"):
-                self._usesPBC = force.usesPeriodicBoundaryConditions()
-                if self._usesPBC:
-                    break
-
-        # Create the ExtendedSpaceContext
         args = [system, integrator]
         if platform is not None:
             args.append(platform)
             if platformProperties is not None:
                 args.append(platformProperties)
 
-        self.context = ExtendedSpaceContext(*args)
-
-        # The integrator is stored in the context and might have been modified
-        # (for tuple of integrators, only the first is returned)
+        self.context = self.extended_space_context = ExtendedSpaceContext(*args)
         self.integrator = self.context.getIntegrator()
 
-        # Initialize other base class attributes
         self.currentStep = 0
         self.reporters = []
 
-        # Load state if provided
         if state is not None:
             self.context.setState(state)
+
+        try:
+            self._usesPBC = self.system.usesPeriodicBoundaryConditions()
+        except Exception:
+            self._usesPBC = topology.getUnitCellDimensions() is not None

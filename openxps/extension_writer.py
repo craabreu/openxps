@@ -120,7 +120,8 @@ class ExtensionWriter(CustomWriter):
         return headers
 
     def getValues(self, simulation: mmapp.Simulation) -> list[float]:
-        state = simulation.context.getExtensionContext().getState(
+        context = simulation.extended_space_context
+        state = context.getState(
             getEnergy=self._needs_energy, getVelocities=self._needs_velocities
         )
         if self._needs_energy:
@@ -129,7 +130,7 @@ class ExtensionWriter(CustomWriter):
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
             for dv, velocity in zip(
-                simulation.context.getSystem().getDynamicalVariables(), velocities
+                context.getSystem().getDynamicalVariables(), velocities
             ):
                 mass = dv.mass._value
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)

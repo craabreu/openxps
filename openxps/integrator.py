@@ -18,7 +18,6 @@ from openmm import unit as mmunit
 
 from . import integrators
 from .coupling import Coupling
-from .dynamical_variable import DynamicalVariable
 from .utils import STRING_SEPARATOR
 
 #: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the
@@ -107,7 +106,6 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         self,
         physical_context: mm.Context,
         extension_context: mm.Context,
-        dynamical_variables: t.Sequence[DynamicalVariable],
         coupling: Coupling,
     ) -> None:
         """Configure the integrator.
@@ -122,15 +120,13 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
             The OpenMM context containing the physical system.
         extension_context
             The OpenMM context containing the extension system.
-        dynamical_variables
-            The dynamical variables included in the extended phase-space system.
         coupling
             The potential that couples the physical and dynamical variables.
         """
         self._physical_context = physical_context
         self._extension_context = extension_context
-        self._dynamical_variables = dynamical_variables
         self._coupling = coupling
+        self._dynamical_variables = coupling.getDynamicalVariables()
 
     def getPhysicalIntegrator(self) -> mm.Integrator:
         """Get the integrator for the physical system.
@@ -372,12 +368,9 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         self,
         physical_context: mm.Context,
         extension_context: mm.Context,
-        dynamical_variables: t.Sequence[DynamicalVariable],
         coupling: Coupling,
     ) -> None:
-        super().configure(
-            physical_context, extension_context, dynamical_variables, coupling
-        )
+        super().configure(physical_context, extension_context, coupling)
         if self._middle_integrator is self._physical_integrator:
             self._update_middle_context = self._coupling.updatePhysicalContext
             self._update_end_context = self._coupling.updateExtensionContext
@@ -394,19 +387,12 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         steps : int
             The number of time steps to advance the simulation.
         """
+        step_count = self._physical_context.getStepCount()
         for _ in range(steps):
             mmswig.Integrator_step(self._end_integrator, self._num_substeps)
-            self._update_middle_context(
-                self._physical_context,
-                self._extension_context,
-            )
+            self._update_middle_context(self._physical_context, self._extension_context)
             mmswig.Integrator_step(self._middle_integrator, 1)
-            self._update_end_context(
-                self._physical_context,
-                self._extension_context,
-            )
+            self._update_end_context(self._physical_context, self._extension_context)
             mmswig.Integrator_step(self._end_integrator, self._num_substeps)
-            self._update_middle_context(
-                self._physical_context,
-                self._extension_context,
-            )
+            self._update_middle_context(self._physical_context, self._extension_context)
+        self._physical_context.setStepCount(step_count + steps)

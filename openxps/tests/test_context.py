@@ -10,7 +10,7 @@ from openmm import unit as mmunit
 from openmmtools import testsystems
 
 from openxps import (
-    CustomCoupling,
+    CollectiveVariableCoupling,
     DynamicalVariable,
     ExtendedSpaceContext,
     ExtendedSpaceSystem,
@@ -45,10 +45,10 @@ def create_dvs():
 
 
 def create_coupling(phi0=180 * mmunit.degrees):
-    """Helper function to create a MetaCollectiveVariable object."""
+    """Helper function to create a CollectiveVariableCoupling object."""
     dvs = create_dvs()
     kwargs = {
-        "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radians**2,
+        "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
         "alpha": 0.01 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
     }
     if phi0 is not None:
@@ -56,7 +56,7 @@ def create_coupling(phi0=180 * mmunit.degrees):
     # Always include x0 and y0 as parameters (they're in the expression)
     kwargs["x0"] = 1 * mmunit.nanometer
     kwargs["y0"] = 1 * mmunit.nanometer
-    return CustomCoupling(
+    return CollectiveVariableCoupling(
         f"0.5*kappa*min(delta_phi,{2 * np.pi}-delta_phi)^2+alpha*(x0-y0)^2"
         "; delta_phi=abs(phi-phi0)",
         [cvpack.Torsion(6, 8, 14, 16, name="phi")],
@@ -92,9 +92,9 @@ def test_set_positions_and_velocities():
     positions = model.positions.value_in_unit(mmunit.nanometer)
     velocities = random.uniform(-1, 1, (num_atoms, 3))
 
-    urad = mmunit.radians
-    unm = mmunit.nanometers
-    ups = mmunit.picoseconds
+    urad = mmunit.radian
+    unm = mmunit.nanometer
+    ups = mmunit.picosecond
 
     context.setPositions(positions)
     context.setVelocities(velocities)
@@ -366,24 +366,21 @@ def test_invalid_integrator_type():
         )
 
 
-def test_set_parameter_for_dv():
+def test_set_protected_parameter():
     """Test setParameter for dynamical variables."""
     model = testsystems.AlanineDipeptideVacuum()
     context = create_extended_context(model)
 
-    # Initialize context
-    context.setPositions(model.positions)
-    context.setDynamicalVariableValues(
-        [1.0 * mmunit.radian, 0.5 * mmunit.nanometer, -0.3 * mmunit.nanometer]
-    )
-
-    # Set a dynamical variable parameter
-    context.setParameter("phi0", 2.0 * mmunit.radian)
-    assert context.getParameter("phi0") == pytest.approx(2.0)
-
-    # Verify it updated the DV value
-    dv_values = context.getDynamicalVariableValues()
-    assert dv_values[0].value_in_unit(mmunit.radian) == pytest.approx(2.0)
+    # The parameter name matches a dynamical variable (i.e., it is protected)
+    protected_param = "phi0"
+    with pytest.raises(
+        ValueError,
+        match=(
+            f'Cannot manually set the parameter "{protected_param}". '
+            "This parameter is set automatically via setDynamicalVariableValues."
+        ),
+    ):
+        context.setParameter(protected_param, 2.0)
 
 
 def test_set_parameter_for_regular_param():

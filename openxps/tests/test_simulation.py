@@ -278,7 +278,7 @@ def test_missing_dv_in_coupling():
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
 
     # Create coupling with no dynamical variables
-    coupling = xps.CustomCoupling(
+    coupling = xps.CollectiveVariableCoupling(
         "0.5*kappa*phi^2",
         [phi],
         [],
