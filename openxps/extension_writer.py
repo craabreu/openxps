@@ -20,12 +20,8 @@ class ExtensionWriter(CustomWriter):
 
     Parameters
     ----------
-    potential
-        If ``True``, the potential energy of the extension context will be reported.
     kinetic
         If ``True``, the kinetic energy of the extension context will be reported.
-    total
-        If ``True``, the total energy of the extension context will be reported.
     temperature
         If ``True``, the temperature of the extension context will be reported.
 
@@ -86,16 +82,12 @@ class ExtensionWriter(CustomWriter):
     def __init__(  # noqa: PLR0913
         self,
         *,
-        potential: bool = False,
         kinetic: bool = False,
-        total: bool = False,
         temperature: bool = False,
     ) -> None:
-        self._potential = potential
         self._kinetic = kinetic
-        self._total = total
         self._temperature = temperature
-        self._needs_energy = potential or kinetic or total or temperature
+        self._needs_energy = kinetic or temperature
         self._needs_velocities = kinetic or temperature
         self._temp_factor = 0.0
 
@@ -109,12 +101,8 @@ class ExtensionWriter(CustomWriter):
 
     def getHeaders(self) -> list[str]:
         headers = []
-        if self._potential:
-            headers.append("Extension Potential Energy (kJ/mole)")
         if self._kinetic:
             headers.append("Extension Kinetic Energy (kJ/mole)")
-        if self._total:
-            headers.append("Extension Total Energy (kJ/mole)")
         if self._temperature:
             headers.append("Extension Temperature (K)")
         return headers
@@ -125,7 +113,6 @@ class ExtensionWriter(CustomWriter):
             getEnergy=self._needs_energy, getVelocities=self._needs_velocities
         )
         if self._needs_energy:
-            potential_energy = mmswig.State_getPotentialEnergy(state)
             kinetic_energy = mmswig.State_getKineticEnergy(state)
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
@@ -135,12 +122,8 @@ class ExtensionWriter(CustomWriter):
                 mass = dv.mass._value
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
         values = []
-        if self._potential:
-            values.append(potential_energy)
         if self._kinetic:
             values.append(kinetic_energy)
-        if self._total:
-            values.append(potential_energy + kinetic_energy)
         if self._temperature:
             values.append(self._temp_factor * kinetic_energy)
         return values

@@ -49,9 +49,7 @@ def test_extension_writer():
                 step=True,
                 writers=[
                     xps.ExtensionWriter(
-                        potential=True,
                         kinetic=True,
-                        total=True,
                         temperature=True,
                     )
                 ],
@@ -62,9 +60,7 @@ def test_extension_writer():
             assert file.readline() == ",".join(
                 [
                     '#"Step"',
-                    '"Extension Potential Energy (kJ/mole)"',
                     '"Extension Kinetic Energy (kJ/mole)"',
-                    '"Extension Total Energy (kJ/mole)"',
                     '"Extension Temperature (K)"\n',
                 ]
             )
