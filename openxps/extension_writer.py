@@ -7,6 +7,7 @@
 
 """
 
+import cvpack
 import openmm as mm
 from cvpack.reporting.custom_writer import CustomWriter
 from openmm import _openmm as mmswig
@@ -86,10 +87,12 @@ class ExtensionWriter(CustomWriter):
         kinetic: bool = False,
         temperature: bool = False,
         dynamical_variables: bool = False,
+        collective_variables: bool = False,
     ) -> None:
         self._kinetic = kinetic
         self._temperature = temperature
         self._dynamical_variables = dynamical_variables
+        self._collective_variables = collective_variables
 
         self._needs_energy = kinetic or temperature
         self._needs_velocities = kinetic or temperature
@@ -97,18 +100,27 @@ class ExtensionWriter(CustomWriter):
 
         self._temp_factor = 0.0
         self._dv_objects = []
+        self._cv_units = {}
 
     def initialize(self, simulation: ExtendedSpaceSimulation) -> None:
         context = simulation.extended_space_context
+        coupling = context.getSystem().getCoupling()
         if self._temperature:
-            number = len(context.getSystem().getDynamicalVariables())
+            number = len(coupling.getDynamicalVariables())
             kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
                 mmunit.kilojoules_per_mole / mmunit.kelvin
             )
             self._temp_factor = 2 / (number * kb)
 
         if self._dynamical_variables:
-            self._dv_objects = context.getSystem().getDynamicalVariables()
+            self._dv_objects = coupling.getDynamicalVariables()
+        if self._collective_variables:
+            self._cv_units = {}
+            for force in coupling.getForces():
+                if isinstance(force, cvpack.MetaCollectiveVariable):
+                    for cv in force.getInnerVariables():
+                        if cv.getName() not in self._cv_units:
+                            self._cv_units[cv.getName()] = cv.getUnit()
 
     def getHeaders(self) -> list[str]:
         headers = []
@@ -119,6 +131,9 @@ class ExtensionWriter(CustomWriter):
         if self._dynamical_variables:
             for dv in self._dv_objects:
                 headers.append(f"{dv.name} ({dv.unit})")
+        if self._collective_variables:
+            for name, unit in self._cv_units.items():
+                headers.append(f"{name} ({unit})")
         return headers
 
     def getValues(self, simulation: ExtendedSpaceSimulation) -> list[float]:
@@ -149,4 +164,7 @@ class ExtensionWriter(CustomWriter):
             for index, dv in enumerate(self._dv_objects):
                 value, _ = dv.bounds.wrap(positions[index].x, 0)
                 values.append(value)
+        if self._collective_variables:
+            for name in self._cv_units:
+                values.append(extension_context.getParameter(name))
         return values
