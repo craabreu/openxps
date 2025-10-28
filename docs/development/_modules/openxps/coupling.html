@@ -868,16 +868,14 @@
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">dynamic_parameters</span>
 
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;derivative_with_respect_to_&quot;</span> <span class="o">+</span> <span class="n">parameter</span>
+
     <span class="k">def</span><span class="w"> </span><span class="nf">_createFlippedForce</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">:</span>
-        <span class="n">inner_product</span> <span class="o">=</span> <span class="s2">&quot;+&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">parameter</span><span class="si">}</span><span class="s2">*</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span>
+        <span class="n">flipped_force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">(</span>
+            <span class="s2">&quot;+&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">*</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">)</span>
         <span class="p">)</span>
-        <span class="n">energy_function</span> <span class="o">=</span> <span class="s2">&quot;;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">inner_product</span><span class="p">]</span>
-            <span class="o">+</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">fn</span><span class="o">.</span><span class="n">getExpression</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span><span class="p">]</span>
-        <span class="p">)</span>
-        <span class="n">flipped_force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">(</span><span class="n">energy_function</span><span class="p">)</span>
         <span class="n">all_dvs</span> <span class="o">=</span> <span class="p">[</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
             <span class="n">flipped_force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span>
@@ -891,10 +889,6 @@
                     <span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dv_indices</span><span class="p">[</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">flipped_force</span>
-
-    <span class="nd">@staticmethod</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="s2">&quot;derivative_with_respect_to_&quot;</span> <span class="o">+</span> <span class="n">parameter</span>
 
 <div class="viewcode-block" id="InnerProductCoupling.updateExtensionContext">
 <a class="viewcode-back" href="../../api/InnerProductCoupling.html#openxps.InnerProductCoupling.updateExtensionContext">[docs]</a>
