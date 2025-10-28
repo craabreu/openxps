@@ -8,7 +8,7 @@ CouplingSum
     .. rubric:: Methods
 
     .. automethod:: addToExtensionSystem
-    .. automethod:: addToPhysicalSystem
     .. automethod:: getCouplings
+    .. automethod:: getProtectedParameters
     .. automethod:: updateExtensionContext
     .. automethod:: updatePhysicalContext

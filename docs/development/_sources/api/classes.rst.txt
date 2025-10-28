@@ -5,9 +5,10 @@ Classes
     :titlesonly:
 
     ExtendedSpaceContext
+    CollectiveVariableCoupling
     CouplingSum
-    CustomCoupling
     HarmonicCoupling
+    InnerProductCoupling
     DynamicalVariable
     ExtensionWriter
     LockstepIntegrator

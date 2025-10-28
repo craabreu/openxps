@@ -138,7 +138,6 @@
         <span class="n">integrator</span><span class="o">.</span><span class="n">configure</span><span class="p">(</span>
             <span class="n">physical_context</span><span class="o">=</span><span class="bp">self</span><span class="p">,</span>
             <span class="n">extension_context</span><span class="o">=</span><span class="n">extension_context</span><span class="p">,</span>
-            <span class="n">dynamical_variables</span><span class="o">=</span><span class="n">system</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">(),</span>
             <span class="n">coupling</span><span class="o">=</span><span class="n">system</span><span class="o">.</span><span class="n">getCoupling</span><span class="p">(),</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_system</span> <span class="o">=</span> <span class="n">system</span>
@@ -205,18 +204,12 @@
 <span class="sd">        value</span>
 <span class="sd">            The value of the parameter.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">dv_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">]</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dv_names</span><span class="p">:</span>
-            <span class="n">i</span> <span class="o">=</span> <span class="n">dv_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
-            <span class="n">dv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dvs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
-            <span class="n">wrapped_value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="n">state</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_getState</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
-            <span class="n">positions</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">))</span>
-            <span class="n">positions</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="n">wrapped_value</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
-            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">wrapped_value</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">getProtectedParameters</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s1">&#39;Cannot manually set the parameter &quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">&quot;. This parameter is &#39;</span>
+                <span class="s2">&quot;set automatically via setDynamicalVariableValues.&quot;</span>
+            <span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceContext.setPositions">
@@ -253,9 +246,8 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">value</span> <span class="o">=</span> <span class="n">quantity</span>
             <span class="n">positions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">Vec3</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
-            <span class="n">wrapped_value</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">wrap</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">wrapped_value</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">positions</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updatePhysicalContext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceContext.getDynamicalVariableValues">

@@ -1,0 +1,10 @@
+InnerProductCoupling
+====================
+
+.. currentmodule:: openxps
+.. autoclass:: InnerProductCoupling
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: updateExtensionContext

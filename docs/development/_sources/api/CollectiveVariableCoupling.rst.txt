@@ -1,0 +1,10 @@
+CollectiveVariableCoupling
+==========================
+
+.. currentmodule:: openxps
+.. autoclass:: CollectiveVariableCoupling
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: updateExtensionContext
