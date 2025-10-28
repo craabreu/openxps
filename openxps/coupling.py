@@ -44,8 +44,11 @@ class Coupling(Serializable):
     ) -> None:
         self._forces = list(forces)
         self._dynamical_variables = [dv.in_md_units() for dv in dynamical_variables]
+        self._dv_indices = {
+            dv.name: index for index, dv in enumerate(self._dynamical_variables)
+        }
+        self._flipped_force = None
         self._checkGlobalParameters()
-        self._flipped_force = self._createFlippedForce()
 
     def __add__(self, other: "Coupling") -> "CouplingSum":
         return CouplingSum([self, other])
@@ -59,12 +62,14 @@ class Coupling(Serializable):
         return {
             "forces": self._forces,
             "dynamical_variables": self._dynamical_variables,
+            "dv_indices": self._dv_indices,
         }
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self._forces = state["forces"]
         self._dynamical_variables = state["dynamical_variables"]
-        self._flipped_force = self._createFlippedForce()
+        self._dv_indices = state["dv_indices"]
+        self._flipped_force = None
 
     def _checkGlobalParameters(self) -> dict[str, mmunit.Quantity]:
         parameters = {}
@@ -90,6 +95,21 @@ class Coupling(Serializable):
             force.addToSystem(system)
         else:
             system.addForce(force)
+
+    def _updateDynamicalVariableIndices(
+        self, dynamical_variables: t.Sequence[DynamicalVariable]
+    ) -> None:
+        """Update the indices of the dynamical variables associated with this coupling.
+
+        Parameters
+        ----------
+        dynamical_variables
+            All the dynamical variables in the system, regardless of whether they are
+            associated with this coupling or not.
+        """
+        for index, dv in enumerate(dynamical_variables):
+            if dv.name in self._dv_indices:
+                self._dv_indices[dv.name] = index
 
     def getForces(self) -> list[mm.Force]:
         """Get the list of OpenMM Force objects associated with this coupling.
@@ -159,6 +179,8 @@ class Coupling(Serializable):
         set[str]
             The protected parameters.
         """
+        if self._flipped_force is None:
+            raise ValueError("This coupling has not been added to an extension system.")
         return {
             self._flipped_force.getCollectiveVariableName(index)
             for index in range(self._flipped_force.getNumCollectiveVariables())
@@ -221,8 +243,7 @@ class Coupling(Serializable):
         >>> extension_system.getNumForces()
         1
         """
-        if self._flipped_force is None:
-            raise ValueError("Flipped force is not available.")
+        self._flipped_force = self._createFlippedForce()
         self._addForceToSystem(self._flipped_force, system)
 
     def updatePhysicalContext(
@@ -244,8 +265,11 @@ class Coupling(Serializable):
             self._flipped_force, extension_context
         )
         for index, value in enumerate(collective_variables):
-            name = self._flipped_force.getCollectiveVariableName(index)
-            mmswig.Context_setParameter(physical_context, name, value)
+            mmswig.Context_setParameter(
+                physical_context,
+                self._flipped_force.getCollectiveVariableName(index),
+                value,
+            )
 
     def updateExtensionContext(
         self,
@@ -302,6 +326,8 @@ class CouplingSum(Coupling):
                 self._couplings.append(coupling)
             forces.extend(coupling.getForces())
             dynamical_variables.extend(coupling.getDynamicalVariables())
+        for coupling in self._couplings:
+            coupling._updateDynamicalVariableIndices(dynamical_variables)
         super().__init__(forces, dynamical_variables)
 
     def __repr__(self) -> str:
@@ -321,6 +347,11 @@ class CouplingSum(Coupling):
     def getCouplings(self) -> t.Sequence[Coupling]:
         """Get the couplings included in the summed coupling."""
         return self._couplings
+
+    def getProtectedParameters(self) -> set[str]:
+        return set.union(
+            *[coupling.getProtectedParameters() for coupling in self._couplings]
+        )
 
     def addToExtensionSystem(self, system: mm.System) -> None:
         for coupling in self._couplings:
@@ -419,9 +450,8 @@ class CollectiveVariableCoupling(Coupling):
         return cvpack.MetaCollectiveVariable(
             force.getEnergyFunction(),
             [
-                dv.createCollectiveVariable(i)
-                for i, dv in enumerate(self._dynamical_variables)
-                if dv in dvs_to_flip
+                dv.createCollectiveVariable(self._dv_indices[dv.name])
+                for dv in dvs_to_flip
             ],
             unit=mmunit.kilojoule_per_mole,
             name="coupling",
@@ -632,19 +662,19 @@ class InnerProductCoupling(Coupling):
         ]
         self._parameters = parameters
         super().__init__(forces, dynamical_variables)
+        self._dynamic_parameters = self._getDynamicParameters()
 
     def __getstate__(self) -> dict[str, t.Any]:
-        return {
-            "forces": self._forces,
-            "dynamical_variables": self._dynamical_variables,
-            "functions": self._functions,
-            "parameters": self._parameters,
-        }
+        state = super().__getstate__()
+        state["functions"] = self._functions
+        state["parameters"] = self._parameters
+        return state
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self._functions = state["functions"]
         self._parameters = state["parameters"]
         super().__setstate__(state)
+        self._dynamic_parameters = self._getDynamicParameters()
 
     def _getDynamicParameters(self) -> set[str]:
         all_force_parameters = {
@@ -708,10 +738,9 @@ class InnerProductCoupling(Coupling):
         return dynamic_parameters
 
     def _createFlippedForce(self) -> mm.CustomCVForce:
-        dynamic_parameters = self._getDynamicParameters()
         inner_product = "+".join(
             f"{parameter}*{self._derivativeName(parameter)}"
-            for parameter in dynamic_parameters
+            for parameter in self._dynamic_parameters
         )
         energy_function = ";".join(
             [inner_product]
@@ -719,16 +748,16 @@ class InnerProductCoupling(Coupling):
         )
         flipped_force = mm.CustomCVForce(energy_function)
         all_dvs = [dv.name for dv in self._dynamical_variables]
-        for parameter in dynamic_parameters:
+        for parameter in self._dynamic_parameters:
             flipped_force.addGlobalParameter(self._derivativeName(parameter), 0.0)
         for fn in self._functions:
             flipped_force.addCollectiveVariable(
                 fn.getName(), fn.createCollectiveVariable(all_dvs)
             )
-        for index, dv in enumerate(self._dynamical_variables):
-            if dv.name in dynamic_parameters:
+        for dv in self._dynamical_variables:
+            if dv.name in self._dynamic_parameters:
                 flipped_force.addCollectiveVariable(
-                    dv.name, dv.createCollectiveVariable(index)
+                    dv.name, dv.createCollectiveVariable(self._dv_indices[dv.name])
                 )
         return flipped_force
 
@@ -743,9 +772,10 @@ class InnerProductCoupling(Coupling):
     ) -> None:
         state = mmswig.Context_getState(physical_context, mm.State.ParameterDerivatives)
         for name, value in mmswig.State_getEnergyParameterDerivatives(state).items():
-            mmswig.Context_setParameter(
-                extension_context, self._derivativeName(name), value
-            )
+            if name in self._dynamic_parameters:
+                mmswig.Context_setParameter(
+                    extension_context, self._derivativeName(name), value
+                )
 
 
 InnerProductCoupling.registerTag("!openxps.InnerProductCoupling")

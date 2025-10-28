@@ -18,7 +18,6 @@ from openmm import unit as mmunit
 
 from . import integrators
 from .coupling import Coupling
-from .dynamical_variable import DynamicalVariable
 from .utils import STRING_SEPARATOR
 
 #: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the
@@ -369,12 +368,9 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         self,
         physical_context: mm.Context,
         extension_context: mm.Context,
-        dynamical_variables: t.Sequence[DynamicalVariable],
         coupling: Coupling,
     ) -> None:
-        super().configure(
-            physical_context, extension_context, dynamical_variables, coupling
-        )
+        super().configure(physical_context, extension_context, coupling)
         if self._middle_integrator is self._physical_integrator:
             self._update_middle_context = self._coupling.updatePhysicalContext
             self._update_end_context = self._coupling.updateExtensionContext

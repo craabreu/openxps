@@ -99,7 +99,6 @@ class ExtendedSpaceContext(mm.Context):
         integrator.configure(
             physical_context=self,
             extension_context=extension_context,
-            dynamical_variables=system.getDynamicalVariables(),
             coupling=system.getCoupling(),
         )
         self._system = system
