@@ -45,10 +45,10 @@ def create_dvs():
 
 
 def create_coupling(phi0=180 * mmunit.degrees):
-    """Helper function to create a MetaCollectiveVariable object."""
+    """Helper function to create a CollectiveVariableCoupling object."""
     dvs = create_dvs()
     kwargs = {
-        "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radians**2,
+        "kappa": 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
         "alpha": 0.01 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
     }
     if phi0 is not None:
@@ -92,9 +92,9 @@ def test_set_positions_and_velocities():
     positions = model.positions.value_in_unit(mmunit.nanometer)
     velocities = random.uniform(-1, 1, (num_atoms, 3))
 
-    urad = mmunit.radians
-    unm = mmunit.nanometers
-    ups = mmunit.picoseconds
+    urad = mmunit.radian
+    unm = mmunit.nanometer
+    ups = mmunit.picosecond
 
     context.setPositions(positions)
     context.setVelocities(velocities)

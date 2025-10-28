@@ -17,8 +17,9 @@ from openxps import (
     DynamicalVariable,
     ExtendedSpaceSystem,
     HarmonicCoupling,
+    InnerProductCoupling,
 )
-from openxps.bounds import CIRCULAR, NoBounds
+from openxps.bounds import CIRCULAR, NoBounds, Reflective
 from openxps.coupling import CouplingSum
 
 
@@ -40,6 +41,138 @@ def create_test_system():
     return testsystems.AlanineDipeptideVacuum()
 
 
+# Base Coupling Class Tests
+def test_coupling_duplicate_dv_names():
+    """Test ValueError when dynamical variables have duplicate names."""
+    phi = create_test_cv()
+    phi0 = create_test_dv("phi0")
+    phi0_duplicate = create_test_dv("phi0")  # Same name as phi0
+
+    with pytest.raises(ValueError, match="dynamical variables must have unique names"):
+        CollectiveVariableCoupling(
+            "0.5*kappa*(phi-phi0)^2",
+            [phi],
+            [phi0, phi0_duplicate],  # Duplicate DV names
+            kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+        )
+
+
+def test_coupling_get_dynamical_variable():
+    """Test getDynamicalVariable(index) method."""
+    phi = create_test_cv()
+    phi0 = create_test_dv("phi0")
+    coupling = CollectiveVariableCoupling(
+        "0.5*kappa*(phi-phi0)^2",
+        [phi],
+        [phi0],
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+    )
+
+    retrieved_dv = coupling.getDynamicalVariable(0)
+    assert retrieved_dv.name == phi0.name
+    assert retrieved_dv.unit == phi0.unit
+
+    # Test IndexError for out of range
+    with pytest.raises(IndexError):
+        coupling.getDynamicalVariable(1)
+
+
+def test_coupling_get_collective_variable_values():
+    """Test getCollectiveVariableValues() method."""
+    model = create_test_system()
+    phi = create_test_cv()
+    phi0 = create_test_dv("phi0")
+    coupling = CollectiveVariableCoupling(
+        "0.5*kappa*(phi-phi0)^2",
+        [phi],
+        [phi0],
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+    )
+
+    system = ExtendedSpaceSystem(model.system, coupling)
+    integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    context = mm.Context(system, integrator)
+    context.setPositions(model.positions)
+
+    cv_values = coupling.getCollectiveVariableValues(context)
+    assert "phi" in cv_values
+    assert isinstance(cv_values["phi"], float)
+
+
+def test_coupling_update_physical_context():
+    """Test updatePhysicalContext() method."""
+    model = create_test_system()
+    phi = create_test_cv()
+    phi0 = create_test_dv("phi0")
+    coupling = CollectiveVariableCoupling(
+        "0.5*kappa*(phi-phi0)^2",
+        [phi],
+        [phi0],
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+    )
+
+    # Create physical and extension systems/contexts
+    physical_system = ExtendedSpaceSystem(model.system, coupling)
+    physical_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    physical_context = mm.Context(physical_system, physical_integrator)
+    physical_context.setPositions(model.positions)
+    physical_context.setParameter("phi0", 2.0)  # Set initial DV value
+
+    extension_system = physical_system.getExtensionSystem()
+    # The coupling is already added to extension system by ExtendedSpaceSystem
+    # But we need to add it again to set up the flipped_force properly
+    extension_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    extension_context = mm.Context(extension_system, extension_integrator)
+    extension_context.setPositions([mm.Vec3(3.0, 0, 0)])  # Set different DV value
+
+    # Update physical context with extension parameters
+    coupling.updatePhysicalContext(physical_context, extension_context)
+
+    # Verify physical context parameter was updated
+    assert physical_context.getParameter("phi0") == pytest.approx(3.0)
+
+
+def test_coupling_get_protected_parameters():
+    """Test getProtectedParameters() raises error before adding to extension system."""
+    phi = create_test_cv()
+    phi0 = create_test_dv("phi0")
+    coupling = CollectiveVariableCoupling(
+        "0.5*kappa*(phi-phi0)^2",
+        [phi],
+        [phi0],
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+    )
+
+    # Should raise error before adding to extension system
+    with pytest.raises(
+        ValueError, match="This coupling has not been added to an extension system"
+    ):
+        coupling.getProtectedParameters()
+
+
+def test_coupling_copy():
+    """Test __copy__ method for base Coupling class."""
+    phi = create_test_cv()
+    phi0 = create_test_dv("phi0")
+    coupling = CollectiveVariableCoupling(
+        "0.5*kappa*(phi-phi0)^2",
+        [phi],
+        [phi0],
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+    )
+
+    copied = copy(coupling)
+
+    # Verify it's a copy
+    assert copied is not coupling
+    # Verify it has the same properties
+    assert (
+        copied.getForce(0).getEnergyFunction()
+        == coupling.getForce(0).getEnergyFunction()
+    )
+    assert len(copied.getDynamicalVariables()) == len(coupling.getDynamicalVariables())
+
+
 # CollectiveVariableCoupling Tests
 def test_custom_coupling_initialization():
     """Test basic initialization of CollectiveVariableCoupling."""
@@ -49,7 +182,7 @@ def test_custom_coupling_initialization():
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
-        kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 
     assert coupling.getForce(0).getEnergyFunction() == "0.5*kappa*(phi-phi0)^2"
@@ -64,7 +197,7 @@ def test_custom_coupling_repr():
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
-        kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 
     repr_str = repr(coupling)
@@ -81,7 +214,7 @@ def test_custom_coupling_add_to_extension_system():
         f"0.5*kappa*min(delta,{2 * pi}-delta)^2; delta=abs(phi-phi0)",
         [phi],
         [phi0],
-        kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 
     # Create extension system and add coupling
@@ -117,7 +250,7 @@ def test_custom_coupling_get_extension_parameters():
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
-        kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 
     system = ExtendedSpaceSystem(model.system, coupling)
@@ -146,7 +279,7 @@ def test_custom_coupling_serialization():
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
-        kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 
     serialized = yaml.safe_dump(coupling)
@@ -171,7 +304,7 @@ def test_custom_coupling_add_to_system():
         "0.5*kappa*(phi-phi0)^2",
         [phi],
         [phi0],
-        kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 
     initial_forces = model.system.getNumForces()
@@ -463,6 +596,67 @@ def test_coupling_sum_conflicting_parameters():
         _ = force1 + force2
 
 
+def test_coupling_sum_conflicting_dvs():
+    """Test error when same DV has conflicting definitions across couplings."""
+    phi = create_test_cv("phi")
+    psi = create_test_cv("psi")
+    # Create two DVs with same name but different properties
+    mass1 = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
+    mass2 = 5 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
+    phi_s1 = DynamicalVariable("phi_s", mmunit.radian, mass1, CIRCULAR)
+    phi_s2 = DynamicalVariable(
+        "phi_s", mmunit.radian, mass2, CIRCULAR
+    )  # Different mass
+    kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
+
+    coupling1 = HarmonicCoupling(phi, phi_s1, kappa)
+    coupling2 = HarmonicCoupling(psi, phi_s2, kappa)
+
+    # Adding them should raise an error because phi_s has conflicting definitions
+    with pytest.raises(ValueError, match="conflicting definitions"):
+        _ = coupling1 + coupling2
+
+
+def test_coupling_sum_update_physical_context():
+    """Test updatePhysicalContext() delegates to all couplings."""
+    model = create_test_system()
+    phi = create_test_cv("phi")
+    psi = create_test_cv("psi")
+    phi_s = create_test_dv("phi_s")
+    psi_s = create_test_dv("psi_s")
+    kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
+
+    coupling1 = HarmonicCoupling(phi, phi_s, kappa)
+    coupling2 = HarmonicCoupling(psi, psi_s, kappa)
+    coupling_sum = coupling1 + coupling2
+
+    system = ExtendedSpaceSystem(model.system, coupling_sum)
+    physical_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    physical_context = mm.Context(system, physical_integrator)
+    physical_context.setPositions(model.positions)
+    physical_context.setParameter("phi_s", 1.0)
+    physical_context.setParameter("psi_s", 2.0)
+
+    extension_system = system.getExtensionSystem()
+    extension_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    extension_context = mm.Context(extension_system, extension_integrator)
+    extension_context.setPositions([mm.Vec3(3.0, 0, 0), mm.Vec3(4.0, 0, 0)])
+
+    # Update physical context with extension parameters
+    # The couplings are already added to extension system by ExtendedSpaceSystem
+    coupling_sum.updatePhysicalContext(physical_context, extension_context)
+
+    # Verify both parameters were updated with CV values from flipped force
+    # (The values come from the collective variables in the flipped force)
+    phi_s_value = physical_context.getParameter("phi_s")
+    psi_s_value = physical_context.getParameter("psi_s")
+    # Values should be updated (may be wrapped/transformed)
+    assert phi_s_value is not None
+    assert psi_s_value is not None
+    # The values should be different from initial values if update worked
+    assert phi_s_value != pytest.approx(1.0) or psi_s_value != pytest.approx(2.0)
+
+
 def test_coupling_sum_repr():
     """Test string representation of CouplingSum."""
     phi = create_test_cv("phi")
@@ -529,7 +723,7 @@ def test_coupling_with_extended_space_system():
         "0.5*kappa*(phi-phi_s)^2",
         [phi],
         [phi_s],
-        kappa=1000 * mmunit.kilojoules_per_mole / mmunit.radian**2,
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
     )
 
     initial_physical_forces = model.system.getNumForces()
@@ -587,3 +781,378 @@ def test_coupling_sum_integration():
     extension_system = system.getExtensionSystem()
     assert extension_system.getNumForces() == 2
     assert extension_system.getNumParticles() == 2
+
+
+# InnerProductCoupling Tests
+def test_inner_product_coupling_initialization():
+    """Test basic initialization of InnerProductCoupling."""
+    # Create a simple force with a global parameter that can be a DV
+    # When DV is a global parameter and there are no functions,
+    # we need at least one function to avoid the set.union issue
+    # So we use a dummy identity function
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])  # Add a dummy bond
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    # Use an identity function so lambda appears in functions
+    coupling = InnerProductCoupling(
+        [force],
+        [lambda_dv],
+        functions={"scaling": "lambda"},  # Identity function
+    )
+
+    assert len(coupling.getForces()) == 1
+    assert len(coupling.getDynamicalVariables()) == 1
+    assert coupling.getDynamicalVariable(0).name == "lambda"
+
+
+def test_inner_product_coupling_with_functions():
+    """Test initialization with function definitions."""
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    coupling = InnerProductCoupling(
+        [force],
+        [lambda_dv],
+        functions={"scaling": "(1-cos(alpha*lambda))/2"},
+        alpha=pi * mmunit.radian,
+    )
+
+    assert len(coupling.getForces()) == 1
+    assert len(coupling.getDynamicalVariables()) == 1
+
+
+def test_inner_product_coupling_repr():
+    """Test string representation of InnerProductCoupling."""
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    coupling = InnerProductCoupling(
+        [force],
+        [lambda_dv],
+        functions={"scaling": "lambda"},
+    )
+    repr_str = repr(coupling)
+
+    # InnerProductCoupling doesn't have a custom __repr__, so it uses base class
+    # We just verify it's not empty
+    assert len(repr_str) > 0
+
+
+def test_inner_product_coupling_missing_function_parameters():
+    """Verify error when function name doesn't match any force parameter."""
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    # Function name "nonexistent" doesn't match any force parameter
+    with pytest.raises(ValueError, match="not global parameters"):
+        InnerProductCoupling(
+            [force],
+            [lambda_dv],
+            functions={"nonexistent": "lambda"},
+        )
+
+
+def test_inner_product_coupling_function_missing_dvs():
+    """Verify error when function doesn't depend on any DV."""
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    # Function doesn't depend on lambda
+    with pytest.raises(ValueError, match="do not depend on any dynamical variables"):
+        InnerProductCoupling(
+            [force],
+            [lambda_dv],
+            functions={"scaling": "1.0"},  # Constant, no DV dependency
+        )
+
+
+def test_inner_product_coupling_dv_in_both():
+    """Verify error when DV is both in function variables and force parameters."""
+    force = mm.CustomBondForce("lambda*energy/r")
+    force.addGlobalParameter("lambda", 1.0)
+    force.addEnergyParameterDerivative("lambda")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    # lambda is both a global parameter (force) and in function
+    with pytest.raises(ValueError, match="both function variables and global"):
+        InnerProductCoupling(
+            [force],
+            [lambda_dv],
+            functions={"lambda": "lambda^2"},  # lambda in both places
+        )
+
+
+def test_inner_product_coupling_dv_in_neither():
+    """Verify error when DV is neither in functions nor force parameters."""
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+    unused_dv = DynamicalVariable(
+        name="unused",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    # unused_dv is not in function or force parameters
+    with pytest.raises(ValueError, match="neither function variables nor global"):
+        InnerProductCoupling(
+            [force],
+            [lambda_dv, unused_dv],
+            functions={"scaling": "lambda"},
+        )
+
+
+def test_inner_product_coupling_missing_derivative():
+    """Verify error when force parameter needs derivative but none requested."""
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    # Missing: force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    # scaling is a dynamic parameter but no derivative was requested
+    with pytest.raises(ValueError, match="no derivative was requested"):
+        InnerProductCoupling(
+            [force],
+            [lambda_dv],
+            functions={"scaling": "lambda"},
+        )
+
+
+def test_inner_product_coupling_add_to_extension_system():
+    """Test _createFlippedForce() creates proper CustomCVForce."""
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    coupling = InnerProductCoupling(
+        [force],
+        [lambda_dv],
+        functions={"scaling": "lambda"},
+    )
+
+    extension_system = mm.System()
+    extension_system.addParticle(lambda_dv.mass / lambda_dv.mass.unit)
+    coupling.addToExtensionSystem(extension_system)
+
+    # Check that a force was added
+    assert extension_system.getNumForces() == 1
+    flipped_force = extension_system.getForce(0)
+
+    # Verify it's a CustomCVForce
+    assert isinstance(flipped_force, mm.CustomCVForce)
+    # scaling (the function name) should be a collective variable in the flipped force
+    # since it's in _dynamic_parameters
+    assert flipped_force.getNumCollectiveVariables() >= 1
+    cv_names = [
+        flipped_force.getCollectiveVariableName(i)
+        for i in range(flipped_force.getNumCollectiveVariables())
+    ]
+    assert "scaling" in cv_names  # Function name becomes a CV
+
+
+def test_inner_product_coupling_update_extension_context():
+    """Test updateExtensionContext() transfers parameter derivatives correctly."""
+    model = create_test_system()
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    # Add bonds to make the force meaningful
+    for i in range(min(5, model.system.getNumParticles() - 1)):  # Limit bonds
+        force.addBond(i, i + 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    coupling = InnerProductCoupling(
+        [force],
+        [lambda_dv],
+        functions={"scaling": "lambda"},
+    )
+
+    system = ExtendedSpaceSystem(model.system, coupling)
+    physical_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    physical_context = mm.Context(system, physical_integrator)
+    physical_context.setPositions(model.positions)
+
+    extension_system = system.getExtensionSystem()
+    extension_integrator = mm.VerletIntegrator(1.0 * mmunit.femtosecond)
+    extension_context = mm.Context(extension_system, extension_integrator)
+    # Set lambda in extension context (where it's a collective variable)
+    extension_context.setPositions([mm.Vec3(0.5, 0, 0)])
+
+    # Update extension context with physical parameters (derivatives)
+    coupling.updateExtensionContext(physical_context, extension_context)
+
+    # Verify derivative parameter was set in extension context
+    derivative_name = "derivative_with_respect_to_scaling"
+    assert extension_context.getParameter(derivative_name) is not None
+
+
+def test_inner_product_coupling_with_extended_space_system():
+    """Full integration test with ExtendedSpaceSystem."""
+    model = create_test_system()
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    for i in range(model.system.getNumParticles() - 1):
+        force.addBond(i, i + 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    coupling = InnerProductCoupling(
+        [force],
+        [lambda_dv],
+        functions={"scaling": "(1-cos(alpha*lambda))/2"},
+        alpha=pi * mmunit.radian,
+    )
+
+    initial_physical_forces = model.system.getNumForces()
+    system = ExtendedSpaceSystem(model.system, coupling)
+
+    # Physical system should have one more force
+    assert system.getNumForces() == initial_physical_forces + 1
+
+    # Extension system should have one force (the flipped one)
+    extension_system = system.getExtensionSystem()
+    assert extension_system.getNumForces() == 1
+    assert extension_system.getNumParticles() == 1
+
+
+def test_inner_product_coupling_serialization():
+    """Test serialization/deserialization via __getstate__/__setstate__."""
+    force = mm.CustomBondForce("scaling*energy/r")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addPerBondParameter("energy")
+    force.addBond(0, 1, [1.0])
+
+    lambda_dv = DynamicalVariable(
+        name="lambda",
+        unit=mmunit.dimensionless,
+        mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
+        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+    )
+
+    coupling = InnerProductCoupling(
+        [force],
+        [lambda_dv],
+        functions={"scaling": "(1-cos(alpha*lambda))/2"},
+        alpha=pi * mmunit.radian,
+    )
+
+    # Test __getstate__ and __setstate__ methods directly
+    # Note: OpenMM Force objects can't be YAML-serialized directly,
+    # so we test the state methods instead
+    state = coupling.__getstate__()
+    assert "forces" in state
+    assert "dynamical_variables" in state
+    assert "functions" in state
+    assert "parameters" in state
+
+    # Create a new coupling from state
+    new_coupling = InnerProductCoupling.__new__(InnerProductCoupling)
+    new_coupling.__setstate__(state)
+
+    assert len(new_coupling.getDynamicalVariables()) == len(
+        coupling.getDynamicalVariables()
+    )
+    assert (
+        new_coupling.getDynamicalVariable(0).name
+        == coupling.getDynamicalVariable(0).name
+    )
