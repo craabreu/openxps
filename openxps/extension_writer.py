@@ -1,38 +1,55 @@
 """
-.. module:: openxps.state_data_writer
+.. module:: openxps.extension_writer
    :platform: Linux, MacOS, Windows
-   :synopsis: A custom writer for reporting state data from an external context.
+   :synopsis: A custom writer for reporting state data from an extension context.
 
 .. classauthor:: Charlles Abreu <craabreu@gmail.com>
 
 """
 
+import cvpack
 import openmm as mm
 from cvpack.reporting.custom_writer import CustomWriter
 from openmm import _openmm as mmswig
-from openmm import app as mmapp
 from openmm import unit as mmunit
+
+from .simulation import ExtendedSpaceSimulation
 
 
 class ExtensionWriter(CustomWriter):
     """
     A custom writer for reporting state data from an extension context.
 
+    This writer can be used with :class:`cvpack.reporting.StateDataReporter` to
+    report various properties of the extension context in an extended phase-space
+    simulation. The extension context contains the dynamical variables and their
+    associated properties.
+
     Parameters
     ----------
-    potential
-        If ``True``, the potential energy of the extension context will be reported.
-    kinetic
-        If ``True``, the kinetic energy of the extension context will be reported.
-    total
-        If ``True``, the total energy of the extension context will be reported.
-    temperature
-        If ``True``, the temperature of the extension context will be reported.
+    kinetic : bool, optional, default=False
+        If ``True``, the kinetic energy of the extension context will be reported
+        in units of kJ/mol.
+    temperature : bool, optional, default=False
+        If ``True``, the temperature of the extension context will be reported
+        in units of Kelvin.
+    dynamical_variables : bool, optional, default=False
+        If ``True``, the current values of all dynamical variables will be reported.
+        Each variable will be reported with its name and unit.
+    forces : bool, optional, default=False
+        If ``True``, the forces acting on each dynamical variable will be reported
+        in units of kJ/(mol*unit), where unit is the unit of the corresponding
+        dynamical variable.
+    collective_variables : bool, optional, default=False
+        If ``True``, the current values of collective variables that are part of
+        collective variable couplings will be reported.
+    coupling_functions : bool, optional, default=False
+        If ``True``, the current values of functions in inner product couplings
+        will be reported.
 
     Example
     -------
     >>> import openxps as xps
-    >>> from math import pi
     >>> from sys import stdout
     >>> import openmm
     >>> import cvpack
@@ -66,66 +83,101 @@ class ExtensionWriter(CustomWriter):
     ...     10,
     ...     step=True,
     ...     kineticEnergy=True,
-    ...     writers=[xps.ExtensionWriter(kinetic=True)],
+    ...     writers=[xps.ExtensionWriter(
+    ...         kinetic=True,
+    ...         temperature=True,
+    ...         dynamical_variables=True
+    ...     )],
     ... )
     >>> simulation.reporters.append(reporter)
     >>> simulation.step(100)  # doctest: +SKIP
-    #"Step","Kinetic Energy (kJ/mole)","Extension Kinetic Energy (kJ/mole)"
-    10,60.512...,1.7013...
-    20,75.765...,2.5089...
-    30,61.116...,1.3375...
-    40,52.359...,0.4791...
-    50,61.382...,0.7065...
-    60,48.674...,0.6520...
-    70,60.771...,1.3525...
-    80,46.518...,2.0280...
-    90,66.111...,0.9597...
-    100,60.94...,0.9695...
+    #"Step","Kinetic Energy (kJ/mole)","Extension Kinetic Energy (kJ/mole)",\
+    "Extension Temperature (K)","phi0 (rad)"
+    10,60.512...,1.7013...,123.456...,3.1415...
     """
 
     def __init__(  # noqa: PLR0913
         self,
         *,
-        potential: bool = False,
         kinetic: bool = False,
-        total: bool = False,
         temperature: bool = False,
+        dynamical_variables: bool = False,
+        forces: bool = False,
+        collective_variables: bool = False,
+        coupling_functions: bool = False,
     ) -> None:
-        self._potential = potential
         self._kinetic = kinetic
-        self._total = total
         self._temperature = temperature
-        self._needs_energy = potential or kinetic or total or temperature
-        self._needs_velocities = kinetic or temperature
-        self._temp_factor = 0.0
+        self._dynamical_variables = dynamical_variables
+        self._forces = forces
+        self._collective_variables = collective_variables
+        self._coupling_functions = coupling_functions
 
-    def initialize(self, simulation: mmapp.Simulation) -> None:
+        self._needs_energy = kinetic or temperature
+        self._needs_velocities = kinetic or temperature
+        self._needs_positions = dynamical_variables
+        self._needs_forces = forces
+
+        self._temp_factor = 0.0
+        self._dv_objects = []
+        self._cv_units = {}
+
+    def initialize(self, simulation: ExtendedSpaceSimulation) -> None:
+        context = simulation.extended_space_context
+        coupling = context.getSystem().getCoupling()
+        self._dv_objects = coupling.getDynamicalVariables()
+
         if self._temperature:
-            number = len(simulation.context.getSystem().getDynamicalVariables())
+            number = len(coupling.getDynamicalVariables())
             kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
                 mmunit.kilojoules_per_mole / mmunit.kelvin
             )
             self._temp_factor = 2 / (number * kb)
 
+        if self._collective_variables:
+            self._cv_units = {}
+            for force in coupling.getForces():
+                if isinstance(force, cvpack.MetaCollectiveVariable):
+                    for cv in force.getInnerVariables():
+                        if cv.getName() not in self._cv_units:
+                            self._cv_units[cv.getName()] = cv.getUnit()
+
+        if self._coupling_functions:
+            self._function_names = []
+            dv_names = {dv.name for dv in self._dv_objects}
+            for parameter in coupling.getProtectedParameters():
+                if parameter not in dv_names:
+                    self._function_names.append(parameter)
+
     def getHeaders(self) -> list[str]:
         headers = []
-        if self._potential:
-            headers.append("Extension Potential Energy (kJ/mole)")
         if self._kinetic:
             headers.append("Extension Kinetic Energy (kJ/mole)")
-        if self._total:
-            headers.append("Extension Total Energy (kJ/mole)")
         if self._temperature:
             headers.append("Extension Temperature (K)")
+        if self._dynamical_variables:
+            for dv in self._dv_objects:
+                headers.append(f"{dv.name} ({dv.unit})")
+        if self._forces:
+            for dv in self._dv_objects:
+                headers.append(f"Force on {dv.name} (kJ/(mol*{dv.unit}))")
+        if self._collective_variables:
+            for name, unit in self._cv_units.items():
+                headers.append(f"{name} ({unit})")
+        if self._coupling_functions:
+            headers.extend(self._function_names)
         return headers
 
-    def getValues(self, simulation: mmapp.Simulation) -> list[float]:
+    def getValues(self, simulation: ExtendedSpaceSimulation) -> list[float]:  # noqa: PLR0912
         context = simulation.extended_space_context
-        state = context.getState(
-            getEnergy=self._needs_energy, getVelocities=self._needs_velocities
+        extension_context = context.getExtensionContext()
+        state = extension_context.getState(
+            getEnergy=self._needs_energy,
+            getPositions=self._needs_positions,
+            getVelocities=self._needs_velocities,
+            getForces=self._needs_forces,
         )
         if self._needs_energy:
-            potential_energy = mmswig.State_getPotentialEnergy(state)
             kinetic_energy = mmswig.State_getKineticEnergy(state)
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
@@ -134,13 +186,26 @@ class ExtensionWriter(CustomWriter):
             ):
                 mass = dv.mass._value
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
+        if self._needs_positions:
+            positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
+        if self._forces:
+            forces = mmswig.State__getVectorAsVec3(state, mm.State.Forces)
         values = []
-        if self._potential:
-            values.append(potential_energy)
         if self._kinetic:
             values.append(kinetic_energy)
-        if self._total:
-            values.append(potential_energy + kinetic_energy)
         if self._temperature:
             values.append(self._temp_factor * kinetic_energy)
+        if self._dynamical_variables:
+            for index, dv in enumerate(self._dv_objects):
+                value, _ = dv.bounds.wrap(positions[index].x, 0)
+                values.append(value)
+        if self._forces:
+            for force in forces:
+                values.append(force.x)
+        if self._collective_variables:
+            for name in self._cv_units:
+                values.append(extension_context.getParameter(name))
+        if self._coupling_functions:
+            for name in self._function_names:
+                values.append(context.getParameter(name))
         return values

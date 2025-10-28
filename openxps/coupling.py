@@ -713,7 +713,9 @@ class InnerProductCoupling(Coupling):
                 force,
                 mmunit.kilojoule_per_mole,
                 name=force.getName(),
-            ) if not isinstance(force, cvpack.CollectiveVariable) else force
+            )
+            if not isinstance(force, cvpack.CollectiveVariable)
+            else force
             for force in forces
         ]
         self._functions = [
