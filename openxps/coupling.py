@@ -802,16 +802,14 @@ class InnerProductCoupling(Coupling):
                 )
         return dynamic_parameters
 
+    @staticmethod
+    def _derivativeName(parameter: str) -> str:
+        return "derivative_with_respect_to_" + parameter
+
     def _createFlippedForce(self) -> mm.CustomCVForce:
-        inner_product = "+".join(
-            f"{parameter}*{self._derivativeName(parameter)}"
-            for parameter in self._dynamic_parameters
+        flipped_force = mm.CustomCVForce(
+            "+".join(f"{p}*{self._derivativeName(p)}" for p in self._dynamic_parameters)
         )
-        energy_function = ";".join(
-            [inner_product]
-            + [f"{fn.getName()}={fn.getExpression()}" for fn in self._functions]
-        )
-        flipped_force = mm.CustomCVForce(energy_function)
         all_dvs = [dv.name for dv in self._dynamical_variables]
         for parameter in self._dynamic_parameters:
             flipped_force.addGlobalParameter(self._derivativeName(parameter), 0.0)
@@ -825,10 +823,6 @@ class InnerProductCoupling(Coupling):
                     dv.name, dv.createCollectiveVariable(self._dv_indices[dv.name])
                 )
         return flipped_force
-
-    @staticmethod
-    def _derivativeName(parameter: str) -> str:
-        return "derivative_with_respect_to_" + parameter
 
     def updateExtensionContext(
         self,
