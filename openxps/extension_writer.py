@@ -10,8 +10,9 @@
 import openmm as mm
 from cvpack.reporting.custom_writer import CustomWriter
 from openmm import _openmm as mmswig
-from openmm import app as mmapp
 from openmm import unit as mmunit
+
+from .simulation import ExtendedSpaceSimulation
 
 
 class ExtensionWriter(CustomWriter):
@@ -84,20 +85,30 @@ class ExtensionWriter(CustomWriter):
         *,
         kinetic: bool = False,
         temperature: bool = False,
+        dynamical_variables: bool = False,
     ) -> None:
         self._kinetic = kinetic
         self._temperature = temperature
+        self._dynamical_variables = dynamical_variables
+
         self._needs_energy = kinetic or temperature
         self._needs_velocities = kinetic or temperature
-        self._temp_factor = 0.0
+        self._needs_positions = dynamical_variables
 
-    def initialize(self, simulation: mmapp.Simulation) -> None:
+        self._temp_factor = 0.0
+        self._dv_objects = []
+
+    def initialize(self, simulation: ExtendedSpaceSimulation) -> None:
+        context = simulation.extended_space_context
         if self._temperature:
-            number = len(simulation.context.getSystem().getDynamicalVariables())
+            number = len(context.getSystem().getDynamicalVariables())
             kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
                 mmunit.kilojoules_per_mole / mmunit.kelvin
             )
             self._temp_factor = 2 / (number * kb)
+
+        if self._dynamical_variables:
+            self._dv_objects = context.getSystem().getDynamicalVariables()
 
     def getHeaders(self) -> list[str]:
         headers = []
@@ -105,12 +116,18 @@ class ExtensionWriter(CustomWriter):
             headers.append("Extension Kinetic Energy (kJ/mole)")
         if self._temperature:
             headers.append("Extension Temperature (K)")
+        if self._dynamical_variables:
+            for dv in self._dv_objects:
+                headers.append(f"{dv.name} ({dv.unit})")
         return headers
 
-    def getValues(self, simulation: mmapp.Simulation) -> list[float]:
+    def getValues(self, simulation: ExtendedSpaceSimulation) -> list[float]:
         context = simulation.extended_space_context
-        state = context.getState(
-            getEnergy=self._needs_energy, getVelocities=self._needs_velocities
+        extension_context = context.getExtensionContext()
+        state = extension_context.getState(
+            getEnergy=self._needs_energy,
+            getPositions=self._needs_positions,
+            getVelocities=self._needs_velocities,
         )
         if self._needs_energy:
             kinetic_energy = mmswig.State_getKineticEnergy(state)
@@ -121,9 +138,15 @@ class ExtensionWriter(CustomWriter):
             ):
                 mass = dv.mass._value
                 kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
+        if self._needs_positions:
+            positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         values = []
         if self._kinetic:
             values.append(kinetic_energy)
         if self._temperature:
             values.append(self._temp_factor * kinetic_energy)
+        if self._dynamical_variables:
+            for index, dv in enumerate(self._dv_objects):
+                value, _ = dv.bounds.wrap(positions[index].x, 0)
+                values.append(value)
         return values
