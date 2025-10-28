@@ -107,7 +107,6 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         self,
         physical_context: mm.Context,
         extension_context: mm.Context,
-        dynamical_variables: t.Sequence[DynamicalVariable],
         coupling: Coupling,
     ) -> None:
         """Configure the integrator.
@@ -122,15 +121,13 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
             The OpenMM context containing the physical system.
         extension_context
             The OpenMM context containing the extension system.
-        dynamical_variables
-            The dynamical variables included in the extended phase-space system.
         coupling
             The potential that couples the physical and dynamical variables.
         """
         self._physical_context = physical_context
         self._extension_context = extension_context
-        self._dynamical_variables = dynamical_variables
         self._coupling = coupling
+        self._dynamical_variables = coupling.getDynamicalVariables()
 
     def getPhysicalIntegrator(self) -> mm.Integrator:
         """Get the integrator for the physical system.
