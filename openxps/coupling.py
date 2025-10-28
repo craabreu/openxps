@@ -708,6 +708,14 @@ class InnerProductCoupling(Coupling):
         functions: t.Optional[dict[str, str]] = None,
         **parameters: mmunit.Quantity,
     ) -> None:
+        forces = [
+            cvpack.OpenMMForceWrapper(
+                force,
+                mmunit.kilojoule_per_mole,
+                name=force.getName(),
+            ) if not isinstance(force, cvpack.CollectiveVariable) else force
+            for force in forces
+        ]
         self._functions = [
             Function(name, expression, **parameters)
             for name, expression in (functions or {}).items()

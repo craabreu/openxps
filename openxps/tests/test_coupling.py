@@ -1104,7 +1104,7 @@ def test_inner_product_coupling_with_extended_space_system():
 
 
 def test_inner_product_coupling_serialization():
-    """Test serialization/deserialization via __getstate__/__setstate__."""
+    """Test YAML serialization/deserialization."""
     force = mm.CustomBondForce("scaling*energy/r")
     force.addGlobalParameter("scaling", 1.0)
     force.addEnergyParameterDerivative("scaling")
@@ -1125,23 +1125,21 @@ def test_inner_product_coupling_serialization():
         alpha=pi * mmunit.radian,
     )
 
-    # Test __getstate__ and __setstate__ methods directly
-    # Note: OpenMM Force objects can't be YAML-serialized directly,
-    # so we test the state methods instead
-    state = coupling.__getstate__()
-    assert "forces" in state
-    assert "dynamical_variables" in state
-    assert "functions" in state
-    assert "parameters" in state
+    # Serialize and deserialize via YAML
+    serialized = yaml.safe_dump(coupling)
+    deserialized = yaml.safe_load(serialized)
 
-    # Create a new coupling from state
-    new_coupling = InnerProductCoupling.__new__(InnerProductCoupling)
-    new_coupling.__setstate__(state)
-
-    assert len(new_coupling.getDynamicalVariables()) == len(
+    assert isinstance(deserialized, InnerProductCoupling)
+    assert len(deserialized.getForces()) == len(coupling.getForces())
+    assert len(deserialized.getDynamicalVariables()) == len(
         coupling.getDynamicalVariables()
     )
     assert (
-        new_coupling.getDynamicalVariable(0).name
+        deserialized.getDynamicalVariable(0).name
         == coupling.getDynamicalVariable(0).name
+    )
+    # Verify the force was properly deserialized by checking its properties
+    assert (
+        deserialized.getForce(0).getNumGlobalParameters()
+        == coupling.getForce(0).getNumGlobalParameters()
     )
