@@ -12,6 +12,7 @@ import typing as t
 import cvpack
 import openmm as mm
 from cvpack.serialization import Serializable
+from openmm import XmlSerializer
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
@@ -288,6 +289,26 @@ class Coupling(Serializable):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
+    def getCollectiveVariableValues(
+        self, physical_context: mm.Context
+    ) -> dict[str, float]:
+        """Get the values of the collective variables.
+
+        Parameters
+        ----------
+        physical_context
+            The physical context to get the collective variable values from.
+        """
+        collective_variables = {}
+        for force in self._forces:
+            if isinstance(force, mm.CustomCVForce):
+                cv_values = force.getCollectiveVariableValues(physical_context)
+                for index, value in enumerate(cv_values):
+                    collective_variables[
+                        mmswig.CustomCVForce_getCollectiveVariableName(force, index)
+                    ] = value
+        return collective_variables
+
 
 class CouplingSum(Coupling):
     """A sum of couplings.
@@ -326,9 +347,9 @@ class CouplingSum(Coupling):
                 self._couplings.append(coupling)
             forces.extend(coupling.getForces())
             dynamical_variables.extend(coupling.getDynamicalVariables())
-        for coupling in self._couplings:
-            coupling._updateDynamicalVariableIndices(dynamical_variables)
         super().__init__(forces, dynamical_variables)
+        self._broadcastDynamicalVariableIndices()
+        self._checkCollectiveVariables()
 
     def __repr__(self) -> str:
         return "+".join(f"({repr(coupling)})" for coupling in self._couplings)
@@ -343,6 +364,27 @@ class CouplingSum(Coupling):
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self.__init__(state["couplings"])
+
+    def _broadcastDynamicalVariableIndices(self) -> None:
+        for coupling in self._couplings:
+            coupling._updateDynamicalVariableIndices(self._dynamical_variables)
+
+    def _checkCollectiveVariables(self) -> None:
+        cvs = {}
+        for coupling in self._couplings:
+            for force in coupling.getForces():
+                if isinstance(force, mm.CustomCVForce):
+                    for index in range(force.getNumCollectiveVariables()):
+                        name = force.getCollectiveVariableName(index)
+                        xml_string = XmlSerializer.serialize(
+                            force.getCollectiveVariable(index)
+                        )
+                        if name in cvs and cvs[name] != xml_string:
+                            raise ValueError(
+                                f'The collective variable "{name}" has conflicting '
+                                "definitions in the couplings."
+                            )
+                        cvs[name] = xml_string
 
     def getCouplings(self) -> t.Sequence[Coupling]:
         """Get the couplings included in the summed coupling."""
