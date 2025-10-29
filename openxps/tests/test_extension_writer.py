@@ -90,7 +90,7 @@ def test_extension_writer_dynamical_variables():
         with open(os.path.join(dirpath, "report.csv"), encoding="utf-8") as file:
             line = file.readline()
             assert '#"Step"' in line
-            assert '"phi0 (radian)"' in line
+            assert '"phi0 (rad)"' in line
 
 
 def test_extension_writer_forces():
@@ -113,7 +113,7 @@ def test_extension_writer_forces():
         with open(os.path.join(dirpath, "report.csv"), encoding="utf-8") as file:
             line = file.readline()
             assert '#"Step"' in line
-            assert '"Force on phi0 (kJ/(mol*radian))"' in line
+            assert '"Force on phi0 (kJ/(mol*rad))"' in line
 
 
 def test_extension_writer_collective_variables():
@@ -163,7 +163,58 @@ def test_extension_writer_collective_variables():
         with open(os.path.join(dirpath, "report.csv"), encoding="utf-8") as file:
             line = file.readline()
             assert '#"Step"' in line
-            assert '"phi (radian)"' in line
+            assert '"phi (rad)"' in line
+
+
+def test_extension_writer_effective_masses():
+    """Test the extension writer with effective masses."""
+    model = testsystems.AlanineDipeptideVacuum()
+    mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    # Use CollectiveVariableCoupling which creates a MetaCollectiveVariable
+    coupling = xps.CollectiveVariableCoupling(
+        "0.5*kappa*(phi-phi0)^2",
+        [phi],
+        [phi0],
+        kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
+    )
+    integrator = openmm.LangevinMiddleIntegrator(
+        300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond
+    )
+    integrator.setRandomNumberSeed(1234)
+    platform = openmm.Platform.getPlatformByName("Reference")
+    simulation = xps.ExtendedSpaceSimulation(
+        model.topology,
+        xps.ExtendedSpaceSystem(model.system, coupling),
+        xps.LockstepIntegrator(integrator),
+        platform,
+    )
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    simulation.context.setDynamicalVariableValues([180 * unit.degree])
+    simulation.context.setDynamicalVariableVelocitiesToTemperature(
+        300 * unit.kelvin, 1234
+    )
+    with tempfile.TemporaryDirectory() as dirpath:
+        with open(os.path.join(dirpath, "report.csv"), "w", encoding="utf-8") as file:
+            reporter = cvpack.reporting.StateDataReporter(
+                file,
+                10,
+                step=True,
+                writers=[
+                    xps.ExtensionWriter(
+                        effective_masses=True,
+                    )
+                ],
+            )
+            simulation.reporters.append(reporter)
+            simulation.step(100)
+        with open(os.path.join(dirpath, "report.csv"), encoding="utf-8") as file:
+            line = file.readline()
+            assert '#"Step"' in line
+            assert '"emass[phi]' in line
+            assert 'Da' in line or 'dalton' in line
 
 
 def test_extension_writer_coupling_functions():
@@ -484,6 +535,6 @@ def test_extension_writer_all_parameters():
             assert '#"Step"' in line
             assert '"Extension Kinetic Energy (kJ/mole)"' in line
             assert '"Extension Temperature (K)"' in line
-            assert '"phi0 (radian)"' in line
-            assert '"Force on phi0 (kJ/(mol*radian))"' in line
-            assert '"phi (radian)"' in line
+            assert '"phi0 (rad)"' in line
+            assert '"Force on phi0 (kJ/(mol*rad))"' in line
+            assert '"phi (rad)"' in line
