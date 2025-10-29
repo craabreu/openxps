@@ -43,6 +43,10 @@ class ExtensionWriter(CustomWriter):
     collective_variables : bool, optional, default=False
         If ``True``, the current values of collective variables that are part of
         collective variable couplings will be reported.
+    effective_masses : bool, optional, default=False
+        If ``True``, the effective masses of collective variables from coupling
+        forces will be reported in units of dalton*(nanometer/unit)^2, where
+        unit is the unit of the corresponding collective variable.
     coupling_functions : bool, optional, default=False
         If ``True``, the current values of functions in inner product couplings
         will be reported.
@@ -104,6 +108,7 @@ class ExtensionWriter(CustomWriter):
         dynamical_variables: bool = False,
         forces: bool = False,
         collective_variables: bool = False,
+        effective_masses: bool = False,
         coupling_functions: bool = False,
     ) -> None:
         self._kinetic = kinetic
@@ -111,6 +116,7 @@ class ExtensionWriter(CustomWriter):
         self._dynamical_variables = dynamical_variables
         self._forces = forces
         self._collective_variables = collective_variables
+        self._effective_masses = effective_masses
         self._coupling_functions = coupling_functions
 
         self._needs_energy = kinetic or temperature
@@ -134,13 +140,11 @@ class ExtensionWriter(CustomWriter):
             )
             self._temp_factor = 2 / (number * kb)
 
-        if self._collective_variables:
-            self._cv_units = {}
+        if self._collective_variables or self._effective_masses:
+            self._meta_cvs = []
             for force in coupling.getForces():
                 if isinstance(force, cvpack.MetaCollectiveVariable):
-                    for cv in force.getInnerVariables():
-                        if cv.getName() not in self._cv_units:
-                            self._cv_units[cv.getName()] = cv.getUnit()
+                    self._meta_cvs.append(force)
 
         if self._coupling_functions:
             self._function_names = []
@@ -149,7 +153,7 @@ class ExtensionWriter(CustomWriter):
                 if parameter not in dv_names:
                     self._function_names.append(parameter)
 
-    def getHeaders(self) -> list[str]:
+    def getHeaders(self) -> list[str]:  # noqa: PLR0912
         headers = []
         if self._kinetic:
             headers.append("Extension Kinetic Energy (kJ/mole)")
@@ -157,13 +161,19 @@ class ExtensionWriter(CustomWriter):
             headers.append("Extension Temperature (K)")
         if self._dynamical_variables:
             for dv in self._dv_objects:
-                headers.append(f"{dv.name} ({dv.unit})")
+                headers.append(f"{dv.name} ({dv.unit.get_symbol()})")
         if self._forces:
             for dv in self._dv_objects:
-                headers.append(f"Force on {dv.name} (kJ/(mol*{dv.unit}))")
+                headers.append(f"Force on {dv.name} (kJ/(mol*{dv.unit.get_symbol()}))")
         if self._collective_variables:
-            for name, unit in self._cv_units.items():
-                headers.append(f"{name} ({unit})")
+            for meta_cv in self._meta_cvs:
+                for cv in meta_cv.getInnerVariables():
+                    headers.append(f"{cv.getName()} ({cv.getUnit().get_symbol()})")
+        if self._effective_masses:
+            for meta_cv in self._meta_cvs:
+                for cv in meta_cv.getInnerVariables():
+                    mass_unit = mmunit.dalton * (mmunit.nanometer / cv.getUnit()) ** 2
+                    headers.append(f"emass[{cv.getName()}] ({mass_unit.get_symbol()})")
         if self._coupling_functions:
             headers.extend(self._function_names)
         return headers
@@ -203,8 +213,17 @@ class ExtensionWriter(CustomWriter):
             for force in forces:
                 values.append(force.x)
         if self._collective_variables:
-            for name in self._cv_units:
-                values.append(extension_context.getParameter(name))
+            for meta_cv in self._meta_cvs:
+                for cv in meta_cv.getInnerVariables():
+                    values.append(extension_context.getParameter(cv.getName()))
+        if self._effective_masses:
+            for meta_cv in self._meta_cvs:
+                for cv, mass in zip(
+                    meta_cv.getInnerVariables(),
+                    meta_cv.getInnerEffectiveMasses(context).values(),
+                ):
+                    mass_unit = mmunit.dalton * (mmunit.nanometer / cv.getUnit()) ** 2
+                    values.append(mass.value_in_unit(mass_unit))
         if self._coupling_functions:
             for name in self._function_names:
                 values.append(context.getParameter(name))
