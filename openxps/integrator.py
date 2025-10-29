@@ -27,6 +27,7 @@ KNOWN_FORCE_FIRST_INTEGRATORS = (
     mm.LangevinIntegrator,
     mm.LangevinMiddleIntegrator,
     mm.NoseHooverIntegrator,
+    integrators.ForceFirstCSVRIntegrator,
 )
 
 #: Tuple of OpenMM integrator classes known to be symmetric in the sense of operator
@@ -34,6 +35,7 @@ KNOWN_FORCE_FIRST_INTEGRATORS = (
 KNOWN_SYMMETRIC_INTEGRATORS = (
     integrators.VelocityVerletIntegrator,
     integrators.BAOABIntegrator,
+    integrators.SymmetricCSVRIntegrator,
 )
 
 
@@ -264,8 +266,8 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
             The number of time steps to advance the simulation.
         """
         for _ in range(steps):
-            mmswig.Integrator_step(self._physical_integrator, 1)
-            mmswig.Integrator_step(self._extension_integrator, 1)
+            self._physical_integrator.step(1)
+            self._extension_integrator.step(1)
             self._coupling.updatePhysicalContext(
                 self._physical_context,
                 self._extension_context,
@@ -389,10 +391,10 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         """
         step_count = self._physical_context.getStepCount()
         for _ in range(steps):
-            mmswig.Integrator_step(self._end_integrator, self._num_substeps)
+            self._end_integrator.step(self._num_substeps)
             self._update_middle_context(self._physical_context, self._extension_context)
-            mmswig.Integrator_step(self._middle_integrator, 1)
+            self._middle_integrator.step(1)
             self._update_end_context(self._physical_context, self._extension_context)
-            mmswig.Integrator_step(self._end_integrator, self._num_substeps)
+            self._end_integrator.step(self._num_substeps)
             self._update_middle_context(self._physical_context, self._extension_context)
         self._physical_context.setStepCount(step_count + steps)

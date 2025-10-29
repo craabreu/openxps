@@ -7,6 +7,13 @@
 
 """
 
+import typing as t
+
+import openmm as mm
+from openmm import unit as mmunit
+
+from ..dynamical_variable import DynamicalVariable
+
 BLOCK_START = (6, 7)
 BLOCK_END = 8
 
@@ -55,3 +62,46 @@ class IntegratorMixin:
                 indent_level += 1
             readable_lines.append(line)
         return "\n".join(readable_lines)
+
+    @staticmethod
+    def countDegreesOfFreedom(
+        system: t.Optional[mm.System] = None,
+        dynamical_variables: t.Optional[t.Sequence[DynamicalVariable]] = None,
+    ) -> int:
+        """Count the degrees of freedom in a system.
+
+        Parameters
+        ----------
+        system
+            The :OpenMM:`System` to count the degrees of freedom of.
+
+        Returns
+        -------
+        int
+            The number of degrees of freedom in the system.
+        """
+        if (system is None) == (dynamical_variables is None):
+            raise ValueError(
+                "Either a system or a sequence of dynamical variables "
+                "must be provided, but not both"
+            )
+
+        if dynamical_variables is not None:
+            return len(dynamical_variables)
+
+        dof = 0
+        for i in range(system.getNumParticles()):
+            if system.getParticleMass(i) > 0 * mmunit.dalton:
+                dof += 3
+        for i in range(system.getNumConstraints()):
+            p1, p2, _ = system.getConstraintParameters(i)
+            if (system.getParticleMass(p1) > 0 * mmunit.dalton) or (
+                system.getParticleMass(p2) > 0 * mmunit.dalton
+            ):
+                dof -= 1
+        if any(
+            isinstance(system.getForce(i), mm.CMMotionRemover)
+            for i in range(system.getNumForces())
+        ):
+            dof -= 3
+        return dof
