@@ -214,7 +214,7 @@ def test_extension_writer_effective_masses():
             line = file.readline()
             assert '#"Step"' in line
             assert '"emass[phi]' in line
-            assert 'Da' in line or 'dalton' in line
+            assert "Da" in line or "dalton" in line
 
 
 def test_extension_writer_coupling_functions():
