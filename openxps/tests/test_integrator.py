@@ -12,20 +12,20 @@ from openxps.integrator import LockstepIntegrator, SplitIntegrator
 
 
 # Helper functions
-def create_kick_first_integrator(step_size):
+def create_force_first_integrator(step_size):
     """Create a LangevinMiddleIntegrator with given step size."""
     return mm.LangevinMiddleIntegrator(
         300 * mmunit.kelvin, 1 / mmunit.picosecond, step_size
     )
 
 
-def create_reversible_integrator(step_size):
-    """Create a reversible VelocityVerletIntegrator with given step size."""
+def create_symmetric_integrator(step_size):
+    """Create a symmetric VelocityVerletIntegrator with given step size."""
     return integrators.VelocityVerletIntegrator(step_size)
 
 
-def create_non_kick_first_integrator(step_size):
-    """Create a CustomIntegrator that is not in KNOWN_KICK_FIRST_INTEGRATORS."""
+def create_non_force_first_integrator(step_size):
+    """Create a CustomIntegrator that is not in KNOWN_FORCE_FIRST_INTEGRATORS."""
     integrator = mm.CustomIntegrator(step_size)
     integrator.addPerDofVariable("x1", 0)
     integrator.addUpdateContextState()
@@ -36,8 +36,8 @@ def create_non_kick_first_integrator(step_size):
     return integrator
 
 
-def create_non_reversible_integrator(step_size):
-    """Create a LangevinIntegrator that is not in KNOWN_REVERSIBLE_INTEGRATORS."""
+def create_non_symmetric_integrator(step_size):
+    """Create a LangevinIntegrator that is not in KNOWN_SYMMETRIC_INTEGRATORS."""
     return mm.LangevinIntegrator(300 * mmunit.kelvin, 1 / mmunit.picosecond, step_size)
 
 
@@ -47,7 +47,7 @@ def create_non_reversible_integrator(step_size):
 def test_lockstep_integrator_with_single_integrator():
     """Test LockstepIntegrator with only physical integrator."""
     step_size = 2.0 * mmunit.femtosecond
-    physical_integrator = create_kick_first_integrator(step_size)
+    physical_integrator = create_force_first_integrator(step_size)
 
     integrator = LockstepIntegrator(physical_integrator)
 
@@ -65,8 +65,8 @@ def test_lockstep_integrator_with_single_integrator():
 def test_lockstep_integrator_with_two_integrators_same_step_size():
     """Test LockstepIntegrator with explicit physical and extension integrators."""
     step_size = 2.0 * mmunit.femtosecond
-    physical_integrator = create_kick_first_integrator(step_size)
-    extension_integrator = create_kick_first_integrator(step_size)
+    physical_integrator = create_force_first_integrator(step_size)
+    extension_integrator = create_force_first_integrator(step_size)
 
     integrator = LockstepIntegrator(physical_integrator, extension_integrator)
 
@@ -76,32 +76,32 @@ def test_lockstep_integrator_with_two_integrators_same_step_size():
 
 def test_lockstep_integrator_error_different_step_sizes():
     """Test that different step sizes raise ValueError."""
-    physical_integrator = create_kick_first_integrator(2.0 * mmunit.femtosecond)
-    extension_integrator = create_kick_first_integrator(1.0 * mmunit.femtosecond)
+    physical_integrator = create_force_first_integrator(2.0 * mmunit.femtosecond)
+    extension_integrator = create_force_first_integrator(1.0 * mmunit.femtosecond)
 
     with pytest.raises(ValueError, match="must have the same step size"):
         LockstepIntegrator(physical_integrator, extension_integrator)
 
 
-def test_lockstep_integrator_error_non_kick_first():
-    """Test that non-kick-first integrators raise ValueError."""
+def test_lockstep_integrator_error_non_force_first():
+    """Test that non-force-first integrators raise ValueError."""
     step_size = 2.0 * mmunit.femtosecond
-    physical_integrator = create_non_kick_first_integrator(step_size)
-    extension_integrator = create_non_kick_first_integrator(step_size)
+    physical_integrator = create_non_force_first_integrator(step_size)
+    extension_integrator = create_non_force_first_integrator(step_size)
 
-    with pytest.raises(ValueError, match="must follow a kick-first"):
+    with pytest.raises(ValueError, match="must follow a force-first"):
         LockstepIntegrator(physical_integrator, extension_integrator)
 
 
-def test_lockstep_integrator_assume_kick_first_bypass():
-    """Test that assume_kick_first=True bypasses validation."""
+def test_lockstep_integrator_assume_force_first_bypass():
+    """Test that assume_force_first=True bypasses validation."""
     step_size = 2.0 * mmunit.femtosecond
-    physical_integrator = create_non_kick_first_integrator(step_size)
-    extension_integrator = create_non_kick_first_integrator(step_size)
+    physical_integrator = create_non_force_first_integrator(step_size)
+    extension_integrator = create_non_force_first_integrator(step_size)
 
-    # Should succeed with assume_kick_first=True
+    # Should succeed with assume_force_first=True
     integrator = LockstepIntegrator(
-        physical_integrator, extension_integrator, assume_kick_first=True
+        physical_integrator, extension_integrator, assume_force_first=True
     )
 
     assert integrator.getPhysicalIntegrator() is physical_integrator
@@ -114,7 +114,7 @@ def test_lockstep_integrator_assume_kick_first_bypass():
 def test_split_integrator_with_single_integrator():
     """Test SplitIntegrator with only physical integrator."""
     step_size = 4.0 * mmunit.femtosecond
-    physical_integrator = create_reversible_integrator(step_size)
+    physical_integrator = create_symmetric_integrator(step_size)
 
     integrator = SplitIntegrator(physical_integrator)
 
@@ -133,47 +133,47 @@ def test_split_integrator_with_single_integrator():
 def test_split_integrator_with_two_integrators_valid_even_ratio():
     """Test SplitIntegrator with valid even ratio step sizes."""
     # Test ratio = 2 (physical: 4 fs, extension: 1 fs)
-    physical_integrator = create_reversible_integrator(4.0 * mmunit.femtosecond)
-    extension_integrator = create_reversible_integrator(1.0 * mmunit.femtosecond)
+    physical_integrator = create_symmetric_integrator(4.0 * mmunit.femtosecond)
+    extension_integrator = create_symmetric_integrator(1.0 * mmunit.femtosecond)
 
     integrator = SplitIntegrator(physical_integrator, extension_integrator)
     assert integrator._num_substeps == 2
 
     # Test ratio = 1 (physical: 2 fs, extension: 1 fs)
-    physical_integrator = create_reversible_integrator(2.0 * mmunit.femtosecond)
-    extension_integrator = create_reversible_integrator(1.0 * mmunit.femtosecond)
+    physical_integrator = create_symmetric_integrator(2.0 * mmunit.femtosecond)
+    extension_integrator = create_symmetric_integrator(1.0 * mmunit.femtosecond)
 
     integrator = SplitIntegrator(physical_integrator, extension_integrator)
     assert integrator._num_substeps == 1
 
 
-def test_split_integrator_error_non_reversible():
-    """Test that non-reversible integrators raise ValueError."""
+def test_split_integrator_error_non_symmetric():
+    """Test that non-symmetric integrators raise ValueError."""
     step_size = 4.0 * mmunit.femtosecond
-    physical_integrator = create_non_reversible_integrator(step_size)
-    extension_integrator = create_non_reversible_integrator(step_size / 2)
+    physical_integrator = create_non_symmetric_integrator(step_size)
+    extension_integrator = create_non_symmetric_integrator(step_size / 2)
 
-    with pytest.raises(ValueError, match="must be reversible"):
+    with pytest.raises(ValueError, match="must be symmetric"):
         SplitIntegrator(physical_integrator, extension_integrator)
 
 
 def test_split_integrator_error_invalid_step_size_ratio():
     """Test that invalid step size ratio raises ValueError."""
-    physical_integrator = create_reversible_integrator(3.0 * mmunit.femtosecond)
-    extension_integrator = create_reversible_integrator(1.0 * mmunit.femtosecond)
+    physical_integrator = create_symmetric_integrator(3.0 * mmunit.femtosecond)
+    extension_integrator = create_symmetric_integrator(1.0 * mmunit.femtosecond)
 
     with pytest.raises(ValueError, match="even integer ratio"):
         SplitIntegrator(physical_integrator, extension_integrator)
 
 
-def test_split_integrator_assume_reversible_bypass():
-    """Test that assume_reversible=True bypasses validation."""
-    physical_integrator = create_non_reversible_integrator(4.0 * mmunit.femtosecond)
-    extension_integrator = create_non_reversible_integrator(2.0 * mmunit.femtosecond)
+def test_split_integrator_assume_symmetric_bypass():
+    """Test that assume_symmetric=True bypasses validation."""
+    physical_integrator = create_non_symmetric_integrator(4.0 * mmunit.femtosecond)
+    extension_integrator = create_non_symmetric_integrator(2.0 * mmunit.femtosecond)
 
-    # Should succeed with assume_reversible=True
+    # Should succeed with assume_symmetric=True
     integrator = SplitIntegrator(
-        physical_integrator, extension_integrator, assume_reversible=True
+        physical_integrator, extension_integrator, assume_symmetric=True
     )
 
     assert integrator.getPhysicalIntegrator() is physical_integrator
@@ -187,7 +187,7 @@ def test_split_integrator_assume_reversible_bypass():
 def test_get_step_size():
     """Test getStepSize returns Quantity in picoseconds."""
     step_size = 2.0 * mmunit.femtosecond
-    physical_integrator = create_kick_first_integrator(step_size)
+    physical_integrator = create_force_first_integrator(step_size)
     integrator = LockstepIntegrator(physical_integrator)
 
     result = integrator.getStepSize()
@@ -202,7 +202,7 @@ def test_set_step_size_with_quantity():
     """Test setStepSize with Quantity."""
     initial_step_size = 2.0 * mmunit.femtosecond
     new_step_size = 4.0 * mmunit.femtosecond
-    physical_integrator = create_kick_first_integrator(initial_step_size)
+    physical_integrator = create_force_first_integrator(initial_step_size)
     integrator = LockstepIntegrator(physical_integrator)
 
     integrator.setStepSize(new_step_size)
@@ -223,7 +223,7 @@ def test_set_step_size_with_float():
     """Test setStepSize with float (ps)."""
     initial_step_size = 2.0 * mmunit.femtosecond
     new_step_size_ps = 0.003  # 3 fs in ps
-    physical_integrator = create_kick_first_integrator(initial_step_size)
+    physical_integrator = create_force_first_integrator(initial_step_size)
     integrator = LockstepIntegrator(physical_integrator)
 
     integrator.setStepSize(new_step_size_ps)
@@ -237,7 +237,7 @@ def test_set_step_size_with_float():
 
 def test_get_physical_integrator():
     """Test getPhysicalIntegrator returns correct instance."""
-    physical_integrator = create_kick_first_integrator(2.0 * mmunit.femtosecond)
+    physical_integrator = create_force_first_integrator(2.0 * mmunit.femtosecond)
     integrator = LockstepIntegrator(physical_integrator)
 
     result = integrator.getPhysicalIntegrator()
@@ -247,8 +247,8 @@ def test_get_physical_integrator():
 
 def test_get_extension_integrator():
     """Test getExtensionIntegrator returns correct instance."""
-    physical_integrator = create_kick_first_integrator(2.0 * mmunit.femtosecond)
-    extension_integrator = create_kick_first_integrator(2.0 * mmunit.femtosecond)
+    physical_integrator = create_force_first_integrator(2.0 * mmunit.femtosecond)
+    extension_integrator = create_force_first_integrator(2.0 * mmunit.femtosecond)
     integrator = LockstepIntegrator(physical_integrator, extension_integrator)
 
     result = integrator.getExtensionIntegrator()
@@ -262,7 +262,7 @@ def test_get_extension_integrator():
 def test_copy_lockstep_integrator():
     """Test __copy__ for LockstepIntegrator."""
     step_size = 2.0 * mmunit.femtosecond
-    original = LockstepIntegrator(create_kick_first_integrator(step_size))
+    original = LockstepIntegrator(create_force_first_integrator(step_size))
 
     copy = original.__copy__()
 
@@ -283,7 +283,7 @@ def test_copy_lockstep_integrator():
 def test_copy_split_integrator():
     """Test __copy__ for SplitIntegrator."""
     step_size = 4.0 * mmunit.femtosecond
-    original = SplitIntegrator(create_reversible_integrator(step_size))
+    original = SplitIntegrator(create_symmetric_integrator(step_size))
 
     copy = original.__copy__()
 
@@ -303,7 +303,7 @@ def test_copy_split_integrator():
 def test_getstate_setstate_lockstep():
     """Test __getstate__ and __setstate__ for LockstepIntegrator."""
     step_size = 2.0 * mmunit.femtosecond
-    original = LockstepIntegrator(create_kick_first_integrator(step_size))
+    original = LockstepIntegrator(create_force_first_integrator(step_size))
 
     # Get state
     state = original.__getstate__()
@@ -331,7 +331,7 @@ def test_getstate_setstate_lockstep():
 def test_getstate_setstate_split():
     """Test __getstate__ and __setstate__ for SplitIntegrator."""
     step_size = 4.0 * mmunit.femtosecond
-    original = SplitIntegrator(create_reversible_integrator(step_size))
+    original = SplitIntegrator(create_symmetric_integrator(step_size))
 
     # Get state
     state = original.__getstate__()

@@ -17,7 +17,7 @@ class VelocityVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """
     A velocity Verlet integrator.
 
-    This is a reversible integrator.
+    This is a symmetric integrator.
 
     Parameters
     ----------

@@ -18,7 +18,7 @@ class BAOABIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """
     A BAOAB integrator.
 
-    This is a reversible integrator.
+    This is a symmetric integrator.
 
     Parameters
     ----------
