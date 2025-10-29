@@ -157,13 +157,13 @@ class ExtensionWriter(CustomWriter):
             headers.append("Extension Temperature (K)")
         if self._dynamical_variables:
             for dv in self._dv_objects:
-                headers.append(f"{dv.name} ({dv.unit})")
+                headers.append(f"{dv.name} ({dv.unit.get_symbol()})")
         if self._forces:
             for dv in self._dv_objects:
-                headers.append(f"Force on {dv.name} (kJ/(mol*{dv.unit}))")
+                headers.append(f"Force on {dv.name} (kJ/(mol*{dv.unit.get_symbol()}))")
         if self._collective_variables:
             for name, unit in self._cv_units.items():
-                headers.append(f"{name} ({unit})")
+                headers.append(f"{name} ({unit.get_symbol()})")
         if self._coupling_functions:
             headers.extend(self._function_names)
         return headers
