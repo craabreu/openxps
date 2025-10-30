@@ -45,7 +45,7 @@
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">BAOABIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/baoab.html#BAOABIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.BAOABIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">IntegratorMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></p>
 <p>A BAOAB integrator.</p>
-<p>This is a reversible integrator.</p>
+<p>This is a symmetric integrator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -84,11 +84,111 @@
 </dd></dl>
 
 <dl class="py class">
+<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">CSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">numDOFs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">splitting</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">IntegratorMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></p>
+<p>Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,
+also known as the Bussi-Donadio-Parrinello thermostat.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
+<li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient.</p></li>
+<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
+<li><p><strong>numDOFs</strong> (<em>int</em>) – The number of degrees of freedom in the system.</p></li>
+<li><p><strong>splitting</strong> (<em>Literal</em><em>[</em><em>'VROR'</em><em>, </em><em>'VRORV'</em><em>]</em>) – The splitting scheme. Valid options are <code class="docutils literal notranslate"><span class="pre">CSVR_FORCE_FIRST</span></code> and
+<code class="docutils literal notranslate"><span class="pre">CSVR_SYMMETRIC</span></code>.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.setRandomNumberSeed">
+<span class="sig-name descname"><span class="pre">setRandomNumberSeed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator.setRandomNumberSeed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.setRandomNumberSeed" title="Link to this definition">¶</a></dt>
+<dd><p>This method overrides the <code class="xref py py-class docutils literal notranslate"><span class="pre">openmm.CustomIntegrator</span></code> method to also set
+the seed of the random number generator used to pick numbers from the gamma
+distribution.
+:param seed: The seed to use for the random number generator.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.step">
+<span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">steps</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator.step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.step" title="Link to this definition">¶</a></dt>
+<dd><p>This method overrides the <code class="xref py py-class docutils literal notranslate"><span class="pre">openmm.CustomIntegrator</span></code> method to include the
+efficient computation of the sum of squares of normally distributed random
+numbers.
+:param steps: The number of steps to take.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="openxps.integrators.ForceFirstCSVRIntegrator">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">ForceFirstCSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">physical_system</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#ForceFirstCSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.ForceFirstCSVRIntegrator" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#openxps.integrators.CSVRIntegrator" title="openxps.integrators.csvr.CSVRIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSVRIntegrator</span></code></a></p>
+<p>Implements a force-first variant of the Canonical Sampling through Velocity
+Rescaling (CSVR) integrator, also known as the Bussi-Donadio-Parrinello thermostat.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Either a system or a sequence of dynamical variables must be provided.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
+<li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient.</p></li>
+<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>physical_system</strong> – The physical <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> to be used in the XPS simulation, or <cite>None</cite> if
+this integrator is intended to be used for an extension system.</p></li>
+<li><p><strong>dynamical_variables</strong> – A sequence of <code class="xref py py-class docutils literal notranslate"><span class="pre">DynamicalVariable</span></code> objects, or <cite>None</cite> if this integrator
+is intended to be used for a physical system.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="openxps.integrators.SymmetricCSVRIntegrator">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">SymmetricCSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">physical_system</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#SymmetricCSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.SymmetricCSVRIntegrator" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#openxps.integrators.CSVRIntegrator" title="openxps.integrators.csvr.CSVRIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSVRIntegrator</span></code></a></p>
+<p>Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,
+also known as the Bussi-Donadio-Parrinello thermostat.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Either a system or a sequence of dynamical variables must be provided.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
+<li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient.</p></li>
+<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>physical_system</strong> – The physical <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> to be used in the XPS simulation, or <cite>None</cite> if
+this integrator is intended to be used for an extension system.</p></li>
+<li><p><strong>dynamical_variables</strong> – A sequence of <code class="xref py py-class docutils literal notranslate"><span class="pre">DynamicalVariable</span></code> objects, or <cite>None</cite> if this integrator
+is intended to be used for a physical system.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
 <dt class="sig sig-object py" id="openxps.integrators.VelocityVerletIntegrator">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">VelocityVerletIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/velocity_verlet.html#VelocityVerletIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.VelocityVerletIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">IntegratorMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></p>
 <p>A velocity Verlet integrator.</p>
-<p>This is a reversible integrator.</p>
+<p>This is a symmetric integrator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>stepSize</strong> (<em>Quantity</em>) – The step size with which to integrate the system.</p>
@@ -142,6 +242,9 @@
 <li class="toctree-l2"><a class="reference internal" href="bounds.html">bounds module</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">integrators module</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.BAOABIntegrator"><code class="docutils literal notranslate"><span class="pre">BAOABIntegrator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.CSVRIntegrator"><code class="docutils literal notranslate"><span class="pre">CSVRIntegrator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.ForceFirstCSVRIntegrator"><code class="docutils literal notranslate"><span class="pre">ForceFirstCSVRIntegrator</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.SymmetricCSVRIntegrator"><code class="docutils literal notranslate"><span class="pre">SymmetricCSVRIntegrator</span></code></a></li>
 <li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.VelocityVerletIntegrator"><code class="docutils literal notranslate"><span class="pre">VelocityVerletIntegrator</span></code></a></li>
 </ul>
 </li>

@@ -41,11 +41,11 @@
 <h1>LockstepIntegrator<a class="headerlink" href="#lockstepintegrator" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.LockstepIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">LockstepIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_integrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_kick_first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrator.html#LockstepIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.LockstepIntegrator" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">LockstepIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_integrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_force_first</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrator.html#LockstepIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.LockstepIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>An integrator that advances the physical and extension systems in lockstep.</p>
 <p>This class integrates both the physical and extension systems simultaneously, then
 synchronizes the contexts after each step. It assumes that both integrators apply
-all forces at the beginning of each time step (a kick-first scheme). If either
+all forces at the beginning of each time step (a force-first scheme). If either
 integrator does not follow this scheme, the overall integration will be incorrect.</p>
 <p>The step sizes of the physical and extension integrators must be equal.</p>
 <dl class="field-list simple">
@@ -54,13 +54,13 @@ integrator does not follow this scheme, the overall integration will be incorrec
 <li><p><strong>physical_integrator</strong> (<em>Integrator</em>) – The integrator for the physical system.</p></li>
 <li><p><strong>extension_integrator</strong> (<em>Integrator</em><em> | </em><em>None</em>) – The integrator for the extension system. If None, a copy of the physical
 integrator is used.</p></li>
-<li><p><strong>assume_kick_first</strong> (<em>bool</em>) – If True, skip the validation that checks whether the integrators are known
-to follow a kick-first scheme. Use this at your own risk if you know your
+<li><p><strong>assume_force_first</strong> (<em>bool</em>) – If True, skip the validation that checks whether the integrators are known
+to follow a force-first scheme. Use this at your own risk if you know your
 integrators are compatible. Default is False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If the physical and extension integrators do not follow a kick-first scheme or
+<dd class="field-even"><p><strong>ValueError</strong> – If the physical and extension integrators do not follow a force-first scheme or
     do not have the same step size.</p>
 </dd>
 </dl>

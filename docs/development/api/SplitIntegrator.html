@@ -42,10 +42,10 @@
 <h1>SplitIntegrator<a class="headerlink" href="#splitintegrator" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.SplitIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">SplitIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_integrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_reversible</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrator.html#SplitIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.SplitIntegrator" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">SplitIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_integrator</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_integrator</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">assume_symmetric</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrator.html#SplitIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.SplitIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>An integrator that advances the physical and extension systems using an operator
 splitting scheme.</p>
-<p>This integrator assumes that the physical and extension integrators are reversible
+<p>This integrator assumes that the physical and extension integrators are symmetric
 in terms of operator splitting, i.e., they can be represented as a palindromic
 sequence of operations. If either integrator does not follow this scheme, the
 overall integration scheme will be incorrect.</p>
@@ -62,14 +62,14 @@ the larger step size <span class="math notranslate nohighlight">\(\Delta t\)</sp
 <li><p><strong>physical_integrator</strong> (<em>Integrator</em>) – The integrator for the physical system.</p></li>
 <li><p><strong>extension_integrator</strong> (<em>Integrator</em><em> | </em><em>None</em>) – The integrator for the extension system. If None, a copy of the physical
 integrator is used with half the step size of the physical integrator.</p></li>
-<li><p><strong>assume_reversible</strong> (<em>bool</em>) – If True, skip the validation that checks whether the integrators are known
-to be reversible in terms of operator splitting. Use this at your own risk if
+<li><p><strong>assume_symmetric</strong> (<em>bool</em>) – If True, skip the validation that checks whether the integrators are known
+to be symmetric in terms of operator splitting. Use this at your own risk if
 you know your integrators are compatible but are not in the known list.
 Default is False.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If the physical and extension integrators are not reversible in terms of
+<dd class="field-even"><p><strong>ValueError</strong> – If the physical and extension integrators are not symmetric in terms of
     operator splitting, or do not have a step size ratio equal to an even integer
     number.</p>
 </dd>

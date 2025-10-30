@@ -58,19 +58,21 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">STRING_SEPARATOR</span>
 
 <span class="c1">#: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the</span>
-<span class="c1">#: beginning of each time step (kick-first or leapfrog schemes).</span>
-<span class="n">KNOWN_KICK_FIRST_INTEGRATORS</span> <span class="o">=</span> <span class="p">(</span>
+<span class="c1">#: beginning of each time step (force-first or leapfrog schemes).</span>
+<span class="n">KNOWN_FORCE_FIRST_INTEGRATORS</span> <span class="o">=</span> <span class="p">(</span>
     <span class="n">mm</span><span class="o">.</span><span class="n">VerletIntegrator</span><span class="p">,</span>
     <span class="n">mm</span><span class="o">.</span><span class="n">LangevinIntegrator</span><span class="p">,</span>
     <span class="n">mm</span><span class="o">.</span><span class="n">LangevinMiddleIntegrator</span><span class="p">,</span>
     <span class="n">mm</span><span class="o">.</span><span class="n">NoseHooverIntegrator</span><span class="p">,</span>
+    <span class="n">integrators</span><span class="o">.</span><span class="n">ForceFirstCSVRIntegrator</span><span class="p">,</span>
 <span class="p">)</span>
 
-<span class="c1">#: Tuple of OpenMM integrator classes known to be reversible in the sense of operator</span>
+<span class="c1">#: Tuple of OpenMM integrator classes known to be symmetric in the sense of operator</span>
 <span class="c1">#: splitting, i.e., they can be represented as a palindromic sequence of operations.</span>
-<span class="n">KNOWN_REVERSIBLE_INTEGRATORS</span> <span class="o">=</span> <span class="p">(</span>
+<span class="n">KNOWN_SYMMETRIC_INTEGRATORS</span> <span class="o">=</span> <span class="p">(</span>
     <span class="n">integrators</span><span class="o">.</span><span class="n">VelocityVerletIntegrator</span><span class="p">,</span>
     <span class="n">integrators</span><span class="o">.</span><span class="n">BAOABIntegrator</span><span class="p">,</span>
+    <span class="n">integrators</span><span class="o">.</span><span class="n">SymmetricCSVRIntegrator</span><span class="p">,</span>
 <span class="p">)</span>
 
 
@@ -241,7 +243,7 @@
 
 <span class="sd">    This class integrates both the physical and extension systems simultaneously, then</span>
 <span class="sd">    synchronizes the contexts after each step. It assumes that both integrators apply</span>
-<span class="sd">    all forces at the beginning of each time step (a kick-first scheme). If either</span>
+<span class="sd">    all forces at the beginning of each time step (a force-first scheme). If either</span>
 <span class="sd">    integrator does not follow this scheme, the overall integration will be incorrect.</span>
 
 <span class="sd">    The step sizes of the physical and extension integrators must be equal.</span>
@@ -253,15 +255,15 @@
 <span class="sd">    extension_integrator</span>
 <span class="sd">        The integrator for the extension system. If None, a copy of the physical</span>
 <span class="sd">        integrator is used.</span>
-<span class="sd">    assume_kick_first</span>
+<span class="sd">    assume_force_first</span>
 <span class="sd">        If True, skip the validation that checks whether the integrators are known</span>
-<span class="sd">        to follow a kick-first scheme. Use this at your own risk if you know your</span>
+<span class="sd">        to follow a force-first scheme. Use this at your own risk if you know your</span>
 <span class="sd">        integrators are compatible. Default is False.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the physical and extension integrators do not follow a kick-first scheme or</span>
+<span class="sd">        If the physical and extension integrators do not follow a force-first scheme or</span>
 <span class="sd">        do not have the same step size.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -269,7 +271,7 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">physical_integrator</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">,</span>
         <span class="n">extension_integrator</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">assume_kick_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">assume_force_first</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">extension_integrator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">extension_integrator</span> <span class="o">=</span> <span class="n">deepcopy</span><span class="p">(</span><span class="n">physical_integrator</span><span class="p">)</span>
@@ -281,16 +283,16 @@
                 <span class="s2">&quot;The physical and extension integrators must have the same step size.&quot;</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
-            <span class="n">assume_kick_first</span>
+            <span class="n">assume_force_first</span>
             <span class="ow">or</span> <span class="nb">all</span><span class="p">(</span>
-                <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_KICK_FIRST_INTEGRATORS</span><span class="p">)</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_FORCE_FIRST_INTEGRATORS</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">integrator</span> <span class="ow">in</span> <span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;The physical and extension integrators must follow a kick-first &quot;</span>
+                <span class="s2">&quot;The physical and extension integrators must follow a force-first &quot;</span>
                 <span class="s2">&quot;scheme. If you are certain your integrators do follow such a scheme, &quot;</span>
-                <span class="s2">&quot;set assume_kick_first=True.&quot;</span>
+                <span class="s2">&quot;set assume_force_first=True.&quot;</span>
             <span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
 
@@ -305,8 +307,8 @@
 <span class="sd">            The number of time steps to advance the simulation.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updatePhysicalContext</span><span class="p">(</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">,</span>
@@ -326,7 +328,7 @@
 <span class="sd">    An integrator that advances the physical and extension systems using an operator</span>
 <span class="sd">    splitting scheme.</span>
 
-<span class="sd">    This integrator assumes that the physical and extension integrators are reversible</span>
+<span class="sd">    This integrator assumes that the physical and extension integrators are symmetric</span>
 <span class="sd">    in terms of operator splitting, i.e., they can be represented as a palindromic</span>
 <span class="sd">    sequence of operations. If either integrator does not follow this scheme, the</span>
 <span class="sd">    overall integration scheme will be incorrect.</span>
@@ -347,16 +349,16 @@
 <span class="sd">    extension_integrator</span>
 <span class="sd">        The integrator for the extension system. If None, a copy of the physical</span>
 <span class="sd">        integrator is used with half the step size of the physical integrator.</span>
-<span class="sd">    assume_reversible</span>
+<span class="sd">    assume_symmetric</span>
 <span class="sd">        If True, skip the validation that checks whether the integrators are known</span>
-<span class="sd">        to be reversible in terms of operator splitting. Use this at your own risk if</span>
+<span class="sd">        to be symmetric in terms of operator splitting. Use this at your own risk if</span>
 <span class="sd">        you know your integrators are compatible but are not in the known list.</span>
 <span class="sd">        Default is False.</span>
 
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
-<span class="sd">        If the physical and extension integrators are not reversible in terms of</span>
+<span class="sd">        If the physical and extension integrators are not symmetric in terms of</span>
 <span class="sd">        operator splitting, or do not have a step size ratio equal to an even integer</span>
 <span class="sd">        number.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -365,7 +367,7 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">physical_integrator</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">,</span>
         <span class="n">extension_integrator</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">assume_reversible</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">assume_symmetric</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">physical_step_size</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_getStepSize</span><span class="p">(</span><span class="n">physical_integrator</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">extension_integrator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -375,16 +377,16 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">extension_step_size</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_getStepSize</span><span class="p">(</span><span class="n">extension_integrator</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
-            <span class="n">assume_reversible</span>
+            <span class="n">assume_symmetric</span>
             <span class="ow">or</span> <span class="nb">all</span><span class="p">(</span>
-                <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_REVERSIBLE_INTEGRATORS</span><span class="p">)</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_SYMMETRIC_INTEGRATORS</span><span class="p">)</span>
                 <span class="k">for</span> <span class="n">integrator</span> <span class="ow">in</span> <span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;The physical and extension integrators must be reversible in terms of &quot;</span>
+                <span class="s2">&quot;The physical and extension integrators must be symmetric in terms of &quot;</span>
                 <span class="s2">&quot;operator splitting. If you are certain your integrators are &quot;</span>
-                <span class="s2">&quot;reversible, set assume_reversible=True.&quot;</span>
+                <span class="s2">&quot;symmetric, set assume_symmetric=True.&quot;</span>
             <span class="p">)</span>
         <span class="n">step_size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">physical_step_size</span><span class="p">,</span> <span class="n">extension_step_size</span><span class="p">)</span>
         <span class="n">substep_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">physical_step_size</span><span class="p">,</span> <span class="n">extension_step_size</span><span class="p">)</span>
@@ -439,11 +441,11 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">step_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="o">.</span><span class="n">getStepCount</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_middle_integrator</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_middle_integrator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span>
-            <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="o">.</span><span class="n">setStepCount</span><span class="p">(</span><span class="n">step_count</span> <span class="o">+</span> <span class="n">steps</span><span class="p">)</span></div>
 </div>
