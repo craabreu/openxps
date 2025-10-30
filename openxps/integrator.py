@@ -21,19 +21,21 @@ from .coupling import Coupling
 from .utils import STRING_SEPARATOR
 
 #: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the
-#: beginning of each time step (kick-first or leapfrog schemes).
-KNOWN_KICK_FIRST_INTEGRATORS = (
+#: beginning of each time step (force-first or leapfrog schemes).
+KNOWN_FORCE_FIRST_INTEGRATORS = (
     mm.VerletIntegrator,
     mm.LangevinIntegrator,
     mm.LangevinMiddleIntegrator,
     mm.NoseHooverIntegrator,
+    integrators.ForceFirstCSVRIntegrator,
 )
 
-#: Tuple of OpenMM integrator classes known to be reversible in the sense of operator
+#: Tuple of OpenMM integrator classes known to be symmetric in the sense of operator
 #: splitting, i.e., they can be represented as a palindromic sequence of operations.
-KNOWN_REVERSIBLE_INTEGRATORS = (
+KNOWN_SYMMETRIC_INTEGRATORS = (
     integrators.VelocityVerletIntegrator,
     integrators.BAOABIntegrator,
+    integrators.SymmetricCSVRIntegrator,
 )
 
 
@@ -202,7 +204,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
 
     This class integrates both the physical and extension systems simultaneously, then
     synchronizes the contexts after each step. It assumes that both integrators apply
-    all forces at the beginning of each time step (a kick-first scheme). If either
+    all forces at the beginning of each time step (a force-first scheme). If either
     integrator does not follow this scheme, the overall integration will be incorrect.
 
     The step sizes of the physical and extension integrators must be equal.
@@ -214,15 +216,15 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     extension_integrator
         The integrator for the extension system. If None, a copy of the physical
         integrator is used.
-    assume_kick_first
+    assume_force_first
         If True, skip the validation that checks whether the integrators are known
-        to follow a kick-first scheme. Use this at your own risk if you know your
+        to follow a force-first scheme. Use this at your own risk if you know your
         integrators are compatible. Default is False.
 
     Raises
     ------
     ValueError
-        If the physical and extension integrators do not follow a kick-first scheme or
+        If the physical and extension integrators do not follow a force-first scheme or
         do not have the same step size.
     """
 
@@ -230,7 +232,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
         self,
         physical_integrator: mm.Integrator,
         extension_integrator: t.Optional[mm.Integrator] = None,
-        assume_kick_first: bool = False,
+        assume_force_first: bool = False,
     ) -> None:
         if extension_integrator is None:
             extension_integrator = deepcopy(physical_integrator)
@@ -242,16 +244,16 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
                 "The physical and extension integrators must have the same step size."
             )
         if not (
-            assume_kick_first
+            assume_force_first
             or all(
-                isinstance(integrator, KNOWN_KICK_FIRST_INTEGRATORS)
+                isinstance(integrator, KNOWN_FORCE_FIRST_INTEGRATORS)
                 for integrator in (physical_integrator, extension_integrator)
             )
         ):
             raise ValueError(
-                "The physical and extension integrators must follow a kick-first "
+                "The physical and extension integrators must follow a force-first "
                 "scheme. If you are certain your integrators do follow such a scheme, "
-                "set assume_kick_first=True."
+                "set assume_force_first=True."
             )
         super().__init__(physical_integrator, extension_integrator)
 
@@ -264,8 +266,8 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
             The number of time steps to advance the simulation.
         """
         for _ in range(steps):
-            mmswig.Integrator_step(self._physical_integrator, 1)
-            mmswig.Integrator_step(self._extension_integrator, 1)
+            self._physical_integrator.step(1)
+            self._extension_integrator.step(1)
             self._coupling.updatePhysicalContext(
                 self._physical_context,
                 self._extension_context,
@@ -281,7 +283,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
     An integrator that advances the physical and extension systems using an operator
     splitting scheme.
 
-    This integrator assumes that the physical and extension integrators are reversible
+    This integrator assumes that the physical and extension integrators are symmetric
     in terms of operator splitting, i.e., they can be represented as a palindromic
     sequence of operations. If either integrator does not follow this scheme, the
     overall integration scheme will be incorrect.
@@ -302,16 +304,16 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
     extension_integrator
         The integrator for the extension system. If None, a copy of the physical
         integrator is used with half the step size of the physical integrator.
-    assume_reversible
+    assume_symmetric
         If True, skip the validation that checks whether the integrators are known
-        to be reversible in terms of operator splitting. Use this at your own risk if
+        to be symmetric in terms of operator splitting. Use this at your own risk if
         you know your integrators are compatible but are not in the known list.
         Default is False.
 
     Raises
     ------
     ValueError
-        If the physical and extension integrators are not reversible in terms of
+        If the physical and extension integrators are not symmetric in terms of
         operator splitting, or do not have a step size ratio equal to an even integer
         number.
     """
@@ -320,7 +322,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         self,
         physical_integrator: mm.Integrator,
         extension_integrator: t.Optional[mm.Integrator] = None,
-        assume_reversible: bool = False,
+        assume_symmetric: bool = False,
     ) -> None:
         physical_step_size = mmswig.Integrator_getStepSize(physical_integrator)
         if extension_integrator is None:
@@ -330,16 +332,16 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         else:
             extension_step_size = mmswig.Integrator_getStepSize(extension_integrator)
         if not (
-            assume_reversible
+            assume_symmetric
             or all(
-                isinstance(integrator, KNOWN_REVERSIBLE_INTEGRATORS)
+                isinstance(integrator, KNOWN_SYMMETRIC_INTEGRATORS)
                 for integrator in (physical_integrator, extension_integrator)
             )
         ):
             raise ValueError(
-                "The physical and extension integrators must be reversible in terms of "
+                "The physical and extension integrators must be symmetric in terms of "
                 "operator splitting. If you are certain your integrators are "
-                "reversible, set assume_reversible=True."
+                "symmetric, set assume_symmetric=True."
             )
         step_size = max(physical_step_size, extension_step_size)
         substep_size = min(physical_step_size, extension_step_size)
@@ -389,10 +391,10 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         """
         step_count = self._physical_context.getStepCount()
         for _ in range(steps):
-            mmswig.Integrator_step(self._end_integrator, self._num_substeps)
+            self._end_integrator.step(self._num_substeps)
             self._update_middle_context(self._physical_context, self._extension_context)
-            mmswig.Integrator_step(self._middle_integrator, 1)
+            self._middle_integrator.step(1)
             self._update_end_context(self._physical_context, self._extension_context)
-            mmswig.Integrator_step(self._end_integrator, self._num_substeps)
+            self._end_integrator.step(self._num_substeps)
             self._update_middle_context(self._physical_context, self._extension_context)
         self._physical_context.setStepCount(step_count + steps)
