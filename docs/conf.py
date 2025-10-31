@@ -60,9 +60,23 @@ def create_function_rst_file(func, module_name="openxps"):
         )
 
 
+def create_constant_rst_file(const_name, const_value, module_name="openxps"):
+    """Create a .rst file for a constant/variable."""
+    with open(f"api/{const_name}.rst", "w") as f:
+        f.writelines(
+            [
+                f"{const_name}\n",
+                "=" * len(const_name) + "\n\n",
+                f".. currentmodule:: {module_name}\n",
+                f".. py:data:: {const_name}\n",
+                "    :type: " + type(const_value).__name__ + "\n\n",
+            ]
+        )
+
+
 def create_module_docs(module, module_name, output_dir="api"):
     """
-    Create documentation files for a module with one class/function per file.
+    Create documentation files for a module with one class/function/constant per file.
 
     Parameters
     ----------
@@ -75,95 +89,107 @@ def create_module_docs(module, module_name, output_dir="api"):
 
     Returns
     -------
-    tuple
-        A tuple of (classes_toctree, functions_toctree) filenames, or None if empty
+    str or None
+        The toctree filename, or None if module is empty
     """
-    classes = [
-        item for item in module.__dict__.values() if inspect.isclass(item)
-    ]
-    functions = [
-        item for item in module.__dict__.values() if inspect.isfunction(item)
-    ]
+    # Filter by __all__ if it exists, otherwise include all classes/functions
+    module_all = getattr(module, "__all__", None)
+    if module_all:
+        module_all_set = set(module_all)
+        classes = [
+            item
+            for item in module.__dict__.values()
+            if inspect.isclass(item) and item.__name__ in module_all_set
+        ]
+        functions = [
+            item
+            for item in module.__dict__.values()
+            if inspect.isfunction(item) and item.__name__ in module_all_set
+        ]
+        # Get constants/variables (items in __all__ that are not classes or functions)
+        constants = []
+        for name in module_all:
+            if name not in {item.__name__ for item in classes} and name not in {
+                item.__name__ for item in functions
+            }:
+                if name in module.__dict__:
+                    const_value = module.__dict__[name]
+                    # Skip modules and other special items
+                    if not inspect.ismodule(const_value) and not name.startswith("_"):
+                        constants.append((name, const_value))
+    else:
+        classes = [
+            item for item in module.__dict__.values() if inspect.isclass(item)
+        ]
+        functions = [
+            item for item in module.__dict__.values() if inspect.isfunction(item)
+        ]
+        constants = []
 
-    classes_toctree = None
-    functions_toctree = None
+    # If module has no items, return None
+    if not classes and not functions and not constants:
+        return None
 
-    if classes:
-        # Determine toctree filename based on module
-        if module_name == "openxps":
-            classes_toctree = "classes.rst"
-            title = "Main Module"
-        else:
-            # For submodules, use {module_name}_classes.rst
-            module_short_name = module_name.split('.')[-1]
-            classes_toctree = f"{module_short_name}_classes.rst"
-            # Capitalize first letter and add "Module"
-            title = f"{module_short_name.capitalize()} Module"
+    # Determine toctree filename based on module
+    if module_name == "openxps":
+        toctree = "main.rst"
+        title = "Main Module"
+    else:
+        # For submodules, use the module name
+        module_short_name = module_name.split('.')[-1]
+        toctree = f"{module_short_name}.rst"
+        # Capitalize first letter and add "Module"
+        title = f"{module_short_name.capitalize()} Module"
 
-        with open(f"{output_dir}/{classes_toctree}", "w") as f:
-            f.write(
-                f"{title}\n"
-                f"{'=' * len(title)}\n"
-                "\n"
-                ".. toctree::\n"
-                "    :titlesonly:\n"
-                "\n"
-            )
-            for item in classes:
-                f.write(f"    {item.__name__}\n")
-                create_class_rst_file(item, module_name)
-            f.write("\n.. testsetup::\n\n    from openxps import *")
+    # Create single toctree with all items
+    with open(f"{output_dir}/{toctree}", "w") as f:
+        f.write(
+            f"{title}\n"
+            f"{'=' * len(title)}\n"
+            "\n"
+            ".. toctree::\n"
+            "    :titlesonly:\n"
+            "\n"
+        )
 
-    if functions:
-        # Determine toctree filename based on module
-        if module_name == "openxps":
-            functions_toctree = "functions.rst"
-            title = "Main Module"
-        else:
-            # For submodules, use {module_name}_functions.rst
-            module_short_name = module_name.split('.')[-1]
-            functions_toctree = f"{module_short_name}_functions.rst"
-            # Capitalize first letter and add "Module"
-            title = f"{module_short_name.capitalize()} Module"
+        # Add classes
+        for item in sorted(classes, key=lambda x: x.__name__):
+            f.write(f"    {item.__name__}\n")
+            create_class_rst_file(item, module_name)
 
-        with open(f"{output_dir}/{functions_toctree}", "w") as f:
-            f.write(
-                f"{title}\n"
-                f"{'=' * len(title)}\n"
-                "\n"
-                ".. toctree::\n"
-                "    :titlesonly:\n"
-                "\n"
-            )
-            for item in functions:
-                f.write(f"    {item.__name__}\n")
-                create_function_rst_file(item, module_name)
-            f.write("\n.. testsetup::\n\n    from openxps import *")
+        # Add functions
+        for item in sorted(functions, key=lambda x: x.__name__):
+            f.write(f"    {item.__name__}\n")
+            create_function_rst_file(item, module_name)
 
-    return (classes_toctree, functions_toctree)
+        # Add constants
+        for const_name, const_value in sorted(constants, key=lambda x: x[0]):
+            f.write(f"    {const_name}\n")
+            create_constant_rst_file(const_name, const_value, module_name)
+
+        f.write("\n.. testsetup::\n\n    from openxps import *")
+
+    return toctree
 
 
 # Documentation entries for main module
-main_classes, main_functions = create_module_docs(openxps, "openxps")
+main_toctree = create_module_docs(openxps, "openxps")
 
 # Documentation entries for submodules
-bounds_classes, bounds_functions = create_module_docs(
-    openxps.bounds, "openxps.bounds"
-)
-integrators_classes, integrators_functions = create_module_docs(
-    openxps.integrators, "openxps.integrators"
-)
+bounds_toctree = create_module_docs(openxps.bounds, "openxps.bounds")
+integrators_toctree = create_module_docs(openxps.integrators, "openxps.integrators")
+couplings_toctree = create_module_docs(openxps.couplings, "openxps.couplings")
 
 with open("api/index.rst", "w") as f:
     entries = []
-    if main_classes:
-        entries.append("    classes\n")
-    if main_functions:
-        entries.append("    functions\n")
-    if bounds_classes:
-        entries.append("    bounds_classes\n")
-    if integrators_classes:
-        entries.append("    integrators_classes\n")
+    if main_toctree:
+        entries.append(f"    {main_toctree}\n")
+    if bounds_toctree:
+        entries.append(f"    {bounds_toctree}\n")
+    if integrators_toctree:
+        entries.append(f"    {integrators_toctree}\n")
+    if couplings_toctree:
+        entries.append(f"    {couplings_toctree}\n")
 
     f.write(
         "API Reference\n"

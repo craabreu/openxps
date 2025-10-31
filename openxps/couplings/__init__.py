@@ -7,9 +7,8 @@
 
 """
 
-from .base import Coupling
+from .base import Coupling, CouplingSum
 from .collective_variable_coupling import CollectiveVariableCoupling
-from .coupling_sum import CouplingSum
 from .harmonic_coupling import HarmonicCoupling
 from .inner_product_coupling import InnerProductCoupling
 

@@ -15,6 +15,6 @@ from .no_bounds import NoBounds
 from .periodic import Periodic
 from .reflective import Reflective
 
-__all__ = ["Bounds", "Periodic", "Reflective", "NoBounds", "CIRCULAR"]
+__all__ = ["Periodic", "Reflective", "NoBounds", "CIRCULAR"]
 
 CIRCULAR = Periodic(-np.pi, np.pi, mmunit.radians)
