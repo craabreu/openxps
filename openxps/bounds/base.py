@@ -1,7 +1,9 @@
 """
-.. module:: openxps.bounds
+Base class for boundary conditions.
+
+.. module:: openxps.bounds.base
    :platform: Linux, MacOS, Windows
-   :synopsis: Specification of boundary conditions for dynamical variables
+   :synopsis: Base class for boundary conditions
 
 .. classauthor:: Charlles Abreu <craabreu@gmail.com>
 
@@ -11,12 +13,11 @@ import typing as t
 from dataclasses import dataclass
 
 import cvpack
-import numpy as np
 from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit
 
-from .utils import preprocess_args
+from ..utils import preprocess_args
 
 
 @dataclass(frozen=True, eq=False)
@@ -191,151 +192,3 @@ class Bounds(Serializable):
 
 
 Bounds.__init__ = preprocess_args(Bounds.__init__)
-
-
-class Periodic(Bounds):
-    """
-    A periodic boundary condition. The dynamical variable is allowed to wrap
-    around the upper and lower bounds.
-
-    Parameters
-    ----------
-    lower
-        The lower bound for the dynamical variable.
-    upper
-        The upper bound for the dynamical variable.
-    unit
-        The unity of measurement of the bounds. If the bounds do not have a unit, use
-        ``dimensionless``.
-
-    Example
-    -------
-    >>> import openxps as xps
-    >>> import yaml
-    >>> from openmm import unit
-    >>> bounds = xps.bounds.Periodic(-180, 180, unit.degree)
-    >>> print(bounds)
-    Periodic(lower=-180, upper=180, unit=deg)
-    >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
-    """
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self.period = self.upper - self.lower
-
-    def leptonExpression(self, variable: str) -> str:
-        scaled = f"scaled_{variable}"
-        if self.lower == 0:
-            shift = deshift = ""
-        elif self.lower > 0:
-            shift = f"-{self.lower}"
-            deshift = f"+{self.lower}"
-        else:
-            shift = f"+{-self.lower}"
-            deshift = f"-{-self.lower}"
-        return (
-            f"({scaled}-floor({scaled}))*{self.period}{deshift}"
-            f";\n{scaled}=({variable}{shift})/{self.period}"
-        )
-
-    def wrap(self, value: float, rate: float) -> tuple[float, float]:
-        return (value - self.lower) % self.period + self.lower, rate
-
-
-Periodic.registerTag("!openxps.bounds.Periodic")
-
-
-class Reflective(Bounds):
-    """
-    A reflective boundary condition. The dynamical variable collides elastically
-    with the upper and lower bounds and is reflected back into the range.
-
-    Parameters
-    ----------
-    lower
-        The lower bound for the dynamical variable.
-    upper
-        The upper bound for the dynamical variable.
-    unit
-        The unity of measurement of the bounds. If the bounds do not have a unit, use
-        ``dimensionless``.
-
-    Example
-    -------
-    >>> import openxps as xps
-    >>> from openmm import unit
-    >>> bounds = xps.bounds.Reflective(1, 10, unit.angstrom)
-    >>> bounds == xps.bounds.Reflective(0.1, 1, unit.nanometer)
-    True
-    >>> print(bounds)
-    Reflective(lower=1, upper=10, unit=A)
-    """
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self.period = 2 * (self.upper - self.lower)
-
-    def leptonExpression(self, variable: str) -> str:
-        scaled = f"scaled_{variable}"
-        wrapped = f"wrapped_{variable}"
-        if self.lower == 0:
-            shift = deshift = ""
-        elif self.lower > 0:
-            shift = f"-{self.lower}"
-            deshift = f"+{self.lower}"
-        else:
-            shift = f"+{-self.lower}"
-            deshift = f"-{-self.lower}"
-        return (
-            f"min({wrapped},1-{wrapped})*{self.period}{deshift}"
-            f";\n{wrapped}={scaled}-floor({scaled})"
-            f";\n{scaled}=({variable}{shift})/{self.period}"
-        )
-
-    def wrap(self, value: float, rate: float) -> tuple[float, float]:
-        x = (value - self.lower) % self.period
-        if x < self.period - x:
-            return x + self.lower, rate
-        return self.period - x + self.lower, -rate
-
-
-Reflective.registerTag("!openxps.bounds.Reflective")
-
-
-class NoBounds(Bounds):
-    """
-    No boundary condition. The dynamical variable is allowed to take any value.
-
-    Parameters
-    ----------
-
-    If it is not ``None``, its unit of measurement must be compatible with the dynamical
-    variable's own unit.
-    Example
-    -------
-    >>> import openxps as xps
-    >>> import yaml
-    >>> from openmm import unit
-    >>> bounds = xps.bounds.Periodic(-180, 180, unit.degree)
-    >>> print(bounds)
-    Periodic(lower=-180, upper=180, unit=deg)
-    >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
-    """
-
-    def __init__(self) -> None:
-        super().__init__(-np.inf, np.inf, mmunit.dimensionless)
-
-    def in_md_units(self) -> "NoBounds":
-        return NoBounds()
-
-    def leptonExpression(self, variable: str) -> str:
-        return f"{variable}"
-
-    def wrap(self, value: float, rate: float) -> tuple[float, float]:
-        return value, rate
-
-
-Periodic.registerTag("!openxps.bounds.Periodic")
-
-
-CIRCULAR = Periodic(-np.pi, np.pi, mmunit.radians)
