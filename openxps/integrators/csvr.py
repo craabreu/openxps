@@ -7,18 +7,11 @@
 
 """
 
-import typing as t
-
 import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
 
-from ..dynamical_variable import DynamicalVariable
 from .mixin import IntegratorMixin
-
-SplittingScheme: t.TypeAlias = t.Literal["VROR", "VRORV"]
-CSVR_FORCE_FIRST: SplittingScheme = "VROR"
-CSVR_SYMMETRIC: SplittingScheme = "VRORV"
 
 
 class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
@@ -34,11 +27,9 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         The friction coefficient.
     stepSize
         The integration step size.
-    numDOFs: int
-        The number of degrees of freedom in the system.
     splitting
-        The splitting scheme. Valid options are ``CSVR_FORCE_FIRST`` and
-        ``CSVR_SYMMETRIC``.
+        The splitting scheme. A sequence of "V", "R", and "O" characters representing
+        the velocity boost, position update, and thermostat steps, respectively.
     """
 
     def __init__(
@@ -46,11 +37,12 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         temperature: mmunit.Quantity,
         frictionCoeff: mmunit.Quantity,
         stepSize: mmunit.Quantity,
-        numDOFs: int,
-        splitting: SplittingScheme,
+        splitting: str,
     ) -> None:
+        if set(splitting) != {"V", "R", "O"}:
+            raise ValueError(f"Invalid splitting scheme: {splitting}")
         super().__init__(stepSize)
-        self._num_dof = numDOFs
+        self._num_dof = None
         self._rng = np.random.default_rng(None)
         self._add_global_variables(temperature, frictionCoeff)
         self.addUpdateContextState()
@@ -63,8 +55,6 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
                 self._add_translation(timestep)
             elif letter == "O":
                 self._add_rescaling(timestep)
-            else:
-                raise ValueError("Valid splitting scheme letters are R, V, and O")
 
     def _add_global_variables(
         self, temperature: mmunit.Quantity, frictionCoeff: mmunit.Quantity
@@ -102,6 +92,9 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
             sumRsq += self._rng.standard_normal(num_steps) ** 2
         return sumRsq
 
+    def register_with_system(self, system: mm.System) -> None:
+        self._num_dof = IntegratorMixin.countDegreesOfFreedom(system)
+
     def setRandomNumberSeed(self, seed: int) -> None:
         """
         This method overrides the :class:`openmm.CustomIntegrator` method to also set
@@ -135,9 +128,6 @@ class SymmetricCSVRIntegrator(CSVRIntegrator):
     Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,
     also known as the Bussi-Donadio-Parrinello thermostat.
 
-    .. note::
-        Either a system or a sequence of dynamical variables must be provided.
-
     Parameters
     ----------
     temperature
@@ -146,15 +136,6 @@ class SymmetricCSVRIntegrator(CSVRIntegrator):
         The friction coefficient.
     stepSize
         The integration step size.
-
-    Keyword Arguments
-    -----------------
-    physical_system
-        The physical :OpenMM:`System` to be used in the XPS simulation, or `None` if
-        this integrator is intended to be used for an extension system.
-    dynamical_variables
-        A sequence of :class:`DynamicalVariable` objects, or `None` if this integrator
-        is intended to be used for a physical system.
     """
 
     def __init__(
@@ -162,17 +143,8 @@ class SymmetricCSVRIntegrator(CSVRIntegrator):
         temperature: mmunit.Quantity,
         frictionCoeff: mmunit.Quantity,
         stepSize: mmunit.Quantity,
-        *,
-        physical_system: t.Optional[mm.System] = None,
-        dynamical_variables: t.Optional[t.Sequence[DynamicalVariable]] = None,
     ) -> None:
-        super().__init__(
-            temperature,
-            frictionCoeff,
-            stepSize,
-            IntegratorMixin.countDegreesOfFreedom(physical_system, dynamical_variables),
-            CSVR_SYMMETRIC,
-        )
+        super().__init__(temperature, frictionCoeff, stepSize, "VRORV")
 
 
 class ForceFirstCSVRIntegrator(CSVRIntegrator):
@@ -180,9 +152,6 @@ class ForceFirstCSVRIntegrator(CSVRIntegrator):
     Implements a force-first variant of the Canonical Sampling through Velocity
     Rescaling (CSVR) integrator, also known as the Bussi-Donadio-Parrinello thermostat.
 
-    .. note::
-        Either a system or a sequence of dynamical variables must be provided.
-
     Parameters
     ----------
     temperature
@@ -191,15 +160,6 @@ class ForceFirstCSVRIntegrator(CSVRIntegrator):
         The friction coefficient.
     stepSize
         The integration step size.
-
-    Keyword Arguments
-    -----------------
-    physical_system
-        The physical :OpenMM:`System` to be used in the XPS simulation, or `None` if
-        this integrator is intended to be used for an extension system.
-    dynamical_variables
-        A sequence of :class:`DynamicalVariable` objects, or `None` if this integrator
-        is intended to be used for a physical system.
     """
 
     def __init__(
@@ -207,14 +167,5 @@ class ForceFirstCSVRIntegrator(CSVRIntegrator):
         temperature: mmunit.Quantity,
         frictionCoeff: mmunit.Quantity,
         stepSize: mmunit.Quantity,
-        *,
-        physical_system: t.Optional[mm.System] = None,
-        dynamical_variables: t.Optional[t.Sequence[DynamicalVariable]] = None,
     ) -> None:
-        super().__init__(
-            temperature,
-            frictionCoeff,
-            stepSize,
-            IntegratorMixin.countDegreesOfFreedom(physical_system, dynamical_variables),
-            CSVR_FORCE_FIRST,
-        )
+        super().__init__(temperature, frictionCoeff, stepSize, "VROR")

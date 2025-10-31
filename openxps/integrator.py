@@ -18,6 +18,7 @@ from openmm import unit as mmunit
 
 from . import integrators
 from .coupling import Coupling
+from .integrators.mixin import IntegratorMixin
 from .utils import STRING_SEPARATOR
 
 #: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the
@@ -28,6 +29,7 @@ KNOWN_FORCE_FIRST_INTEGRATORS = (
     mm.LangevinMiddleIntegrator,
     mm.NoseHooverIntegrator,
     integrators.ForceFirstCSVRIntegrator,
+    integrators.ForceFirstMassiveGGMTIntegrator,
 )
 
 #: Tuple of OpenMM integrator classes known to be symmetric in the sense of operator
@@ -36,6 +38,7 @@ KNOWN_SYMMETRIC_INTEGRATORS = (
     integrators.VelocityVerletIntegrator,
     integrators.BAOABIntegrator,
     integrators.SymmetricCSVRIntegrator,
+    integrators.SymmetricMassiveGGMTIntegrator,
 )
 
 
@@ -125,6 +128,12 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         coupling
             The potential that couples the physical and dynamical variables.
         """
+        for integrator, context in (
+            (self._physical_integrator, physical_context),
+            (self._extension_integrator, extension_context),
+        ):
+            if isinstance(integrator, IntegratorMixin):
+                integrator.register_with_system(context.getSystem())
         self._physical_context = physical_context
         self._extension_context = extension_context
         self._coupling = coupling
@@ -345,12 +354,18 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             )
         step_size = max(physical_step_size, extension_step_size)
         substep_size = min(physical_step_size, extension_step_size)
-        if not np.isclose(np.remainder(step_size, 2 * substep_size), 0):
+        if not self._is_even_division(step_size, substep_size):
             raise ValueError(
                 "The physical and extension integrator step sizes must be related by "
                 "an even integer ratio."
             )
         super().__init__(physical_integrator, extension_integrator)
+
+    @staticmethod
+    def _is_even_division(a: float, b: float) -> bool:
+        if b == 0:
+            raise ValueError("Division by zero is not allowed.")
+        return np.isclose(a / b - round(a / b), 0) and int(round(a / b)) % 2 == 0
 
     def _initialize(self) -> None:
         super()._initialize()

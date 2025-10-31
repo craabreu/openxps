@@ -7,12 +7,8 @@
 
 """
 
-import typing as t
-
 import openmm as mm
 from openmm import unit as mmunit
-
-from ..dynamical_variable import DynamicalVariable
 
 BLOCK_START = (6, 7)
 BLOCK_END = 8
@@ -63,11 +59,12 @@ class IntegratorMixin:
             readable_lines.append(line)
         return "\n".join(readable_lines)
 
+    def register_with_system(self, system: mm.System) -> None:
+        """Register the integrator with the system."""
+        pass
+
     @staticmethod
-    def countDegreesOfFreedom(
-        system: t.Optional[mm.System] = None,
-        dynamical_variables: t.Optional[t.Sequence[DynamicalVariable]] = None,
-    ) -> int:
+    def countDegreesOfFreedom(system: mm.System) -> int:
         """Count the degrees of freedom in a system.
 
         Parameters
@@ -80,15 +77,6 @@ class IntegratorMixin:
         int
             The number of degrees of freedom in the system.
         """
-        if (system is None) == (dynamical_variables is None):
-            raise ValueError(
-                "Either a system or a sequence of dynamical variables "
-                "must be provided, but not both"
-            )
-
-        if dynamical_variables is not None:
-            return len(dynamical_variables)
-
         dof = 0
         for i in range(system.getNumParticles()):
             if system.getParticleMass(i) > 0 * mmunit.dalton:
