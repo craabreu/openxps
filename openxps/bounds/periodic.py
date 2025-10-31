@@ -32,7 +32,7 @@ class PeriodicBounds(Bounds):
     >>> import openxps as xps
     >>> import yaml
     >>> from openmm import unit
-    >>> bounds = xps.bounds.PeriodicBounds(-180, 180, unit.degree)
+    >>> bounds = xps.PeriodicBounds(-180, 180, unit.degree)
     >>> print(bounds)
     PeriodicBounds(lower=-180, upper=180, unit=deg)
     >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds

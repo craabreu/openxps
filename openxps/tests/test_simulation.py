@@ -21,7 +21,7 @@ def create_test_system():
     """Helper function to create a test system."""
     model = testsystems.AlanineDipeptideVacuum()
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    phi0 = xps.DynamicalVariable("phi0", mmunit.radian, mass, xps.bounds.CIRCULAR)
+    phi0 = xps.DynamicalVariable("phi0", mmunit.radian, mass, xps.CircularBounds())
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     kappa = 1000 * mmunit.kilojoules_per_mole / mmunit.radian**2
     harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)

@@ -19,7 +19,7 @@ from openxps import (
     HarmonicCoupling,
     InnerProductCoupling,
 )
-from openxps.bounds import CIRCULAR, NoBounds, ReflectiveBounds
+from openxps.bounds import CircularBounds, NoBounds, ReflectiveBounds
 from openxps.couplings import CouplingSum
 
 
@@ -33,7 +33,7 @@ def create_test_dv(name="phi_s", mass=None):
     """Create a test dynamical variable."""
     if mass is None:
         mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    return DynamicalVariable(name, mmunit.radian, mass, CIRCULAR)
+    return DynamicalVariable(name, mmunit.radian, mass, CircularBounds())
 
 
 def create_test_system():
@@ -603,9 +603,9 @@ def test_coupling_sum_conflicting_dvs():
     # Create two DVs with same name but different properties
     mass1 = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
     mass2 = 5 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    phi_s1 = DynamicalVariable("phi_s", mmunit.radian, mass1, CIRCULAR)
+    phi_s1 = DynamicalVariable("phi_s", mmunit.radian, mass1, CircularBounds())
     phi_s2 = DynamicalVariable(
-        "phi_s", mmunit.radian, mass2, CIRCULAR
+        "phi_s", mmunit.radian, mass2, CircularBounds()
     )  # Different mass
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 

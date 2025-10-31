@@ -53,7 +53,7 @@ class DynamicalVariable(Serializable):
     ...     "psi",
     ...     unit.radian,
     ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-    ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
+    ...     xps.PeriodicBounds(-180, 180, unit.degree)
     ... )
     >>> dv
     DynamicalVariable(name='psi', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)
@@ -128,7 +128,7 @@ class DynamicalVariable(Serializable):
         ...     "psi",
         ...     unit.radian,
         ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-        ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
+        ...     xps.PeriodicBounds(-180, 180, unit.degree)
         ... )
         >>> dv.isPeriodic()
         True
@@ -164,7 +164,7 @@ class DynamicalVariable(Serializable):
         ...     "psi",
         ...     unit.radian,
         ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-        ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
+        ...     xps.PeriodicBounds(-180, 180, unit.degree)
         ... )
         >>> cv = dv.createCollectiveVariable(0)
         """
@@ -225,7 +225,7 @@ class DynamicalVariable(Serializable):
         ...     "psi0",
         ...     unit.radian,
         ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-        ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
+        ...     xps.PeriodicBounds(-180, 180, unit.degree)
         ... )
         >>> psi = cvpack.Torsion(6, 8, 14, 16, name="psi")
         >>> dv.distanceTo(psi)

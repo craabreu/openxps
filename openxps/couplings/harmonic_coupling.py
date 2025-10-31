@@ -45,7 +45,9 @@ class HarmonicCoupling(CollectiveVariableCoupling):
     >>> from openmm import unit
     >>> dvmass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
-    >>> phi_s = xps.DynamicalVariable("phi_s", unit.radian, dvmass, xps.bounds.CIRCULAR)
+    >>> phi_s = xps.DynamicalVariable(
+    ...     "phi_s", unit.radian, dvmass, xps.CircularBounds()
+    ... )
     >>> kappa = 1000 * unit.kilojoule_per_mole / unit.radian**2
     >>> xps.HarmonicCoupling(phi, phi_s, kappa)
     HarmonicCoupling("0.5*kappa_phi_phi_s*((phi-phi_s-6.28...*floor(...))^2)")

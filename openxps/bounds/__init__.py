@@ -7,14 +7,19 @@
 
 """
 
-import numpy as np
-from openmm import unit as mmunit
-
 from .base import Bounds
+from .circular import CircularBounds
 from .no_bounds import NoBounds
 from .periodic import PeriodicBounds
 from .reflective import ReflectiveBounds
 
-__all__ = ["PeriodicBounds", "ReflectiveBounds", "NoBounds", "CIRCULAR"]
+__all__ = [
+    "PeriodicBounds",
+    "ReflectiveBounds",
+    "NoBounds",
+    "CircularBounds",
+    "CIRCULAR",
+]
 
-CIRCULAR = PeriodicBounds(-np.pi, np.pi, mmunit.radians)
+# Backward compatibility constant
+CIRCULAR = CircularBounds()

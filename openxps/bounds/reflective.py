@@ -31,8 +31,8 @@ class ReflectiveBounds(Bounds):
     -------
     >>> import openxps as xps
     >>> from openmm import unit
-    >>> bounds = xps.bounds.ReflectiveBounds(1, 10, unit.angstrom)
-    >>> bounds == xps.bounds.ReflectiveBounds(0.1, 1, unit.nanometer)
+    >>> bounds = xps.ReflectiveBounds(1, 10, unit.angstrom)
+    >>> bounds == xps.ReflectiveBounds(0.1, 1, unit.nanometer)
     True
     >>> print(bounds)
     ReflectiveBounds(lower=1, upper=10, unit=A)

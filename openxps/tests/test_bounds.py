@@ -7,7 +7,13 @@ import pytest
 import yaml
 from openmm import unit as mmunit
 
-from openxps.bounds import CIRCULAR, Bounds, PeriodicBounds, ReflectiveBounds
+from openxps.bounds import (
+    CIRCULAR,
+    Bounds,
+    CircularBounds,
+    PeriodicBounds,
+    ReflectiveBounds,
+)
 
 
 def test_bounds_initialization():
@@ -90,6 +96,7 @@ def test_circular_constant():
     """
     Test the CIRCULAR constant.
     """
+    assert isinstance(CIRCULAR, CircularBounds)
     assert CIRCULAR.lower == -np.pi
     assert CIRCULAR.upper == np.pi
     assert CIRCULAR.unit == mmunit.radians

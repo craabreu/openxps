@@ -18,7 +18,7 @@ def create_test_simulation():
     """Helper function to create a test simulation."""
     model = testsystems.AlanineDipeptideVacuum()
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
-    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2
     harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)
@@ -120,7 +120,7 @@ def test_extension_writer_collective_variables():
     """Test the extension writer with collective variables."""
     model = testsystems.AlanineDipeptideVacuum()
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
-    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     # Use CollectiveVariableCoupling which creates a MetaCollectiveVariable
     coupling = xps.CollectiveVariableCoupling(
@@ -170,7 +170,7 @@ def test_extension_writer_effective_masses():
     """Test the extension writer with effective masses."""
     model = testsystems.AlanineDipeptideVacuum()
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
-    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     # Use CollectiveVariableCoupling which creates a MetaCollectiveVariable
     coupling = xps.CollectiveVariableCoupling(
@@ -232,7 +232,7 @@ def test_extension_writer_coupling_functions():
         name="lambda",
         unit=unit.dimensionless,
         mass=1.0 * unit.dalton * unit.nanometer**2,
-        bounds=xps.bounds.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
+        bounds=xps.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
     )
 
     # Create InnerProductCoupling with a function that creates a protected parameter
@@ -301,7 +301,7 @@ def test_extension_writer_inner_product_coupling_multiple_functions():
         name="lambda",
         unit=unit.dimensionless,
         mass=1.0 * unit.dalton * unit.nanometer**2,
-        bounds=xps.bounds.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
+        bounds=xps.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
     )
 
     # Create InnerProductCoupling with multiple functions
@@ -368,7 +368,7 @@ def test_extension_writer_inner_product_coupling_no_functions():
         name="lambda",
         unit=unit.dimensionless,
         mass=1.0 * unit.dalton * unit.nanometer**2,
-        bounds=xps.bounds.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
+        bounds=xps.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
     )
 
     # Create InnerProductCoupling without functions (identity mapping)
@@ -429,7 +429,7 @@ def test_extension_writer_inner_product_coupling_with_other_parameters():
         name="lambda",
         unit=unit.dimensionless,
         mass=1.0 * unit.dalton * unit.nanometer**2,
-        bounds=xps.bounds.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
+        bounds=xps.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
     )
 
     coupling = xps.InnerProductCoupling(
@@ -487,7 +487,7 @@ def test_extension_writer_all_parameters():
     """Test the extension writer with all parameters enabled."""
     model = testsystems.AlanineDipeptideVacuum()
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
-    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
     phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     coupling = xps.CollectiveVariableCoupling(
         "0.5*kappa*(phi-phi0)^2",

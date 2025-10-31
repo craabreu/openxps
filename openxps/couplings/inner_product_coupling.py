@@ -108,7 +108,7 @@ class InnerProductCoupling(Coupling):
     ...     name="lambda",
     ...     unit=unit.dimensionless,
     ...     mass=1.0 * unit.dalton * unit.nanometer**2,
-    ...     bounds=xps.bounds.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
+    ...     bounds=xps.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
     ... )
     >>> coupling = xps.InnerProductCoupling(
     ...     [force],

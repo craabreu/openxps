@@ -232,7 +232,7 @@ class Coupling(Serializable):
         ...     "phi0",
         ...     unit.radian,
         ...     3 * unit.dalton * (unit.nanometer / unit.radian)**2,
-        ...     xps.bounds.CIRCULAR
+        ...     xps.CircularBounds()
         ... )
         >>> coupling = xps.CollectiveVariableCoupling(
         ...     "0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
@@ -329,9 +329,13 @@ class CouplingSum(Coupling):
     >>> from openmm import unit
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     >>> psi = cvpack.Torsion(4, 6, 8, 14, name="psi")
-    >>> dvmass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2
-    >>> phi_s = xps.DynamicalVariable("phi_s", unit.radian, dvmass, xps.bounds.CIRCULAR)
-    >>> psi_s = xps.DynamicalVariable("psi_s", unit.radian, dvmass, xps.bounds.CIRCULAR)
+    >>> dv_mass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2
+    >>> phi_s = xps.DynamicalVariable(
+    ...     "phi_s", unit.radian, dv_mass, xps.CircularBounds()
+    ... )
+    >>> psi_s = xps.DynamicalVariable(
+    ...     "psi_s", unit.radian, dv_mass, xps.CircularBounds()
+    ... )
     >>> coupling = xps.HarmonicCoupling(
     ...     phi, phi_s, 1000 * unit.kilojoule_per_mole / unit.radian**2
     ... ) + xps.HarmonicCoupling(

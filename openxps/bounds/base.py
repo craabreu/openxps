@@ -83,7 +83,7 @@ class Bounds(Serializable):
         -------
         >>> import openxps as xps
         >>> from openmm import unit
-        >>> bounds = xps.bounds.PeriodicBounds(-1.0, 1.0, unit.kilocalories_per_mole)
+        >>> bounds = xps.PeriodicBounds(-1.0, 1.0, unit.kilocalories_per_mole)
         >>> bounds.in_md_units()
         PeriodicBounds(lower=-4.184, upper=4.184, unit=nm**2 Da/(ps**2))
         """
@@ -108,7 +108,7 @@ class Bounds(Serializable):
         -------
         >>> import openxps as xps
         >>> from openmm import unit
-        >>> bounds = xps.bounds.PeriodicBounds(-180, 180, unit.degree)
+        >>> bounds = xps.PeriodicBounds(-180, 180, unit.degree)
         >>> bounds.convert(unit.radian)
         PeriodicBounds(lower=-3.14159..., upper=3.14159..., unit=rad)
         """
@@ -130,7 +130,7 @@ class Bounds(Serializable):
         -------
         >>> import openxps as xps
         >>> from openmm import unit
-        >>> bounds = xps.bounds.PeriodicBounds(-180, 180, unit.degree)
+        >>> bounds = xps.PeriodicBounds(-180, 180, unit.degree)
         >>> bounds.asQuantity()
         (-180, 180) deg
         """
@@ -154,11 +154,11 @@ class Bounds(Serializable):
         -------
         >>> import openxps as xps
         >>> from openmm import unit
-        >>> periodic = xps.bounds.PeriodicBounds(-180, 180, unit.degree)
+        >>> periodic = xps.PeriodicBounds(-180, 180, unit.degree)
         >>> print(periodic.leptonExpression("x"))
         (scaled_x-floor(scaled_x))*360-180;
         scaled_x=(x+180)/360
-        >>> reflective = xps.bounds.ReflectiveBounds(1, 10, unit.angstrom)
+        >>> reflective = xps.ReflectiveBounds(1, 10, unit.angstrom)
         >>> print(reflective.leptonExpression("y"))
         min(wrapped_y,1-wrapped_y)*18+1;
         wrapped_y=scaled_y-floor(scaled_y);

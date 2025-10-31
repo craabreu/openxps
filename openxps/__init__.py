@@ -4,6 +4,7 @@ Extended Phase-Space Methods with OpenMM
 
 from . import bounds  # noqa: F401
 from ._version import __version__  # noqa: F401
+from .bounds import CircularBounds, NoBounds, PeriodicBounds, ReflectiveBounds
 from .context import ExtendedSpaceContext  # noqa: F401
 from .couplings import (
     CollectiveVariableCoupling,  # noqa: F401
@@ -22,6 +23,10 @@ from .system import ExtendedSpaceSystem  # noqa: F401
 
 __all__ = [
     "bounds",
+    "CircularBounds",
+    "NoBounds",
+    "PeriodicBounds",
+    "ReflectiveBounds",
     "CollectiveVariableCoupling",
     "HarmonicCoupling",
     "InnerProductCoupling",

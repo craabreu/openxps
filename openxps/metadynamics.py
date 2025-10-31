@@ -55,7 +55,7 @@ class ExtendedSpaceBiasVariable(Serializable):
     ...     "phi",
     ...     unit.radian,
     ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-    ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
+    ...     xps.PeriodicBounds(-180, 180, unit.degree)
     ... )
     >>> bias_variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)
     >>> bias_variable.dynamical_variable
@@ -126,7 +126,7 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
-    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     >>> kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2
     >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)
