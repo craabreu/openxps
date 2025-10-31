@@ -19,7 +19,7 @@
     <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="DynamicalVariable" href="DynamicalVariable.html" />
+    <link rel="next" title="Integrators" href="integrators.html" />
     <link rel="prev" title="HarmonicCoupling" href="HarmonicCoupling.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
@@ -41,8 +41,8 @@
   <section id="innerproductcoupling">
 <h1>InnerProductCoupling<a class="headerlink" href="#innerproductcoupling" title="Link to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="openxps.InnerProductCoupling">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">InnerProductCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">forces</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">functions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#InnerProductCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.InnerProductCoupling" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.couplings.InnerProductCoupling">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.couplings.</span></span><span class="sig-name descname"><span class="pre">InnerProductCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">forces</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">functions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/inner_product_coupling.html#InnerProductCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.InnerProductCoupling" title="Link to this definition">¶</a></dt>
 <dd><p>Coupling defined by the inner product of two separable vector-valued functions.</p>
 <p>Use this class if the coupling energy is the inner product of a vector-valued
 function <span class="math notranslate nohighlight">\({\boldsymbol \lambda}\)</span> of the extended dynamical variables
@@ -121,7 +121,7 @@ functions (i.e., <code class="docutils literal notranslate"><span class="pre">ke
 <span class="gp">... </span>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda&quot;</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="o">.</span><span class="n">dimensionless</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">mass</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">bounds</span><span class="o">=</span><span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Reflective</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">dimensionless</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">bounds</span><span class="o">=</span><span class="n">xps</span><span class="o">.</span><span class="n">ReflectiveBounds</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">dimensionless</span><span class="p">),</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">coupling</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">InnerProductCoupling</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="p">[</span><span class="n">force</span><span class="p">],</span>
@@ -140,8 +140,8 @@ functions (i.e., <code class="docutils literal notranslate"><span class="pre">ke
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.InnerProductCoupling.updateExtensionContext">
-<span class="sig-name descname"><span class="pre">updateExtensionContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#InnerProductCoupling.updateExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.InnerProductCoupling.updateExtensionContext" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.couplings.InnerProductCoupling.updateExtensionContext">
+<span class="sig-name descname"><span class="pre">updateExtensionContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/inner_product_coupling.html#InnerProductCoupling.updateExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.InnerProductCoupling.updateExtensionContext" title="Link to this definition">¶</a></dt>
 <dd><p>Update the extension context with the current physical parameters.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -180,24 +180,15 @@ functions (i.e., <code class="docutils literal notranslate"><span class="pre">ke
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
+<li class="toctree-l2"><a class="reference internal" href="main.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">Bounds</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="couplings.html">Couplings</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="CollectiveVariableCoupling.html">CollectiveVariableCoupling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CouplingSum.html">CouplingSum</a></li>
 <li class="toctree-l3"><a class="reference internal" href="HarmonicCoupling.html">HarmonicCoupling</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">InnerProductCoupling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
-<li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="SplitIntegrator.html">SplitIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceBiasVariable.html">ExtendedSpaceBiasVariable</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceMetadynamics.html">ExtendedSpaceMetadynamics</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSimulation.html">ExtendedSpaceSimulation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="bounds.html">bounds module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">Integrators</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>

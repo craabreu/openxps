@@ -18,8 +18,8 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="CouplingSum" href="CouplingSum.html" />
-    <link rel="prev" title="ExtendedSpaceContext" href="ExtendedSpaceContext.html" />
+    <link rel="next" title="HarmonicCoupling" href="HarmonicCoupling.html" />
+    <link rel="prev" title="Couplings" href="couplings.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -40,8 +40,8 @@
   <section id="collectivevariablecoupling">
 <h1>CollectiveVariableCoupling<a class="headerlink" href="#collectivevariablecoupling" title="Link to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="openxps.CollectiveVariableCoupling">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">CollectiveVariableCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collective_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CollectiveVariableCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CollectiveVariableCoupling" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.couplings.CollectiveVariableCoupling">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.couplings.</span></span><span class="sig-name descname"><span class="pre">CollectiveVariableCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">function</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collective_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/collective_variable_coupling.html#CollectiveVariableCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.CollectiveVariableCoupling" title="Link to this definition">¶</a></dt>
 <dd><p>Coupling between dynamical variables and physical collective variables.</p>
 <p>This class uses a <a class="extlink-CVPack reference external" href="https://redesignscience.github.io/cvpack/latest/api/MetaCollectiveVariable.html">cvpack.MetaCollectiveVariable</a> to create a coupling defined by
 a mathematical expression involving physical collective variables and parameters.</p>
@@ -64,7 +64,7 @@ collective variables and parameters.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">math</span><span class="w"> </span><span class="kn">import</span> <span class="n">pi</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">phi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;phi0&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CIRCULAR</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">&quot;phi0&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">CircularBounds</span><span class="p">())</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xps</span><span class="o">.</span><span class="n">CollectiveVariableCoupling</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="sa">f</span><span class="s2">&quot;0.5*kappa*min(delta,</span><span class="si">{</span><span class="mi">2</span><span class="o">*</span><span class="n">pi</span><span class="si">}</span><span class="s2">-delta)^2; delta=abs(phi-phi0)&quot;</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="p">[</span><span class="n">phi</span><span class="p">],</span>
@@ -76,8 +76,8 @@ collective variables and parameters.</p></li>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.CollectiveVariableCoupling.updateExtensionContext">
-<span class="sig-name descname"><span class="pre">updateExtensionContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/coupling.html#CollectiveVariableCoupling.updateExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.CollectiveVariableCoupling.updateExtensionContext" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.couplings.CollectiveVariableCoupling.updateExtensionContext">
+<span class="sig-name descname"><span class="pre">updateExtensionContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/collective_variable_coupling.html#CollectiveVariableCoupling.updateExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.CollectiveVariableCoupling.updateExtensionContext" title="Link to this definition">¶</a></dt>
 <dd><p>Update the extension context with the current physical parameters.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -116,24 +116,15 @@ collective variables and parameters.</p></li>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
+<li class="toctree-l2"><a class="reference internal" href="main.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">Bounds</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="couplings.html">Couplings</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">CollectiveVariableCoupling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CouplingSum.html">CouplingSum</a></li>
 <li class="toctree-l3"><a class="reference internal" href="HarmonicCoupling.html">HarmonicCoupling</a></li>
 <li class="toctree-l3"><a class="reference internal" href="InnerProductCoupling.html">InnerProductCoupling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
-<li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="SplitIntegrator.html">SplitIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceBiasVariable.html">ExtendedSpaceBiasVariable</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceMetadynamics.html">ExtendedSpaceMetadynamics</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSimulation.html">ExtendedSpaceSimulation</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="bounds.html">bounds module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">Integrators</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>

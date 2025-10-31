@@ -1,7 +1,18 @@
-integrators module
-==================
+Integrators
+===========
 
-.. automodule:: openxps.integrators
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. toctree::
+    :titlesonly:
+
+    BAOABIntegrator
+    CSVRIntegrator
+    ForceFirstCSVRIntegrator
+    ForceFirstMassiveGGMTIntegrator
+    MassiveGGMTIntegrator
+    SymmetricCSVRIntegrator
+    SymmetricMassiveGGMTIntegrator
+    VelocityVerletIntegrator
+
+.. testsetup::
+
+    from openxps import *

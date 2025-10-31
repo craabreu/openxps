@@ -18,8 +18,8 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="ExtensionWriter" href="ExtensionWriter.html" />
-    <link rel="prev" title="InnerProductCoupling" href="InnerProductCoupling.html" />
+    <link rel="next" title="ExtendedSpaceBiasVariable" href="ExtendedSpaceBiasVariable.html" />
+    <link rel="prev" title="Core" href="main.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -52,10 +52,11 @@ unit, use <code class="docutils literal notranslate"><span class="pre">openmm.un
 <li><p><strong>mass</strong> (<em>openmm.unit.quantity.Quantity</em>) – The mass assigned to this dynamical variable, whose unit of measurement
 must be compatible with <code class="docutils literal notranslate"><span class="pre">dalton*(nanometer/unit)**2</span></code>, where <code class="docutils literal notranslate"><span class="pre">unit</span></code> is the
 dynamical variable’s own unit (see <code class="docutils literal notranslate"><span class="pre">unit</span></code> above).</p></li>
-<li><p><strong>bounds</strong> (<a class="reference internal" href="bounds.html#openxps.bounds.Bounds" title="openxps.bounds.Bounds"><em>openxps.bounds.Bounds</em></a>) – The boundary condition to be applied to this dynamical variable. It must
-be an instance of <code class="xref py py-class docutils literal notranslate"><span class="pre">Periodic</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">Reflective</span></code>, or <code class="xref py py-class docutils literal notranslate"><span class="pre">NoBounds</span></code>
-(for unbounded variables). If it is not <code class="xref py py-class docutils literal notranslate"><span class="pre">NoBounds</span></code>, its unit of
-measurement must be compatible with the dynamical variable’s own unit.</p></li>
+<li><p><strong>bounds</strong> (<em>openxps.bounds.base.Bounds</em>) – The boundary condition to be applied to this dynamical variable. It must
+be an instance of <code class="xref py py-class docutils literal notranslate"><span class="pre">PeriodicBounds</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">ReflectiveBounds</span></code>, or
+<code class="xref py py-class docutils literal notranslate"><span class="pre">NoBounds</span></code> (for unbounded variables). If it is not
+<code class="xref py py-class docutils literal notranslate"><span class="pre">NoBounds</span></code>, its unit of measurement must be compatible with
+the dynamical variable’s own unit.</p></li>
 </ul>
 </dd>
 </dl>
@@ -67,12 +68,12 @@ measurement must be compatible with the dynamical variable’s own unit.</p></li
 <span class="gp">... </span>    <span class="s2">&quot;psi&quot;</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">PeriodicBounds</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span>
 <span class="go">DynamicalVariable(name=&#39;psi&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span>
-<span class="go">Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)</span>
+<span class="go">PeriodicBounds(lower=-3.14159..., upper=3.14159..., unit=rad)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">dv</span><span class="p">))</span> <span class="o">==</span> <span class="n">dv</span>
 </pre></div>
 </div>
@@ -105,7 +106,7 @@ dynamical variable.</p></li>
 <span class="gp">... </span>    <span class="s2">&quot;psi&quot;</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">PeriodicBounds</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">cv</span> <span class="o">=</span> <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
@@ -136,7 +137,7 @@ of freedom and another variable.</p>
 <span class="gp">... </span>    <span class="s2">&quot;psi0&quot;</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">PeriodicBounds</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">psi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;psi&quot;</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span><span class="o">.</span><span class="n">distanceTo</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
@@ -176,7 +177,7 @@ of freedom and another variable.</p>
 <span class="gp">... </span>    <span class="s2">&quot;psi&quot;</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">PeriodicBounds</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span>
 <span class="go">True</span>
@@ -211,24 +212,21 @@ of freedom and another variable.</p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
-<li class="toctree-l2 current"><a class="reference internal" href="classes.html">Classes</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CollectiveVariableCoupling.html">CollectiveVariableCoupling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="CouplingSum.html">CouplingSum</a></li>
-<li class="toctree-l3"><a class="reference internal" href="HarmonicCoupling.html">HarmonicCoupling</a></li>
-<li class="toctree-l3"><a class="reference internal" href="InnerProductCoupling.html">InnerProductCoupling</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="main.html">Core</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">DynamicalVariable</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
-<li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="SplitIntegrator.html">SplitIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceBiasVariable.html">ExtendedSpaceBiasVariable</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceMetadynamics.html">ExtendedSpaceMetadynamics</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSimulation.html">ExtendedSpaceSimulation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SplitIntegrator.html">SplitIntegrator</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="bounds.html">bounds module</a></li>
-<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="couplings.html">Couplings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">Integrators</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>

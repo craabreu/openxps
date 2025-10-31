@@ -1,0 +1,12 @@
+CSVRIntegrator
+==============
+
+.. currentmodule:: openxps.integrators
+.. autoclass:: CSVRIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: register_with_system
+    .. automethod:: setRandomNumberSeed
+    .. automethod:: step

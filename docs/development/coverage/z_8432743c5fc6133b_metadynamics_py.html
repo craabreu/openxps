@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_8432743c5fc6133b_simulation_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-10-31 14:26 +0000
+            created at 2025-10-31 22:09 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -137,7 +137,7 @@
     <p class="pln"><span class="n"><a id="t55" href="#t55">55</a></span><span class="t"><span class="str">    ...     "phi",</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t56" href="#t56">56</a></span><span class="t"><span class="str">    ...     unit.radian,</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t57" href="#t57">57</a></span><span class="t"><span class="str">    ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t"><span class="str">    ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t58" href="#t58">58</a></span><span class="t"><span class="str">    ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t59" href="#t59">59</a></span><span class="t"><span class="str">    ... )</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t60" href="#t60">60</a></span><span class="t"><span class="str">    >>> bias_variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t"><span class="str">    >>> bias_variable.dynamical_variable</span>&nbsp;</span><span class="r"></span></p>
@@ -208,7 +208,7 @@
     <p class="pln"><span class="n"><a id="t126" href="#t126">126</a></span><span class="t"><span class="str">    >>> model = testsystems.AlanineDipeptideVacuum()</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t127" href="#t127">127</a></span><span class="t"><span class="str">    >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t128" href="#t128">128</a></span><span class="t"><span class="str">    >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t"><span class="str">    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t129" href="#t129">129</a></span><span class="t"><span class="str">    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t130" href="#t130">130</a></span><span class="t"><span class="str">    >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t131" href="#t131">131</a></span><span class="t"><span class="str">    >>> kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t132" href="#t132">132</a></span><span class="t"><span class="str">    >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)</span>&nbsp;</span><span class="r"></span></p>
@@ -300,7 +300,7 @@
             <a class="nav" href="z_8432743c5fc6133b_simulation_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-10-31 14:26 +0000
+            created at 2025-10-31 22:09 +0000
         </p>
     </div>
 </footer>

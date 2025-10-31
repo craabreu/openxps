@@ -1,7 +1,14 @@
-bounds module
-=============
+Bounds
+======
 
-.. automodule:: openxps.bounds
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. toctree::
+    :titlesonly:
+
+    CircularBounds
+    NoBounds
+    PeriodicBounds
+    ReflectiveBounds
+
+.. testsetup::
+
+    from openxps import *

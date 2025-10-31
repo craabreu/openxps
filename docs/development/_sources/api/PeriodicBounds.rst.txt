@@ -1,0 +1,11 @@
+PeriodicBounds
+==============
+
+.. currentmodule:: openxps.bounds
+.. autoclass:: PeriodicBounds
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: leptonExpression
+    .. automethod:: wrap

@@ -1,0 +1,7 @@
+ForceFirstMassiveGGMTIntegrator
+===============================
+
+.. currentmodule:: openxps.integrators
+.. autoclass:: ForceFirstMassiveGGMTIntegrator
+    :member-order: alphabetical
+

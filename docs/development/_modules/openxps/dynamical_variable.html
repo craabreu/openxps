@@ -54,7 +54,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">cvpack.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">Quantity</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">,</span> <span class="n">Periodic</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">,</span> <span class="n">PeriodicBounds</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
 
 
@@ -78,9 +78,10 @@
 <span class="sd">        dynamical variable&#39;s own unit (see ``unit`` above).</span>
 <span class="sd">    bounds</span>
 <span class="sd">        The boundary condition to be applied to this dynamical variable. It must</span>
-<span class="sd">        be an instance of :class:`Periodic`, :class:`Reflective`, or :class:`NoBounds`</span>
-<span class="sd">        (for unbounded variables). If it is not :class:`~openxps.NoBounds`, its unit of</span>
-<span class="sd">        measurement must be compatible with the dynamical variable&#39;s own unit.</span>
+<span class="sd">        be an instance of :class:`PeriodicBounds`, :class:`ReflectiveBounds`, or</span>
+<span class="sd">        :class:`NoBounds` (for unbounded variables). If it is not</span>
+<span class="sd">        :class:`~openxps.NoBounds`, its unit of measurement must be compatible with</span>
+<span class="sd">        the dynamical variable&#39;s own unit.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -91,12 +92,12 @@
 <span class="sd">    ...     &quot;psi&quot;,</span>
 <span class="sd">    ...     unit.radian,</span>
 <span class="sd">    ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
-<span class="sd">    ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>
+<span class="sd">    ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; dv</span>
 <span class="sd">    DynamicalVariable(name=&#39;psi&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
 <span class="sd">    &gt;&gt;&gt; dv.bounds</span>
-<span class="sd">    Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)</span>
+<span class="sd">    PeriodicBounds(lower=-3.14159..., upper=3.14159..., unit=rad)</span>
 <span class="sd">    &gt;&gt;&gt; assert yaml.safe_load(yaml.safe_dump(dv)) == dv</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -171,12 +172,12 @@
 <span class="sd">        ...     &quot;psi&quot;,</span>
 <span class="sd">        ...     unit.radian,</span>
 <span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
-<span class="sd">        ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>
+<span class="sd">        ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; dv.isPeriodic()</span>
 <span class="sd">        True</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">Periodic</span><span class="p">)</span></div>
+        <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">PeriodicBounds</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="DynamicalVariable.createCollectiveVariable">
@@ -210,7 +211,7 @@
 <span class="sd">        ...     &quot;psi&quot;,</span>
 <span class="sd">        ...     unit.radian,</span>
 <span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
-<span class="sd">        ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>
+<span class="sd">        ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; cv = dv.createCollectiveVariable(0)</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -274,7 +275,7 @@
 <span class="sd">        ...     &quot;psi0&quot;,</span>
 <span class="sd">        ...     unit.radian,</span>
 <span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
-<span class="sd">        ...     xps.bounds.Periodic(-180, 180, unit.degree)</span>
+<span class="sd">        ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; psi = cvpack.Torsion(6, 8, 14, 16, name=&quot;psi&quot;)</span>
 <span class="sd">        &gt;&gt;&gt; dv.distanceTo(psi)</span>

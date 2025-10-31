@@ -1,7 +1,7 @@
 InnerProductCoupling
 ====================
 
-.. currentmodule:: openxps
+.. currentmodule:: openxps.couplings
 .. autoclass:: InnerProductCoupling
     :member-order: alphabetical
 

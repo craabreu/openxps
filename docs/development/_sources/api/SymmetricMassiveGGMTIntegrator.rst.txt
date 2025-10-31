@@ -1,0 +1,7 @@
+SymmetricMassiveGGMTIntegrator
+==============================
+
+.. currentmodule:: openxps.integrators
+.. autoclass:: SymmetricMassiveGGMTIntegrator
+    :member-order: alphabetical
+

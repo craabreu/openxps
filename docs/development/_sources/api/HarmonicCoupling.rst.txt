@@ -1,7 +1,7 @@
 HarmonicCoupling
 ================
 
-.. currentmodule:: openxps
+.. currentmodule:: openxps.couplings
 .. autoclass:: HarmonicCoupling
     :member-order: alphabetical
 

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>openxps.bounds.reflective &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=572d9513" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for openxps.bounds.reflective</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Reflective boundary condition.</span>
+
+<span class="sd">.. module:: openxps.bounds.reflective</span>
+<span class="sd">   :platform: Linux, MacOS, Windows</span>
+<span class="sd">   :synopsis: Reflective boundary condition</span>
+
+<span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span>
+
+
+<div class="viewcode-block" id="ReflectiveBounds">
+<a class="viewcode-back" href="../../../api/ReflectiveBounds.html#openxps.bounds.ReflectiveBounds">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ReflectiveBounds</span><span class="p">(</span><span class="n">Bounds</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A reflective boundary condition. The dynamical variable collides elastically</span>
+<span class="sd">    with the upper and lower bounds and is reflected back into the range.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lower</span>
+<span class="sd">        The lower bound for the dynamical variable.</span>
+<span class="sd">    upper</span>
+<span class="sd">        The upper bound for the dynamical variable.</span>
+<span class="sd">    unit</span>
+<span class="sd">        The unity of measurement of the bounds. If the bounds do not have a unit, use</span>
+<span class="sd">        ``dimensionless``.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; bounds = xps.ReflectiveBounds(1, 10, unit.angstrom)</span>
+<span class="sd">    &gt;&gt;&gt; bounds == xps.ReflectiveBounds(0.1, 1, unit.nanometer)</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; print(bounds)</span>
+<span class="sd">    ReflectiveBounds(lower=1, upper=10, unit=A)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__post_init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">upper</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ReflectiveBounds.leptonExpression">
+<a class="viewcode-back" href="../../../api/ReflectiveBounds.html#openxps.bounds.ReflectiveBounds.leptonExpression">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">leptonExpression</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variable</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">scaled</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;scaled_</span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">wrapped</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;wrapped_</span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">shift</span> <span class="o">=</span> <span class="n">deshift</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">shift</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">deshift</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;+</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">shift</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;+</span><span class="si">{</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="n">deshift</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;-</span><span class="si">{</span><span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;min(</span><span class="si">{</span><span class="n">wrapped</span><span class="si">}</span><span class="s2">,1-</span><span class="si">{</span><span class="n">wrapped</span><span class="si">}</span><span class="s2">)*</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="si">}{</span><span class="n">deshift</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;;</span><span class="se">\n</span><span class="si">{</span><span class="n">wrapped</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">scaled</span><span class="si">}</span><span class="s2">-floor(</span><span class="si">{</span><span class="n">scaled</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;;</span><span class="se">\n</span><span class="si">{</span><span class="n">scaled</span><span class="si">}</span><span class="s2">=(</span><span class="si">{</span><span class="n">variable</span><span class="si">}{</span><span class="n">shift</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">period</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ReflectiveBounds.wrap">
+<a class="viewcode-back" href="../../../api/ReflectiveBounds.html#openxps.bounds.ReflectiveBounds.wrap">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">wrap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span>
+        <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">-</span> <span class="n">x</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="n">rate</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">-</span> <span class="n">x</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="o">-</span><span class="n">rate</span></div>
+</div>
+
+
+
+<span class="n">ReflectiveBounds</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.bounds.ReflectiveBounds&quot;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

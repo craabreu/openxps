@@ -1,0 +1,10 @@
+MassiveGGMTIntegrator
+=====================
+
+.. currentmodule:: openxps.integrators
+.. autoclass:: MassiveGGMTIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: register_with_system

@@ -100,7 +100,7 @@
 <span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
-<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.CircularBounds())</span>
 <span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
 <span class="sd">    &gt;&gt;&gt; kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2</span>
 <span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)</span>

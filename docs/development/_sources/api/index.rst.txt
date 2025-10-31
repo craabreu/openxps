@@ -5,6 +5,7 @@ API Reference
     :maxdepth: 2
     :titlesonly:
 
-    classes
-    bounds
-    integrators
+    main.rst
+    bounds.rst
+    couplings.rst
+    integrators.rst

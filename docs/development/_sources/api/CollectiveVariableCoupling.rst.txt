@@ -1,7 +1,7 @@
 CollectiveVariableCoupling
 ==========================
 
-.. currentmodule:: openxps
+.. currentmodule:: openxps.couplings
 .. autoclass:: CollectiveVariableCoupling
     :member-order: alphabetical
 

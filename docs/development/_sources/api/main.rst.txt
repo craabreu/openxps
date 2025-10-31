@@ -1,22 +1,18 @@
-Classes
-=======
+Core
+====
 
 .. toctree::
     :titlesonly:
 
-    ExtendedSpaceContext
-    CollectiveVariableCoupling
-    CouplingSum
-    HarmonicCoupling
-    InnerProductCoupling
     DynamicalVariable
-    ExtensionWriter
-    LockstepIntegrator
-    SplitIntegrator
     ExtendedSpaceBiasVariable
+    ExtendedSpaceContext
     ExtendedSpaceMetadynamics
     ExtendedSpaceSimulation
     ExtendedSpaceSystem
+    ExtensionWriter
+    LockstepIntegrator
+    SplitIntegrator
 
 .. testsetup::
 

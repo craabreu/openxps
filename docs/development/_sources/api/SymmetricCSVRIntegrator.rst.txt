@@ -1,0 +1,7 @@
+SymmetricCSVRIntegrator
+=======================
+
+.. currentmodule:: openxps.integrators
+.. autoclass:: SymmetricCSVRIntegrator
+    :member-order: alphabetical
+

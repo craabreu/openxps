@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>integrators module &#8212; OpenXPS dev  documentation</title>
+    <title>Integrators &#8212; OpenXPS dev  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
@@ -18,8 +18,8 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Bibliography" href="../references.html" />
-    <link rel="prev" title="bounds module" href="bounds.html" />
+    <link rel="next" title="BAOABIntegrator" href="BAOABIntegrator.html" />
+    <link rel="prev" title="InnerProductCoupling" href="InnerProductCoupling.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -37,235 +37,20 @@
 
           <div class="body" role="main">
             
-  <section id="module-openxps.integrators">
-<span id="integrators-module"></span><h1>integrators module<a class="headerlink" href="#module-openxps.integrators" title="Link to this heading">¶</a></h1>
-<p>Integrators for extended phase-space simulations with OpenMM.</p>
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.BAOABIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">BAOABIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/baoab.html#BAOABIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.BAOABIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">IntegratorMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></p>
-<p>A BAOAB integrator.</p>
-<p>This is a symmetric integrator.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature of the heat bath.</p></li>
-<li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient which couples the system to the heat bath.</p></li>
-<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The step size with which to integrate the system.</p></li>
+  <section id="integrators">
+<h1>Integrators<a class="headerlink" href="#integrators" title="Link to this heading">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="BAOABIntegrator.html">BAOABIntegrator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="CSVRIntegrator.html">CSVRIntegrator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ForceFirstCSVRIntegrator.html">ForceFirstCSVRIntegrator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ForceFirstMassiveGGMTIntegrator.html">ForceFirstMassiveGGMTIntegrator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="MassiveGGMTIntegrator.html">MassiveGGMTIntegrator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="SymmetricCSVRIntegrator.html">SymmetricCSVRIntegrator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="SymmetricMassiveGGMTIntegrator.html">SymmetricMassiveGGMTIntegrator</a></li>
+<li class="toctree-l1"><a class="reference internal" href="VelocityVerletIntegrator.html">VelocityVerletIntegrator</a></li>
 </ul>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">BAOABIntegrator</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtosecond</span>
-<span class="gp">... </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span>
-<span class="go">Per-dof variables:</span>
-<span class="go">  x1</span>
-<span class="go">Global variables:</span>
-<span class="go">  a = 0.999000499833375</span>
-<span class="go">  b = 0.044699008184376096</span>
-<span class="go">  kT = 2.494338785445972</span>
-<span class="go">Computation steps:</span>
-<span class="go">   0: allow forces to update the context state</span>
-<span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
-<span class="go">   2: constrain velocities</span>
-<span class="go">   3: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   4: v &lt;- a*v + b*sqrt(kT/m)*gaussian</span>
-<span class="go">   5: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   6: x1 &lt;- x</span>
-<span class="go">   7: constrain positions</span>
-<span class="go">   8: v &lt;- v + (x-x1)/dt + 0.5*dt*f/m</span>
-<span class="go">   9: constrain velocities</span>
-</pre></div>
 </div>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">CSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">splitting</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">IntegratorMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></p>
-<p>Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,
-also known as the Bussi-Donadio-Parrinello thermostat.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
-<li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient.</p></li>
-<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
-<li><p><strong>splitting</strong> (<em>str</em>) – The splitting scheme. A sequence of “V”, “R”, and “O” characters representing
-the velocity boost, position update, and thermostat steps, respectively.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.register_with_system">
-<span class="sig-name descname"><span class="pre">register_with_system</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator.register_with_system"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.register_with_system" title="Link to this definition">¶</a></dt>
-<dd><p>Register the integrator with the system.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.setRandomNumberSeed">
-<span class="sig-name descname"><span class="pre">setRandomNumberSeed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator.setRandomNumberSeed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.setRandomNumberSeed" title="Link to this definition">¶</a></dt>
-<dd><p>This method overrides the <code class="xref py py-class docutils literal notranslate"><span class="pre">openmm.CustomIntegrator</span></code> method to also set
-the seed of the random number generator used to pick numbers from the gamma
-distribution.
-:param seed: The seed to use for the random number generator.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.step">
-<span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">steps</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator.step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.step" title="Link to this definition">¶</a></dt>
-<dd><p>This method overrides the <code class="xref py py-class docutils literal notranslate"><span class="pre">openmm.CustomIntegrator</span></code> method to include the
-efficient computation of the sum of squares of normally distributed random
-numbers.
-:param steps: The number of steps to take.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.ForceFirstCSVRIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">ForceFirstCSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#ForceFirstCSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.ForceFirstCSVRIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#openxps.integrators.CSVRIntegrator" title="openxps.integrators.csvr.CSVRIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSVRIntegrator</span></code></a></p>
-<p>Implements a force-first variant of the Canonical Sampling through Velocity
-Rescaling (CSVR) integrator, also known as the Bussi-Donadio-Parrinello thermostat.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
-<li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient.</p></li>
-<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.ForceFirstMassiveGGMTIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">ForceFirstMassiveGGMTIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeConstant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bathLoops</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#ForceFirstMassiveGGMTIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.ForceFirstMassiveGGMTIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#openxps.integrators.MassiveGGMTIntegrator" title="openxps.integrators.massive_ggmt.MassiveGGMTIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">MassiveGGMTIntegrator</span></code></a></p>
-<p>Implements a force-first, massive variant of the Generalized Gaussian Moment
-Thermostat (GGMT) integrator.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
-<li><p><strong>timeConstant</strong> (<em>Quantity</em>) – The time constant of the thermostat.</p></li>
-<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
-<li><p><strong>bathLoops</strong> (<em>int</em>) – The number of internal loops in the thermostat. A larger number will increase
-the accuracy and stability of the integrator but will also increase the
-computational cost.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">MassiveGGMTIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeConstant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bathLoops</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">splitting</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">IntegratorMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></p>
-<p>Implements a massive variant of the Generalized Gaussian Moment Thermostat (GGMT)
-integrator.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
-<li><p><strong>timeConstant</strong> (<em>Quantity</em>) – The time constant of the thermostat.</p></li>
-<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
-<li><p><strong>bathLoops</strong> (<em>int</em>) – The number of internal loops in the thermostat. A larger number will increase
-the accuracy and stability of the integrator but will also increase the
-computational cost.</p></li>
-<li><p><strong>splitting</strong> (<em>str</em>) – The splitting scheme. A sequence of “V”, “R”, and “O” characters representing
-the velocity boost, position update, and thermostat steps, respectively.</p></li>
-</ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator.register_with_system">
-<span class="sig-name descname"><span class="pre">register_with_system</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator.register_with_system"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.register_with_system" title="Link to this definition">¶</a></dt>
-<dd><p>Register the integrator with the system.</p>
-<dl class="field-list simple">
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.SymmetricCSVRIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">SymmetricCSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#SymmetricCSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.SymmetricCSVRIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#openxps.integrators.CSVRIntegrator" title="openxps.integrators.csvr.CSVRIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">CSVRIntegrator</span></code></a></p>
-<p>Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,
-also known as the Bussi-Donadio-Parrinello thermostat.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
-<li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient.</p></li>
-<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.SymmetricMassiveGGMTIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">SymmetricMassiveGGMTIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeConstant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bathLoops</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#SymmetricMassiveGGMTIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.SymmetricMassiveGGMTIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#openxps.integrators.MassiveGGMTIntegrator" title="openxps.integrators.massive_ggmt.MassiveGGMTIntegrator"><code class="xref py py-class docutils literal notranslate"><span class="pre">MassiveGGMTIntegrator</span></code></a></p>
-<p>Implements a symmetric, massive variant of the Generalized Gaussian Moment
-Thermostat (GGMT) integrator.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
-<li><p><strong>timeConstant</strong> (<em>Quantity</em>) – The time constant of the thermostat.</p></li>
-<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
-<li><p><strong>bathLoops</strong> (<em>int</em>) – The number of internal loops in the thermostat. A larger number will increase
-the accuracy and stability of the integrator but will also increase the
-computational cost.</p></li>
-</ul>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.VelocityVerletIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">VelocityVerletIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/velocity_verlet.html#VelocityVerletIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.VelocityVerletIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">IntegratorMixin</span></code>, <code class="xref py py-class docutils literal notranslate"><span class="pre">CustomIntegrator</span></code></p>
-<p>A velocity Verlet integrator.</p>
-<p>This is a symmetric integrator.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>stepSize</strong> (<em>Quantity</em>) – The step size with which to integrate the system.</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">VelocityVerletIntegrator</span><span class="p">(</span><span class="mi">1</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtosecond</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span>
-<span class="go">Per-dof variables:</span>
-<span class="go">  x1</span>
-<span class="go">Computation steps:</span>
-<span class="go">   0: allow forces to update the context state</span>
-<span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
-<span class="go">   2: x &lt;- x + dt*v</span>
-<span class="go">   3: x1 &lt;- x</span>
-<span class="go">   4: constrain positions</span>
-<span class="go">   5: v &lt;- v + (x-x1)/dt + 0.5*dt*f/m</span>
-<span class="go">   6: constrain velocities</span>
-</pre></div>
-</div>
-</dd></dl>
-
 </section>
 
 
@@ -291,17 +76,18 @@ computational cost.</p></li>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="classes.html">Classes</a></li>
-<li class="toctree-l2"><a class="reference internal" href="bounds.html">bounds module</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">integrators module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.BAOABIntegrator"><code class="docutils literal notranslate"><span class="pre">BAOABIntegrator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.CSVRIntegrator"><code class="docutils literal notranslate"><span class="pre">CSVRIntegrator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.ForceFirstCSVRIntegrator"><code class="docutils literal notranslate"><span class="pre">ForceFirstCSVRIntegrator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.ForceFirstMassiveGGMTIntegrator"><code class="docutils literal notranslate"><span class="pre">ForceFirstMassiveGGMTIntegrator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.MassiveGGMTIntegrator"><code class="docutils literal notranslate"><span class="pre">MassiveGGMTIntegrator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.SymmetricCSVRIntegrator"><code class="docutils literal notranslate"><span class="pre">SymmetricCSVRIntegrator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.SymmetricMassiveGGMTIntegrator"><code class="docutils literal notranslate"><span class="pre">SymmetricMassiveGGMTIntegrator</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.integrators.VelocityVerletIntegrator"><code class="docutils literal notranslate"><span class="pre">VelocityVerletIntegrator</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="main.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="couplings.html">Couplings</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Integrators</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="BAOABIntegrator.html">BAOABIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="CSVRIntegrator.html">CSVRIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ForceFirstCSVRIntegrator.html">ForceFirstCSVRIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ForceFirstMassiveGGMTIntegrator.html">ForceFirstMassiveGGMTIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="MassiveGGMTIntegrator.html">MassiveGGMTIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SymmetricCSVRIntegrator.html">SymmetricCSVRIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SymmetricMassiveGGMTIntegrator.html">SymmetricMassiveGGMTIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="VelocityVerletIntegrator.html">VelocityVerletIntegrator</a></li>
 </ul>
 </li>
 </ul>

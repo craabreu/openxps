@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>openxps.couplings.collective_variable_coupling &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=572d9513" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for openxps.couplings.collective_variable_coupling</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Collective variable coupling.</span>
+
+<span class="sd">.. module:: openxps.couplings.collective_variable_coupling</span>
+<span class="sd">   :platform: Linux, MacOS, Windows</span>
+<span class="sd">   :synopsis: Coupling between dynamical variables and physical collective variables</span>
+
+<span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">openxps.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Coupling</span>
+
+
+<div class="viewcode-block" id="CollectiveVariableCoupling">
+<a class="viewcode-back" href="../../../api/CollectiveVariableCoupling.html#openxps.couplings.CollectiveVariableCoupling">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CollectiveVariableCoupling</span><span class="p">(</span><span class="n">Coupling</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Coupling between dynamical variables and physical collective variables.</span>
+
+<span class="sd">    This class uses a :CVPack:`MetaCollectiveVariable` to create a coupling defined by</span>
+<span class="sd">    a mathematical expression involving physical collective variables and parameters.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    function</span>
+<span class="sd">        A mathematical expression that defines the coupling energy as a function of</span>
+<span class="sd">        collective variables and parameters.</span>
+<span class="sd">    collective_variables</span>
+<span class="sd">        The physical collective variables used in the coupling function.</span>
+<span class="sd">    dynamical_variables</span>
+<span class="sd">        The extended dynamical variables used in the coupling function.</span>
+<span class="sd">    **parameters</span>
+<span class="sd">        Named parameters that appear in the mathematical expression.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from copy import copy</span>
+<span class="sd">    &gt;&gt;&gt; import cvpack</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; from math import pi</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.CircularBounds())</span>
+<span class="sd">    &gt;&gt;&gt; xps.CollectiveVariableCoupling(</span>
+<span class="sd">    ...     f&quot;0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)&quot;,</span>
+<span class="sd">    ...     [phi],</span>
+<span class="sd">    ...     [phi0],</span>
+<span class="sd">    ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    CollectiveVariableCoupling(&quot;0.5*kappa*min(delta,6.28...-delta)^2; ...&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@preprocess_args</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">function</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">collective_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">],</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+        <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">dv_names</span> <span class="o">=</span> <span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">}</span>
+        <span class="n">filtered_params</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">parameters</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dv_names</span><span class="p">}</span>
+
+        <span class="n">force</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">(</span>
+            <span class="n">function</span><span class="p">,</span>
+            <span class="n">collective_variables</span><span class="p">,</span>
+            <span class="n">unit</span><span class="o">=</span><span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;coupling&quot;</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">filtered_params</span><span class="p">,</span>
+            <span class="o">**</span><span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">dv</span><span class="o">.</span><span class="n">unit</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">},</span>
+        <span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">([</span><span class="n">force</span><span class="p">],</span> <span class="n">dynamical_variables</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">(&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getEnergyFunction</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot;)&#39;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_createFlippedForce</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">:</span>
+        <span class="n">force</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">getParameterDefaultValues</span><span class="p">()</span>
+        <span class="n">dvs_to_flip</span> <span class="o">=</span> <span class="p">[</span><span class="n">dv</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span> <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="n">parameters</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dvs_to_flip</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="n">parameters</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="p">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">():</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span> <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">force</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">()}</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">(</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">getEnergyFunction</span><span class="p">(),</span>
+            <span class="p">[</span>
+                <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dv_indices</span><span class="p">[</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+                <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dvs_to_flip</span>
+            <span class="p">],</span>
+            <span class="n">unit</span><span class="o">=</span><span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;coupling&quot;</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">parameters</span><span class="p">,</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="CollectiveVariableCoupling.updateExtensionContext">
+<a class="viewcode-back" href="../../../api/CollectiveVariableCoupling.html#openxps.couplings.CollectiveVariableCoupling.updateExtensionContext">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">updateExtensionContext</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+        <span class="n">extension_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">force</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">collective_variables</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">CustomCVForce_getCollectiveVariableValues</span><span class="p">(</span>
+            <span class="n">force</span><span class="p">,</span> <span class="n">physical_context</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">collective_variables</span><span class="p">):</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">CustomCVForce_getCollectiveVariableName</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+            <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span><span class="n">extension_context</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="n">CollectiveVariableCoupling</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.CollectiveVariableCoupling&quot;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

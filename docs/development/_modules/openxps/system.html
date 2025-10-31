@@ -46,7 +46,7 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.coupling</span><span class="w"> </span><span class="kn">import</span> <span class="n">Coupling</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.couplings</span><span class="w"> </span><span class="kn">import</span> <span class="n">Coupling</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
 
 
@@ -74,7 +74,7 @@
 <span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
-<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.bounds.CIRCULAR)</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.CircularBounds())</span>
 <span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCoupling(</span>
 <span class="sd">    ...     cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;),</span>
 <span class="sd">    ...     phi0,</span>

@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>bounds module &#8212; OpenXPS dev  documentation</title>
+    <title>Bounds &#8212; OpenXPS dev  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
@@ -18,8 +18,8 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="integrators module" href="integrators.html" />
-    <link rel="prev" title="ExtendedSpaceSystem" href="ExtendedSpaceSystem.html" />
+    <link rel="next" title="CircularBounds" href="CircularBounds.html" />
+    <link rel="prev" title="SplitIntegrator" href="SplitIntegrator.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -37,449 +37,16 @@
 
           <div class="body" role="main">
             
-  <section id="module-0">
-<span id="bounds-module"></span><h1>bounds module<a class="headerlink" href="#module-0" title="Link to this heading">¶</a></h1>
-<span class="target" id="module-openxps.bounds"></span><dl class="py class">
-<dt class="sig sig-object py" id="openxps.bounds.Bounds">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.bounds.</span></span><span class="sig-name descname"><span class="pre">Bounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lower</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Bounds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Bounds" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Serializable</span></code></p>
-<p>A boundary condition for a dynamical variable.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>lower</strong> (<em>float</em>) – The lower bound for the dynamical variable.</p></li>
-<li><p><strong>upper</strong> (<em>float</em>) – The upper bound for the dynamical variable.</p></li>
-<li><p><strong>unit</strong> (<em>cvpack.units.units.Unit</em>) – The unity of measurement of the bounds. If the bounds do not have a unit, use
-<code class="docutils literal notranslate"><span class="pre">dimensionless</span></code>.</p></li>
+  <section id="bounds">
+<h1>Bounds<a class="headerlink" href="#bounds" title="Link to this heading">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="CircularBounds.html">CircularBounds</a></li>
+<li class="toctree-l1"><a class="reference internal" href="NoBounds.html">NoBounds</a></li>
+<li class="toctree-l1"><a class="reference internal" href="PeriodicBounds.html">PeriodicBounds</a></li>
+<li class="toctree-l1"><a class="reference internal" href="ReflectiveBounds.html">ReflectiveBounds</a></li>
 </ul>
-</dd>
-</dl>
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.Bounds.asQuantity">
-<span class="sig-name descname"><span class="pre">asQuantity</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Bounds.asQuantity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Bounds.asQuantity" title="Link to this definition">¶</a></dt>
-<dd><p>Return the bounds as a Quantity object.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>The bounds as a Quantity object.</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>Quantity</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">()</span>
-<span class="go">(-180, 180) deg</span>
-</pre></div>
 </div>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.Bounds.convert">
-<span class="sig-name descname"><span class="pre">convert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">unit</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Bounds.convert"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Bounds.convert" title="Link to this definition">¶</a></dt>
-<dd><p>Convert the bounds to a different unit of measurement.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>unit</strong> (<em>Unit</em>) – The new unit of measurement for the bounds.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>The bounds in the new unit of measurement.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#openxps.bounds.Bounds" title="openxps.bounds.Bounds">Bounds</a></p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span>
-<span class="go">Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.Bounds.in_md_units">
-<span class="sig-name descname"><span class="pre">in_md_units</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Bounds.in_md_units"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Bounds.in_md_units" title="Link to this definition">¶</a></dt>
-<dd><p>Return the bounds in the MD unit system.</p>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilocalories_per_mole</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span>
-<span class="go">Periodic(lower=-4.184, upper=4.184, unit=nm**2 Da/(ps**2))</span>
-</pre></div>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#openxps.bounds.Bounds" title="openxps.bounds.Bounds"><em>Bounds</em></a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.Bounds.leptonExpression">
-<span class="sig-name descname"><span class="pre">leptonExpression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Bounds.leptonExpression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Bounds.leptonExpression" title="Link to this definition">¶</a></dt>
-<dd><p>Return a lepton expression representing the transformation from an unwrapped
-variable to a wrapped value under the boundary conditions.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>variable</strong> (<em>str</em>) – The name of the variable in the expression.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A string representing the transformation.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>str</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">periodic</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
-<span class="go">(scaled_x-floor(scaled_x))*360-180;</span>
-<span class="go">scaled_x=(x+180)/360</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">reflective</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Reflective</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">angstrom</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">reflective</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">))</span>
-<span class="go">min(wrapped_y,1-wrapped_y)*18+1;</span>
-<span class="go">wrapped_y=scaled_y-floor(scaled_y);</span>
-<span class="go">scaled_y=(y-1)/18</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="openxps.bounds.Bounds.lower">
-<span class="sig-name descname"><span class="pre">lower</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#openxps.bounds.Bounds.lower" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="openxps.bounds.Bounds.unit">
-<span class="sig-name descname"><span class="pre">unit</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Unit</span></em><a class="headerlink" href="#openxps.bounds.Bounds.unit" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="openxps.bounds.Bounds.upper">
-<span class="sig-name descname"><span class="pre">upper</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">float</span></em><a class="headerlink" href="#openxps.bounds.Bounds.upper" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.Bounds.wrap">
-<span class="sig-name descname"><span class="pre">wrap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Bounds.wrap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Bounds.wrap" title="Link to this definition">¶</a></dt>
-<dd><p>Wrap a value around the bounds and adjust its rate of change.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>value</strong> (<em>float</em>) – The unwrapped value, in the same unit of measurement as the bounds.</p></li>
-<li><p><strong>rate</strong> (<em>float</em>) – The rate of change of the unwrapped value, in the same unit of measurement
-as the bounds divided by a time unit.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>float</em> – The wrapped value, in the same unit of measurement as the bounds.</p></li>
-<li><p><em>float</em> – The adjusted rate of change of the wrapped value, in the same unit of
-measurement as the original rate.</p></li>
-</ul>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tuple[float, float]</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.bounds.NoBounds">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.bounds.</span></span><span class="sig-name descname"><span class="pre">NoBounds</span></span><a class="reference internal" href="../_modules/openxps/bounds.html#NoBounds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.NoBounds" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#openxps.bounds.Bounds" title="openxps.bounds.Bounds"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bounds</span></code></a></p>
-<p>No boundary condition. The dynamical variable is allowed to take any value.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>None</strong> (<em>If it is not</em>)</p></li>
-<li><p><strong>dynamical</strong> (<em>its unit</em><em> of </em><em>measurement must be compatible with the</em>)</p></li>
-<li><p><strong>unit.</strong> (<em>variable's own</em>)</p></li>
-</ul>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span>
-<span class="go">Periodic(lower=-180, upper=180, unit=deg)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">bounds</span><span class="p">))</span> <span class="o">==</span> <span class="n">bounds</span>
-</pre></div>
-</div>
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.NoBounds.in_md_units">
-<span class="sig-name descname"><span class="pre">in_md_units</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#NoBounds.in_md_units"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.NoBounds.in_md_units" title="Link to this definition">¶</a></dt>
-<dd><p>Return the bounds in the MD unit system.</p>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilocalories_per_mole</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span>
-<span class="go">Periodic(lower=-4.184, upper=4.184, unit=nm**2 Da/(ps**2))</span>
-</pre></div>
-</div>
-<dl class="field-list simple">
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><a class="reference internal" href="#openxps.bounds.NoBounds" title="openxps.bounds.NoBounds"><em>NoBounds</em></a></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.NoBounds.leptonExpression">
-<span class="sig-name descname"><span class="pre">leptonExpression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#NoBounds.leptonExpression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.NoBounds.leptonExpression" title="Link to this definition">¶</a></dt>
-<dd><p>Return a lepton expression representing the transformation from an unwrapped
-variable to a wrapped value under the boundary conditions.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>variable</strong> (<em>str</em>) – The name of the variable in the expression.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A string representing the transformation.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>str</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">periodic</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
-<span class="go">(scaled_x-floor(scaled_x))*360-180;</span>
-<span class="go">scaled_x=(x+180)/360</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">reflective</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Reflective</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">angstrom</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">reflective</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">))</span>
-<span class="go">min(wrapped_y,1-wrapped_y)*18+1;</span>
-<span class="go">wrapped_y=scaled_y-floor(scaled_y);</span>
-<span class="go">scaled_y=(y-1)/18</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.NoBounds.wrap">
-<span class="sig-name descname"><span class="pre">wrap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#NoBounds.wrap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.NoBounds.wrap" title="Link to this definition">¶</a></dt>
-<dd><p>Wrap a value around the bounds and adjust its rate of change.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>value</strong> (<em>float</em>) – The unwrapped value, in the same unit of measurement as the bounds.</p></li>
-<li><p><strong>rate</strong> (<em>float</em>) – The rate of change of the unwrapped value, in the same unit of measurement
-as the bounds divided by a time unit.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>float</em> – The wrapped value, in the same unit of measurement as the bounds.</p></li>
-<li><p><em>float</em> – The adjusted rate of change of the wrapped value, in the same unit of
-measurement as the original rate.</p></li>
-</ul>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tuple[float, float]</p>
-</dd>
-</dl>
-</dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.bounds.Periodic">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.bounds.</span></span><span class="sig-name descname"><span class="pre">Periodic</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lower</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Periodic"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Periodic" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#openxps.bounds.Bounds" title="openxps.bounds.Bounds"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bounds</span></code></a></p>
-<p>A periodic boundary condition. The dynamical variable is allowed to wrap
-around the upper and lower bounds.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>lower</strong> (<em>float</em>) – The lower bound for the dynamical variable.</p></li>
-<li><p><strong>upper</strong> (<em>float</em>) – The upper bound for the dynamical variable.</p></li>
-<li><p><strong>unit</strong> (<em>cvpack.units.units.Unit</em>) – The unity of measurement of the bounds. If the bounds do not have a unit, use
-<code class="docutils literal notranslate"><span class="pre">dimensionless</span></code>.</p></li>
-</ul>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span>
-<span class="go">Periodic(lower=-180, upper=180, unit=deg)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">assert</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="n">bounds</span><span class="p">))</span> <span class="o">==</span> <span class="n">bounds</span>
-</pre></div>
-</div>
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.Periodic.leptonExpression">
-<span class="sig-name descname"><span class="pre">leptonExpression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Periodic.leptonExpression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Periodic.leptonExpression" title="Link to this definition">¶</a></dt>
-<dd><p>Return a lepton expression representing the transformation from an unwrapped
-variable to a wrapped value under the boundary conditions.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>variable</strong> (<em>str</em>) – The name of the variable in the expression.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A string representing the transformation.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>str</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">periodic</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
-<span class="go">(scaled_x-floor(scaled_x))*360-180;</span>
-<span class="go">scaled_x=(x+180)/360</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">reflective</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Reflective</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">angstrom</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">reflective</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">))</span>
-<span class="go">min(wrapped_y,1-wrapped_y)*18+1;</span>
-<span class="go">wrapped_y=scaled_y-floor(scaled_y);</span>
-<span class="go">scaled_y=(y-1)/18</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.Periodic.wrap">
-<span class="sig-name descname"><span class="pre">wrap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Periodic.wrap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Periodic.wrap" title="Link to this definition">¶</a></dt>
-<dd><p>Wrap a value around the bounds and adjust its rate of change.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>value</strong> (<em>float</em>) – The unwrapped value, in the same unit of measurement as the bounds.</p></li>
-<li><p><strong>rate</strong> (<em>float</em>) – The rate of change of the unwrapped value, in the same unit of measurement
-as the bounds divided by a time unit.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>float</em> – The wrapped value, in the same unit of measurement as the bounds.</p></li>
-<li><p><em>float</em> – The adjusted rate of change of the wrapped value, in the same unit of
-measurement as the original rate.</p></li>
-</ul>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tuple[float, float]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="openxps.bounds.Periodic.yaml_tag">
-<span class="sig-name descname"><span class="pre">yaml_tag</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'!openxps.bounds.Periodic'</span></em><a class="headerlink" href="#openxps.bounds.Periodic.yaml_tag" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-<dl class="py class">
-<dt class="sig sig-object py" id="openxps.bounds.Reflective">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.bounds.</span></span><span class="sig-name descname"><span class="pre">Reflective</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lower</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Reflective"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Reflective" title="Link to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference internal" href="#openxps.bounds.Bounds" title="openxps.bounds.Bounds"><code class="xref py py-class docutils literal notranslate"><span class="pre">Bounds</span></code></a></p>
-<p>A reflective boundary condition. The dynamical variable collides elastically
-with the upper and lower bounds and is reflected back into the range.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>lower</strong> (<em>float</em>) – The lower bound for the dynamical variable.</p></li>
-<li><p><strong>upper</strong> (<em>float</em>) – The upper bound for the dynamical variable.</p></li>
-<li><p><strong>unit</strong> (<em>cvpack.units.units.Unit</em>) – The unity of measurement of the bounds. If the bounds do not have a unit, use
-<code class="docutils literal notranslate"><span class="pre">dimensionless</span></code>.</p></li>
-</ul>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Reflective</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">angstrom</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">==</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Reflective</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="p">)</span>
-<span class="go">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span>
-<span class="go">Reflective(lower=1, upper=10, unit=A)</span>
-</pre></div>
-</div>
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.Reflective.leptonExpression">
-<span class="sig-name descname"><span class="pre">leptonExpression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Reflective.leptonExpression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Reflective.leptonExpression" title="Link to this definition">¶</a></dt>
-<dd><p>Return a lepton expression representing the transformation from an unwrapped
-variable to a wrapped value under the boundary conditions.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>variable</strong> (<em>str</em>) – The name of the variable in the expression.</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A string representing the transformation.</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>str</p>
-</dd>
-</dl>
-<p class="rubric">Example</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Periodic</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">periodic</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
-<span class="go">(scaled_x-floor(scaled_x))*360-180;</span>
-<span class="go">scaled_x=(x+180)/360</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">reflective</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">Reflective</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">angstrom</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">reflective</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;y&quot;</span><span class="p">))</span>
-<span class="go">min(wrapped_y,1-wrapped_y)*18+1;</span>
-<span class="go">wrapped_y=scaled_y-floor(scaled_y);</span>
-<span class="go">scaled_y=(y-1)/18</span>
-</pre></div>
-</div>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="openxps.bounds.Reflective.wrap">
-<span class="sig-name descname"><span class="pre">wrap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rate</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds.html#Reflective.wrap"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.Reflective.wrap" title="Link to this definition">¶</a></dt>
-<dd><p>Wrap a value around the bounds and adjust its rate of change.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>value</strong> (<em>float</em>) – The unwrapped value, in the same unit of measurement as the bounds.</p></li>
-<li><p><strong>rate</strong> (<em>float</em>) – The rate of change of the unwrapped value, in the same unit of measurement
-as the bounds divided by a time unit.</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>float</em> – The wrapped value, in the same unit of measurement as the bounds.</p></li>
-<li><p><em>float</em> – The adjusted rate of change of the wrapped value, in the same unit of
-measurement as the original rate.</p></li>
-</ul>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>tuple[float, float]</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py attribute">
-<dt class="sig sig-object py" id="openxps.bounds.Reflective.yaml_tag">
-<span class="sig-name descname"><span class="pre">yaml_tag</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'!openxps.bounds.Reflective'</span></em><a class="headerlink" href="#openxps.bounds.Reflective.yaml_tag" title="Link to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
 </section>
 
 
@@ -505,15 +72,16 @@ measurement as the original rate.</p></li>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="classes.html">Classes</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">bounds module</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.bounds.Bounds"><code class="docutils literal notranslate"><span class="pre">Bounds</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.bounds.NoBounds"><code class="docutils literal notranslate"><span class="pre">NoBounds</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.bounds.Periodic"><code class="docutils literal notranslate"><span class="pre">Periodic</span></code></a></li>
-<li class="toctree-l3"><a class="reference internal" href="#openxps.bounds.Reflective"><code class="docutils literal notranslate"><span class="pre">Reflective</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="main.html">Core</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Bounds</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="CircularBounds.html">CircularBounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="NoBounds.html">NoBounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="PeriodicBounds.html">PeriodicBounds</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ReflectiveBounds.html">ReflectiveBounds</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="integrators.html">integrators module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="couplings.html">Couplings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">Integrators</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>

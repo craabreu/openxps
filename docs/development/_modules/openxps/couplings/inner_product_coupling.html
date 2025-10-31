@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>openxps.couplings.inner_product_coupling &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=572d9513" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for openxps.couplings.inner_product_coupling</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Inner product coupling.</span>
+
+<span class="sd">.. module:: openxps.couplings.inner_product_coupling</span>
+<span class="sd">   :platform: Linux, MacOS, Windows</span>
+<span class="sd">   :synopsis: The inner product of two separable vector-valued functions</span>
+
+<span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">openxps.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Function</span><span class="p">,</span> <span class="n">preprocess_args</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">..dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Coupling</span>
+
+
+<div class="viewcode-block" id="InnerProductCoupling">
+<a class="viewcode-back" href="../../../api/InnerProductCoupling.html#openxps.couplings.InnerProductCoupling">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">InnerProductCoupling</span><span class="p">(</span><span class="n">Coupling</span><span class="p">):</span>
+<span class="w">    </span><span class="sa">r</span><span class="sd">&quot;&quot;&quot;Coupling defined by the inner product of two separable vector-valued functions.</span>
+
+<span class="sd">    Use this class if the coupling energy is the inner product of a vector-valued</span>
+<span class="sd">    function :math:`{\boldsymbol \lambda}` of the extended dynamical variables</span>
+<span class="sd">    :math:`{\bf s}` and a vector-valued function :math:`{\bf u}` of the physical</span>
+<span class="sd">    coordinates :math:`{\bf r}`, i.e.,</span>
+
+<span class="sd">    .. math::</span>
+
+<span class="sd">        U = {\boldsymbol \lambda}({\bf s}) \cdot {\bf u}({\bf r})</span>
+<span class="sd">          = \sum_{i=1}^n \lambda_i({\bf s}) u_i({\bf r})</span>
+
+<span class="sd">    where :math:`n` is the dimensionality of the vector-valued functions.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    forces</span>
+<span class="sd">        A sequence of :OpenMM:`Force` objects whose sum depends linearly on a vector of</span>
+<span class="sd">        :math:`n` global context parameters.</span>
+<span class="sd">    dynamical_variables</span>
+<span class="sd">        The dynamical variables of the extended phase-space system.</span>
+<span class="sd">    functions</span>
+<span class="sd">        A dictionary defining global context parameters (keys) as mathematical functions</span>
+<span class="sd">        (values) of the dynamical variables. It is not necessary to include identity</span>
+<span class="sd">        functions (i.e., ``key=value``).</span>
+<span class="sd">    **parameters</span>
+<span class="sd">        Named parameters that appear in the mathematical expressions.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; from copy import copy</span>
+<span class="sd">    &gt;&gt;&gt; from collections import namedtuple</span>
+<span class="sd">    &gt;&gt;&gt; import cvpack</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; from math import pi</span>
+<span class="sd">    &gt;&gt;&gt; import openmm as mm</span>
+<span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
+<span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
+
+<span class="sd">    A function to remove Coulomb interactions:</span>
+
+<span class="sd">    &gt;&gt;&gt; Parameters = namedtuple(</span>
+<span class="sd">    ...     &quot;Parameters&quot;,</span>
+<span class="sd">    ...     [&quot;index&quot;, &quot;charge&quot;, &quot;sigma&quot;, &quot;epsilon&quot;],</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; def remove_coulomb_interaction(</span>
+<span class="sd">    ...     force: mm.NonbondedForce, p1: Parameters, p2: Parameters</span>
+<span class="sd">    ... ) -&gt; None:</span>
+<span class="sd">    ...     force.addException(</span>
+<span class="sd">    ...         p1.index,</span>
+<span class="sd">    ...         p2.index,</span>
+<span class="sd">    ...         0.0,</span>
+<span class="sd">    ...         (p1.sigma + p2.sigma)/2,</span>
+<span class="sd">    ...         (p1.epsilon * p2.epsilon).sqrt(),</span>
+<span class="sd">    ...     )</span>
+
+<span class="sd">    Remove carbonyl oxygen &lt;=&gt; amide hydrogen interactions:</span>
+
+<span class="sd">    &gt;&gt;&gt; nbforce = next(</span>
+<span class="sd">    ...     f for f in model.system.getForces()</span>
+<span class="sd">    ...     if isinstance(f, mm.NonbondedForce)</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; O1 = Parameters(5, *nbforce.getParticleParameters(5))</span>
+<span class="sd">    &gt;&gt;&gt; H1 = Parameters(7, *nbforce.getParticleParameters(7))</span>
+<span class="sd">    &gt;&gt;&gt; O2 = Parameters(15, *nbforce.getParticleParameters(15))</span>
+<span class="sd">    &gt;&gt;&gt; H2 = Parameters(17, *nbforce.getParticleParameters(17))</span>
+<span class="sd">    &gt;&gt;&gt; remove_coulomb_interaction(nbforce, O1, H2)</span>
+<span class="sd">    &gt;&gt;&gt; remove_coulomb_interaction(nbforce, O2, H1)</span>
+
+<span class="sd">    Add scaled Coulomb interactions:</span>
+
+<span class="sd">    &gt;&gt;&gt; force = mm.CustomBondForce(f&quot;scaling*chargeProd/r&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; _ = force.addGlobalParameter(&quot;scaling&quot;, 1.0)</span>
+<span class="sd">    &gt;&gt;&gt; _ = force.addEnergyParameterDerivative(&quot;scaling&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; _ = force.addPerBondParameter(&quot;chargeProd&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; _ = force.addBond(O1.index, H2.index, [O1.charge*H2.charge])</span>
+<span class="sd">    &gt;&gt;&gt; _ = force.addBond(O2.index, H1.index, [O2.charge*H1.charge])</span>
+
+<span class="sd">    Create a coupling between the dynamical variable and the nonbonded force:</span>
+
+<span class="sd">    &gt;&gt;&gt; lambda_dv = xps.DynamicalVariable(</span>
+<span class="sd">    ...     name=&quot;lambda&quot;,</span>
+<span class="sd">    ...     unit=unit.dimensionless,</span>
+<span class="sd">    ...     mass=1.0 * unit.dalton * unit.nanometer**2,</span>
+<span class="sd">    ...     bounds=xps.ReflectiveBounds(0.0, 1.0, unit.dimensionless),</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; coupling = xps.InnerProductCoupling(</span>
+<span class="sd">    ...     [force],</span>
+<span class="sd">    ...     [lambda_dv],</span>
+<span class="sd">    ...     functions={&quot;scaling&quot;: &quot;(1-cos(alpha*lambda))/2&quot;},</span>
+<span class="sd">    ...     alpha=pi*unit.radian,</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; context = xps.ExtendedSpaceContext(</span>
+<span class="sd">    ...     xps.ExtendedSpaceSystem(model.system, coupling),</span>
+<span class="sd">    ...     xps.LockstepIntegrator(mm.VerletIntegrator(1.0 * mmunit.femtosecond)),</span>
+<span class="sd">    ...     mm.Platform.getPlatformByName(&quot;Reference&quot;),</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; context.setPositions(model.positions)</span>
+<span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableValues([1.0])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@preprocess_args</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">forces</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Force</span><span class="p">],</span>
+        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterable</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
+        <span class="n">functions</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">forces</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">(</span>
+                <span class="n">force</span><span class="p">,</span>
+                <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">force</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span>
+            <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">)</span>
+            <span class="k">else</span> <span class="n">force</span>
+            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">forces</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">Function</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">expression</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">expression</span> <span class="ow">in</span> <span class="p">(</span><span class="n">functions</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span> <span class="o">=</span> <span class="n">parameters</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span> <span class="n">dynamical_variables</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getDynamicParameters</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">]:</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">()</span>
+        <span class="n">state</span><span class="p">[</span><span class="s2">&quot;functions&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span>
+        <span class="n">state</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span>
+        <span class="k">return</span> <span class="n">state</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;functions&quot;</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__setstate__</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getDynamicParameters</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_getDynamicParameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="n">all_force_parameters</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">force</span><span class="o">.</span><span class="n">getGlobalParameterName</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span>
+            <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumGlobalParameters</span><span class="p">())</span>
+        <span class="p">}</span>
+        <span class="n">function_names</span> <span class="o">=</span> <span class="p">{</span><span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span><span class="p">}</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span><span class="p">:</span>
+            <span class="n">function_variables</span> <span class="o">=</span> <span class="nb">set</span><span class="o">.</span><span class="n">union</span><span class="p">(</span>
+                <span class="o">*</span><span class="p">(</span><span class="n">fn</span><span class="o">.</span><span class="n">getVariables</span><span class="p">()</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span><span class="p">),</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">function_variables</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">missing</span> <span class="o">:=</span> <span class="n">function_names</span> <span class="o">-</span> <span class="n">all_force_parameters</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;These functions are not global parameters in the provided forces: &quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">all_dvs</span> <span class="o">=</span> <span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">functions_missing_dvs</span> <span class="o">:=</span> <span class="p">[</span>
+            <span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">fn</span><span class="o">.</span><span class="n">getVariables</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">all_dvs</span><span class="p">)</span>
+        <span class="p">]:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;These functions do not depend on any dynamical variables: &quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">functions_missing_dvs</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">dvs_in_force_parameters</span> <span class="o">=</span> <span class="n">all_dvs</span> <span class="o">&amp;</span> <span class="n">all_force_parameters</span>
+        <span class="n">dvs_in_function_variables</span> <span class="o">=</span> <span class="n">all_dvs</span> <span class="o">&amp;</span> <span class="n">function_variables</span>
+
+        <span class="k">if</span> <span class="n">dvs_in_both</span> <span class="o">:=</span> <span class="n">dvs_in_function_variables</span> <span class="o">&amp;</span> <span class="n">dvs_in_force_parameters</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;These dynamical variables are both function variables and global &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;context parameters: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dvs_in_both</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">dvs_in_neither</span> <span class="o">:=</span> <span class="n">all_dvs</span> <span class="o">-</span> <span class="p">(</span>
+            <span class="n">dvs_in_function_variables</span> <span class="o">|</span> <span class="n">dvs_in_force_parameters</span>
+        <span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;These dynamical variables are neither function variables nor global &quot;</span>
+                <span class="s2">&quot;context parameters: &quot;</span> <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dvs_in_neither</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">dynamic_parameters</span> <span class="o">=</span> <span class="n">dvs_in_force_parameters</span> <span class="o">|</span> <span class="n">function_names</span>
+        <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">:</span>
+            <span class="n">force_parameters</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">force</span><span class="o">.</span><span class="n">getGlobalParameterName</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumGlobalParameters</span><span class="p">())</span>
+            <span class="p">}</span>
+            <span class="n">has_derivatives</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">force</span><span class="o">.</span><span class="n">getEnergyParameterDerivativeName</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumEnergyParameterDerivatives</span><span class="p">())</span>
+            <span class="p">}</span>
+            <span class="k">if</span> <span class="n">missing</span> <span class="o">:=</span> <span class="n">force_parameters</span> <span class="o">&amp;</span> <span class="n">dynamic_parameters</span> <span class="o">-</span> <span class="n">has_derivatives</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;The following parameters require a derivative and are present in &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;force </span><span class="si">{</span><span class="n">force</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2">, but no derivative was requested: &quot;</span>
+                    <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="n">dynamic_parameters</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;derivative_with_respect_to_&quot;</span> <span class="o">+</span> <span class="n">parameter</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_createFlippedForce</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">:</span>
+        <span class="n">flipped_force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">(</span>
+            <span class="s2">&quot;+&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">*</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">all_dvs</span> <span class="o">=</span> <span class="p">[</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
+            <span class="n">flipped_force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span><span class="p">:</span>
+            <span class="n">flipped_force</span><span class="o">.</span><span class="n">addCollectiveVariable</span><span class="p">(</span>
+                <span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span> <span class="n">fn</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">all_dvs</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
+                <span class="n">flipped_force</span><span class="o">.</span><span class="n">addCollectiveVariable</span><span class="p">(</span>
+                    <span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dv_indices</span><span class="p">[</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+                <span class="p">)</span>
+        <span class="k">return</span> <span class="n">flipped_force</span>
+
+<div class="viewcode-block" id="InnerProductCoupling.updateExtensionContext">
+<a class="viewcode-back" href="../../../api/InnerProductCoupling.html#openxps.couplings.InnerProductCoupling.updateExtensionContext">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">updateExtensionContext</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+        <span class="n">extension_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_getState</span><span class="p">(</span><span class="n">physical_context</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">ParameterDerivatives</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State_getEnergyParameterDerivatives</span><span class="p">(</span><span class="n">state</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
+                <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span>
+                    <span class="n">extension_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">value</span>
+                <span class="p">)</span></div>
+</div>
+
+
+
+<span class="n">InnerProductCoupling</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.InnerProductCoupling&quot;</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
