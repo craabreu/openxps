@@ -44,18 +44,11 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
-
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">..dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.mixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span>
-
-<span class="n">SplittingScheme</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">TypeAlias</span> <span class="o">=</span> <span class="n">t</span><span class="o">.</span><span class="n">Literal</span><span class="p">[</span><span class="s2">&quot;VROR&quot;</span><span class="p">,</span> <span class="s2">&quot;VRORV&quot;</span><span class="p">]</span>
-<span class="n">CSVR_FORCE_FIRST</span><span class="p">:</span> <span class="n">SplittingScheme</span> <span class="o">=</span> <span class="s2">&quot;VROR&quot;</span>
-<span class="n">CSVR_SYMMETRIC</span><span class="p">:</span> <span class="n">SplittingScheme</span> <span class="o">=</span> <span class="s2">&quot;VRORV&quot;</span>
 
 
 <div class="viewcode-block" id="CSVRIntegrator">
@@ -73,11 +66,9 @@
 <span class="sd">        The friction coefficient.</span>
 <span class="sd">    stepSize</span>
 <span class="sd">        The integration step size.</span>
-<span class="sd">    numDOFs: int</span>
-<span class="sd">        The number of degrees of freedom in the system.</span>
 <span class="sd">    splitting</span>
-<span class="sd">        The splitting scheme. Valid options are ``CSVR_FORCE_FIRST`` and</span>
-<span class="sd">        ``CSVR_SYMMETRIC``.</span>
+<span class="sd">        The splitting scheme. A sequence of &quot;V&quot;, &quot;R&quot;, and &quot;O&quot; characters representing</span>
+<span class="sd">        the velocity boost, position update, and thermostat steps, respectively.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -85,11 +76,12 @@
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">numDOFs</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">splitting</span><span class="p">:</span> <span class="n">SplittingScheme</span><span class="p">,</span>
+        <span class="n">splitting</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">splitting</span><span class="p">)</span> <span class="o">!=</span> <span class="p">{</span><span class="s2">&quot;V&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;O&quot;</span><span class="p">}:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid splitting scheme: </span><span class="si">{</span><span class="n">splitting</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">numDOFs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_global_variables</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addUpdateContextState</span><span class="p">()</span>
@@ -102,8 +94,6 @@
                 <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="n">timestep</span><span class="p">)</span>
             <span class="k">elif</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;O&quot;</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">_add_rescaling</span><span class="p">(</span><span class="n">timestep</span><span class="p">)</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Valid splitting scheme letters are R, V, and O&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_global_variables</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span>
@@ -140,6 +130,12 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">sumRsq</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="n">num_steps</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="k">return</span> <span class="n">sumRsq</span>
+
+<div class="viewcode-block" id="CSVRIntegrator.register_with_system">
+<a class="viewcode-back" href="../../../api/integrators.html#openxps.integrators.CSVRIntegrator.register_with_system">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">register_with_system</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">IntegratorMixin</span><span class="o">.</span><span class="n">countDegreesOfFreedom</span><span class="p">(</span><span class="n">system</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="CSVRIntegrator.setRandomNumberSeed">
 <a class="viewcode-back" href="../../../api/integrators.html#openxps.integrators.CSVRIntegrator.setRandomNumberSeed">[docs]</a>
@@ -183,9 +179,6 @@
 <span class="sd">    Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,</span>
 <span class="sd">    also known as the Bussi-Donadio-Parrinello thermostat.</span>
 
-<span class="sd">    .. note::</span>
-<span class="sd">        Either a system or a sequence of dynamical variables must be provided.</span>
-
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    temperature</span>
@@ -194,15 +187,6 @@
 <span class="sd">        The friction coefficient.</span>
 <span class="sd">    stepSize</span>
 <span class="sd">        The integration step size.</span>
-
-<span class="sd">    Keyword Arguments</span>
-<span class="sd">    -----------------</span>
-<span class="sd">    physical_system</span>
-<span class="sd">        The physical :OpenMM:`System` to be used in the XPS simulation, or `None` if</span>
-<span class="sd">        this integrator is intended to be used for an extension system.</span>
-<span class="sd">    dynamical_variables</span>
-<span class="sd">        A sequence of :class:`DynamicalVariable` objects, or `None` if this integrator</span>
-<span class="sd">        is intended to be used for a physical system.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -210,17 +194,8 @@
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="o">*</span><span class="p">,</span>
-        <span class="n">physical_system</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">temperature</span><span class="p">,</span>
-            <span class="n">frictionCoeff</span><span class="p">,</span>
-            <span class="n">stepSize</span><span class="p">,</span>
-            <span class="n">IntegratorMixin</span><span class="o">.</span><span class="n">countDegreesOfFreedom</span><span class="p">(</span><span class="n">physical_system</span><span class="p">,</span> <span class="n">dynamical_variables</span><span class="p">),</span>
-            <span class="n">CSVR_SYMMETRIC</span><span class="p">,</span>
-        <span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">,</span> <span class="n">stepSize</span><span class="p">,</span> <span class="s2">&quot;VRORV&quot;</span><span class="p">)</span></div>
 
 
 
@@ -231,9 +206,6 @@
 <span class="sd">    Implements a force-first variant of the Canonical Sampling through Velocity</span>
 <span class="sd">    Rescaling (CSVR) integrator, also known as the Bussi-Donadio-Parrinello thermostat.</span>
 
-<span class="sd">    .. note::</span>
-<span class="sd">        Either a system or a sequence of dynamical variables must be provided.</span>
-
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    temperature</span>
@@ -242,15 +214,6 @@
 <span class="sd">        The friction coefficient.</span>
 <span class="sd">    stepSize</span>
 <span class="sd">        The integration step size.</span>
-
-<span class="sd">    Keyword Arguments</span>
-<span class="sd">    -----------------</span>
-<span class="sd">    physical_system</span>
-<span class="sd">        The physical :OpenMM:`System` to be used in the XPS simulation, or `None` if</span>
-<span class="sd">        this integrator is intended to be used for an extension system.</span>
-<span class="sd">    dynamical_variables</span>
-<span class="sd">        A sequence of :class:`DynamicalVariable` objects, or `None` if this integrator</span>
-<span class="sd">        is intended to be used for a physical system.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -258,17 +221,8 @@
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="o">*</span><span class="p">,</span>
-        <span class="n">physical_system</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
-            <span class="n">temperature</span><span class="p">,</span>
-            <span class="n">frictionCoeff</span><span class="p">,</span>
-            <span class="n">stepSize</span><span class="p">,</span>
-            <span class="n">IntegratorMixin</span><span class="o">.</span><span class="n">countDegreesOfFreedom</span><span class="p">(</span><span class="n">physical_system</span><span class="p">,</span> <span class="n">dynamical_variables</span><span class="p">),</span>
-            <span class="n">CSVR_FORCE_FIRST</span><span class="p">,</span>
-        <span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">,</span> <span class="n">stepSize</span><span class="p">,</span> <span class="s2">&quot;VROR&quot;</span><span class="p">)</span></div>
 
 </pre></div>
 

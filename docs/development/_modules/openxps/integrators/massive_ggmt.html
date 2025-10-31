@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>openxps.integrators.massive_ggmt &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=572d9513" />
+    <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for openxps.integrators.massive_ggmt</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">.. module:: openxps.integrators.massive_ggmt</span>
+<span class="sd">   :platform: Linux, MacOS, Windows</span>
+<span class="sd">   :synopsis: Massive Generalized Gaussian Moment Thermostat (GGMT) integrator.</span>
+
+<span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.mixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span>
+
+
+<div class="viewcode-block" id="MassiveGGMTIntegrator">
+<a class="viewcode-back" href="../../../api/integrators.html#openxps.integrators.MassiveGGMTIntegrator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">MassiveGGMTIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Implements a massive variant of the Generalized Gaussian Moment Thermostat (GGMT)</span>
+<span class="sd">    integrator.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    temperature</span>
+<span class="sd">        The temperature.</span>
+<span class="sd">    timeConstant</span>
+<span class="sd">        The time constant of the thermostat.</span>
+<span class="sd">    stepSize</span>
+<span class="sd">        The integration step size.</span>
+<span class="sd">    bathLoops</span>
+<span class="sd">        The number of internal loops in the thermostat. A larger number will increase</span>
+<span class="sd">        the accuracy and stability of the integrator but will also increase the</span>
+<span class="sd">        computational cost.</span>
+<span class="sd">    splitting</span>
+<span class="sd">        The splitting scheme. A sequence of &quot;V&quot;, &quot;R&quot;, and &quot;O&quot; characters representing</span>
+<span class="sd">        the velocity boost, position update, and thermostat steps, respectively.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">timeConstant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">splitting</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">splitting</span><span class="p">)</span> <span class="o">!=</span> <span class="p">{</span><span class="s2">&quot;V&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;O&quot;</span><span class="p">}:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid splitting scheme: </span><span class="si">{</span><span class="n">splitting</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">bathLoops</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of bath loops must be at least 1.&quot;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_variables</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">timeConstant</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addUpdateContextState</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="n">splitting</span><span class="p">:</span>
+            <span class="n">fraction</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">splitting</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">letter</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;V&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="n">fraction</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;R&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="n">fraction</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;O&quot;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_add_thermostat</span><span class="p">(</span><span class="n">fraction</span><span class="p">,</span> <span class="n">bathLoops</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_variables</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="n">timeConstant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">kT</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="n">temperature</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="n">kT</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;Q1&quot;</span><span class="p">,</span> <span class="n">kT</span> <span class="o">*</span> <span class="n">timeConstant</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;Q2&quot;</span><span class="p">,</span> <span class="mi">8</span> <span class="o">/</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">kT</span><span class="o">**</span><span class="mi">3</span> <span class="o">*</span> <span class="n">timeConstant</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;v1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;v2&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_translation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;x + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*v&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*f/m&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainVelocities</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_v1_v2</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v1&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(m*v^2 - kT)/Q1&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v2&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v2 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*((m*v^2)^2/3 - kT^2)/Q2&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_v</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
+            <span class="s2">&quot;v&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;v*exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(v1+kT*v2))/sqrt(1+</span><span class="si">{</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*m*v^2*v2/3)&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_thermostat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">subfraction</span> <span class="o">=</span> <span class="n">fraction</span> <span class="o">/</span> <span class="n">bathLoops</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_v1_v2</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">subfraction</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">bathLoops</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_v</span><span class="p">(</span><span class="n">subfraction</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_v1_v2</span><span class="p">(</span><span class="n">subfraction</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_v</span><span class="p">(</span><span class="n">subfraction</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_v1_v2</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">subfraction</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MassiveGGMTIntegrator.register_with_system">
+<a class="viewcode-back" href="../../../api/integrators.html#openxps.integrators.MassiveGGMTIntegrator.register_with_system">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">register_with_system</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Massive GGMT integrators do not support constraints.&quot;</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="SymmetricMassiveGGMTIntegrator">
+<a class="viewcode-back" href="../../../api/integrators.html#openxps.integrators.SymmetricMassiveGGMTIntegrator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SymmetricMassiveGGMTIntegrator</span><span class="p">(</span><span class="n">MassiveGGMTIntegrator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Implements a symmetric, massive variant of the Generalized Gaussian Moment</span>
+<span class="sd">    Thermostat (GGMT) integrator.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    temperature</span>
+<span class="sd">        The temperature.</span>
+<span class="sd">    timeConstant</span>
+<span class="sd">        The time constant of the thermostat.</span>
+<span class="sd">    stepSize</span>
+<span class="sd">        The integration step size.</span>
+<span class="sd">    bathLoops</span>
+<span class="sd">        The number of internal loops in the thermostat. A larger number will increase</span>
+<span class="sd">        the accuracy and stability of the integrator but will also increase the</span>
+<span class="sd">        computational cost.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">timeConstant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">timeConstant</span><span class="p">,</span> <span class="n">stepSize</span><span class="p">,</span> <span class="n">bathLoops</span><span class="p">,</span> <span class="s2">&quot;VRORV&quot;</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ForceFirstMassiveGGMTIntegrator">
+<a class="viewcode-back" href="../../../api/integrators.html#openxps.integrators.ForceFirstMassiveGGMTIntegrator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ForceFirstMassiveGGMTIntegrator</span><span class="p">(</span><span class="n">MassiveGGMTIntegrator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Implements a force-first, massive variant of the Generalized Gaussian Moment</span>
+<span class="sd">    Thermostat (GGMT) integrator.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    temperature</span>
+<span class="sd">        The temperature.</span>
+<span class="sd">    timeConstant</span>
+<span class="sd">        The time constant of the thermostat.</span>
+<span class="sd">    stepSize</span>
+<span class="sd">        The integration step size.</span>
+<span class="sd">    bathLoops</span>
+<span class="sd">        The number of internal loops in the thermostat. A larger number will increase</span>
+<span class="sd">        the accuracy and stability of the integrator but will also increase the</span>
+<span class="sd">        computational cost.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">timeConstant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">timeConstant</span><span class="p">,</span> <span class="n">stepSize</span><span class="p">,</span> <span class="n">bathLoops</span><span class="p">,</span> <span class="s2">&quot;VROR&quot;</span><span class="p">)</span></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../../../index.html">Table of Contents</a></h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api/index.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

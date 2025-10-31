@@ -55,6 +55,7 @@
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.</span><span class="w"> </span><span class="kn">import</span> <span class="n">integrators</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.coupling</span><span class="w"> </span><span class="kn">import</span> <span class="n">Coupling</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.integrators.mixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">STRING_SEPARATOR</span>
 
 <span class="c1">#: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the</span>
@@ -65,6 +66,7 @@
     <span class="n">mm</span><span class="o">.</span><span class="n">LangevinMiddleIntegrator</span><span class="p">,</span>
     <span class="n">mm</span><span class="o">.</span><span class="n">NoseHooverIntegrator</span><span class="p">,</span>
     <span class="n">integrators</span><span class="o">.</span><span class="n">ForceFirstCSVRIntegrator</span><span class="p">,</span>
+    <span class="n">integrators</span><span class="o">.</span><span class="n">ForceFirstMassiveGGMTIntegrator</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="c1">#: Tuple of OpenMM integrator classes known to be symmetric in the sense of operator</span>
@@ -73,6 +75,7 @@
     <span class="n">integrators</span><span class="o">.</span><span class="n">VelocityVerletIntegrator</span><span class="p">,</span>
     <span class="n">integrators</span><span class="o">.</span><span class="n">BAOABIntegrator</span><span class="p">,</span>
     <span class="n">integrators</span><span class="o">.</span><span class="n">SymmetricCSVRIntegrator</span><span class="p">,</span>
+    <span class="n">integrators</span><span class="o">.</span><span class="n">SymmetricMassiveGGMTIntegrator</span><span class="p">,</span>
 <span class="p">)</span>
 
 
@@ -162,6 +165,12 @@
 <span class="sd">        coupling</span>
 <span class="sd">            The potential that couples the physical and dynamical variables.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">integrator</span><span class="p">,</span> <span class="n">context</span> <span class="ow">in</span> <span class="p">(</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span><span class="p">,</span> <span class="n">physical_context</span><span class="p">),</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span><span class="p">,</span> <span class="n">extension_context</span><span class="p">),</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">IntegratorMixin</span><span class="p">):</span>
+                <span class="n">integrator</span><span class="o">.</span><span class="n">register_with_system</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span> <span class="o">=</span> <span class="n">physical_context</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="n">extension_context</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span> <span class="o">=</span> <span class="n">coupling</span>
@@ -390,12 +399,18 @@
             <span class="p">)</span>
         <span class="n">step_size</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">physical_step_size</span><span class="p">,</span> <span class="n">extension_step_size</span><span class="p">)</span>
         <span class="n">substep_size</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">physical_step_size</span><span class="p">,</span> <span class="n">extension_step_size</span><span class="p">)</span>
-        <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">remainder</span><span class="p">(</span><span class="n">step_size</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">substep_size</span><span class="p">),</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_even_division</span><span class="p">(</span><span class="n">step_size</span><span class="p">,</span> <span class="n">substep_size</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s2">&quot;The physical and extension integrator step sizes must be related by &quot;</span>
                 <span class="s2">&quot;an even integer ratio.&quot;</span>
             <span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_is_even_division</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">b</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Division by zero is not allowed.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">isclose</span><span class="p">(</span><span class="n">a</span> <span class="o">/</span> <span class="n">b</span> <span class="o">-</span> <span class="nb">round</span><span class="p">(</span><span class="n">a</span> <span class="o">/</span> <span class="n">b</span><span class="p">),</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">a</span> <span class="o">/</span> <span class="n">b</span><span class="p">))</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_initialize</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">_initialize</span><span class="p">()</span>
