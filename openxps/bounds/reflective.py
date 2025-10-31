@@ -12,7 +12,7 @@ Reflective boundary condition.
 from .base import Bounds
 
 
-class Reflective(Bounds):
+class ReflectiveBounds(Bounds):
     """
     A reflective boundary condition. The dynamical variable collides elastically
     with the upper and lower bounds and is reflected back into the range.
@@ -31,11 +31,11 @@ class Reflective(Bounds):
     -------
     >>> import openxps as xps
     >>> from openmm import unit
-    >>> bounds = xps.bounds.Reflective(1, 10, unit.angstrom)
-    >>> bounds == xps.bounds.Reflective(0.1, 1, unit.nanometer)
+    >>> bounds = xps.bounds.ReflectiveBounds(1, 10, unit.angstrom)
+    >>> bounds == xps.bounds.ReflectiveBounds(0.1, 1, unit.nanometer)
     True
     >>> print(bounds)
-    Reflective(lower=1, upper=10, unit=A)
+    ReflectiveBounds(lower=1, upper=10, unit=A)
     """
 
     def __post_init__(self) -> None:
@@ -66,4 +66,4 @@ class Reflective(Bounds):
         return self.period - x + self.lower, -rate
 
 
-Reflective.registerTag("!openxps.bounds.Reflective")
+ReflectiveBounds.registerTag("!openxps.bounds.ReflectiveBounds")

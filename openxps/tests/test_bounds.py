@@ -7,7 +7,7 @@ import pytest
 import yaml
 from openmm import unit as mmunit
 
-from openxps.bounds import CIRCULAR, Bounds, Periodic, Reflective
+from openxps.bounds import CIRCULAR, Bounds, PeriodicBounds, ReflectiveBounds
 
 
 def test_bounds_initialization():
@@ -58,7 +58,7 @@ def test_periodic_wrap():
     """
     Test the wrapping behavior of Periodic bounds.
     """
-    bounds = Periodic(-180, 180, mmunit.degrees)
+    bounds = PeriodicBounds(-180, 180, mmunit.degrees)
     wrapped_value, wrapped_rate = bounds.wrap(190, 10)
     assert wrapped_value == -170
     assert wrapped_rate == 10
@@ -68,7 +68,7 @@ def test_reflective_wrap():
     """
     Test the wrapping behavior of Reflective bounds.
     """
-    bounds = Reflective(0, 10, mmunit.dimensionless)
+    bounds = ReflectiveBounds(0, 10, mmunit.dimensionless)
     wrapped_value, wrapped_rate = bounds.wrap(12, 1)
     assert wrapped_value == 8
     assert wrapped_rate == -1
@@ -100,12 +100,12 @@ def test_serialization():
     Test the serialization and deserialization of Bounds objects using YAML.
     """
 
-    periodic = Periodic(-np.pi, np.pi, mmunit.radians)
+    periodic = PeriodicBounds(-np.pi, np.pi, mmunit.radians)
     serialized = yaml.safe_dump(periodic)
     deserialized = yaml.safe_load(serialized)
     assert deserialized == periodic
 
-    reflective = Reflective(0, 10, mmunit.dimensionless)
+    reflective = ReflectiveBounds(0, 10, mmunit.dimensionless)
     serialized = yaml.safe_dump(reflective)
     deserialized = yaml.safe_load(serialized)
     assert deserialized == reflective

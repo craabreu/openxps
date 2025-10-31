@@ -55,7 +55,7 @@ class ExtendedSpaceBiasVariable(Serializable):
     ...     "phi",
     ...     unit.radian,
     ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-    ...     xps.bounds.Periodic(-180, 180, unit.degree)
+    ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
     ... )
     >>> bias_variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)
     >>> bias_variable.dynamical_variable

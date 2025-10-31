@@ -19,7 +19,7 @@ from openxps import (
     HarmonicCoupling,
     InnerProductCoupling,
 )
-from openxps.bounds import CIRCULAR, NoBounds, Reflective
+from openxps.bounds import CIRCULAR, NoBounds, ReflectiveBounds
 from openxps.couplings import CouplingSum
 
 
@@ -797,7 +797,7 @@ def test_inner_product_coupling_initialization():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     # When DV is a global parameter, no functions are needed
@@ -820,7 +820,7 @@ def test_inner_product_coupling_with_functions():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     coupling = InnerProductCoupling(
@@ -846,7 +846,7 @@ def test_inner_product_coupling_repr():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     coupling = InnerProductCoupling([force], [lambda_dv])
@@ -869,7 +869,7 @@ def test_inner_product_coupling_missing_function_parameters():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     # Function name "nonexistent" doesn't match any force parameter
@@ -893,7 +893,7 @@ def test_inner_product_coupling_function_missing_dvs():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     # Function doesn't depend on lambda
@@ -917,7 +917,7 @@ def test_inner_product_coupling_dv_in_both():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     # lambda is both a global parameter (force) and in function
@@ -941,13 +941,13 @@ def test_inner_product_coupling_dv_in_neither():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
     unused_dv = DynamicalVariable(
         name="unused",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     # unused_dv is not in function or force parameters
@@ -971,7 +971,7 @@ def test_inner_product_coupling_missing_derivative():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     # scaling is a dynamic parameter but no derivative was requested
@@ -995,7 +995,7 @@ def test_inner_product_coupling_add_to_extension_system():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     coupling = InnerProductCoupling(
@@ -1039,7 +1039,7 @@ def test_inner_product_coupling_update_extension_context():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     coupling = InnerProductCoupling(
@@ -1081,7 +1081,7 @@ def test_inner_product_coupling_with_extended_space_system():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     coupling = InnerProductCoupling(
@@ -1115,7 +1115,7 @@ def test_inner_product_coupling_serialization():
         name="lambda",
         unit=mmunit.dimensionless,
         mass=1.0 * mmunit.dalton * mmunit.nanometer**2,
-        bounds=Reflective(0.0, 1.0, mmunit.dimensionless),
+        bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
     coupling = InnerProductCoupling(

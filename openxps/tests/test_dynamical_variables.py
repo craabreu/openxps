@@ -7,20 +7,20 @@ import pytest
 import yaml
 from openmm import unit as mmunit
 
-from openxps.bounds import NoBounds, Periodic, Reflective
+from openxps.bounds import NoBounds, PeriodicBounds, ReflectiveBounds
 from openxps.dynamical_variable import DynamicalVariable
 
 
 def test_dv_initialization():
     """Test successful DynamicalVariable initialization."""
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    bounds = Periodic(-180, 180, mmunit.degree)
+    bounds = PeriodicBounds(-180, 180, mmunit.degree)
     dv = DynamicalVariable("phi", mmunit.radian, mass, bounds)
 
     assert dv.name == "phi"
     assert dv.unit == mmunit.radian
     assert dv.mass.unit == mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    assert isinstance(dv.bounds, Periodic)
+    assert isinstance(dv.bounds, PeriodicBounds)
 
 
 def test_dv_invalid_unit():
@@ -50,7 +50,7 @@ def test_dv_incompatible_mass_unit():
 
 def test_dv_bounds_incompatible_units():
     """Test DynamicalVariable initialization with bounds having incompatible units."""
-    bounds = Reflective(0, 10, mmunit.meter)  # Incompatible with radian
+    bounds = ReflectiveBounds(0, 10, mmunit.meter)  # Incompatible with radian
     with pytest.raises(ValueError):
         DynamicalVariable(
             "phi",
@@ -63,7 +63,7 @@ def test_dv_bounds_incompatible_units():
 def test_dv_serialization():
     """Test YAML serialization and deserialization of DynamicalVariable."""
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    bounds = Periodic(-180, 180, mmunit.degree)
+    bounds = PeriodicBounds(-180, 180, mmunit.degree)
     dv = DynamicalVariable("phi", mmunit.radian, mass, bounds)
 
     serialized = yaml.safe_dump(dv)
@@ -99,13 +99,13 @@ def test_dv_distance_method():
         "psi0",
         mmunit.radian,
         3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
-        Periodic(-180, 180, mmunit.degree),
+        PeriodicBounds(-180, 180, mmunit.degree),
     )
     phi0 = DynamicalVariable(
         "phi0",
         mmunit.radian,
         3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
-        Periodic(-180, 180, mmunit.degree),
+        PeriodicBounds(-180, 180, mmunit.degree),
     )
 
     assert psi0.distanceTo(cvpack.Torsion(6, 8, 14, 16, name="psi")) == (
@@ -133,7 +133,7 @@ def test_dv_distance_method():
         "distance0",
         mmunit.nanometer,
         3 * mmunit.dalton,
-        Reflective(0, 1, mmunit.nanometer),
+        ReflectiveBounds(0, 1, mmunit.nanometer),
     )
     assert distance0.distanceTo(cvpack.Distance(0, 1)) == "(distance-distance0)"
 

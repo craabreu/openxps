@@ -10,7 +10,7 @@ from openmm import unit as mmunit
 from openmmtools import testsystems
 
 from openxps import CollectiveVariableCoupling, DynamicalVariable, ExtendedSpaceSystem
-from openxps.bounds import CIRCULAR, NoBounds, Reflective
+from openxps.bounds import CIRCULAR, NoBounds, ReflectiveBounds
 
 
 def create_dvs():
@@ -21,7 +21,7 @@ def create_dvs():
         DynamicalVariable(name="phi0", unit=mmunit.radian, mass=mass, bounds=CIRCULAR),
         DynamicalVariable(name="x0", bounds=NoBounds(), **kwargs),
         DynamicalVariable(
-            name="y0", bounds=Reflective(-1, 1, mmunit.nanometer), **kwargs
+            name="y0", bounds=ReflectiveBounds(-1, 1, mmunit.nanometer), **kwargs
         ),
     ]
 

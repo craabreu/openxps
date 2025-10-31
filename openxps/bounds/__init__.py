@@ -12,9 +12,9 @@ from openmm import unit as mmunit
 
 from .base import Bounds
 from .no_bounds import NoBounds
-from .periodic import Periodic
-from .reflective import Reflective
+from .periodic import PeriodicBounds
+from .reflective import ReflectiveBounds
 
-__all__ = ["Periodic", "Reflective", "NoBounds", "CIRCULAR"]
+__all__ = ["PeriodicBounds", "ReflectiveBounds", "NoBounds", "CIRCULAR"]
 
-CIRCULAR = Periodic(-np.pi, np.pi, mmunit.radians)
+CIRCULAR = PeriodicBounds(-np.pi, np.pi, mmunit.radians)

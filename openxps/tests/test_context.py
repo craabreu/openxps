@@ -16,7 +16,7 @@ from openxps import (
     ExtendedSpaceSystem,
     LockstepIntegrator,
 )
-from openxps.bounds import CIRCULAR, NoBounds, Reflective
+from openxps.bounds import CIRCULAR, NoBounds, ReflectiveBounds
 from openxps.utils import BINARY_SEPARATOR
 
 
@@ -39,7 +39,7 @@ def create_dvs():
         DynamicalVariable(name="phi0", unit=mmunit.radian, mass=mass, bounds=CIRCULAR),
         DynamicalVariable(name="x0", bounds=NoBounds(), **kwargs),
         DynamicalVariable(
-            name="y0", bounds=Reflective(-1, 1, mmunit.nanometer), **kwargs
+            name="y0", bounds=ReflectiveBounds(-1, 1, mmunit.nanometer), **kwargs
         ),
     ]
 

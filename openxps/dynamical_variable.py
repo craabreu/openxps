@@ -17,7 +17,7 @@ from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit
 
-from .bounds import Bounds, NoBounds, Periodic
+from .bounds import Bounds, NoBounds, PeriodicBounds
 from .utils import preprocess_args
 
 
@@ -39,9 +39,10 @@ class DynamicalVariable(Serializable):
         dynamical variable's own unit (see ``unit`` above).
     bounds
         The boundary condition to be applied to this dynamical variable. It must
-        be an instance of :class:`Periodic`, :class:`Reflective`, or :class:`NoBounds`
-        (for unbounded variables). If it is not :class:`~openxps.NoBounds`, its unit of
-        measurement must be compatible with the dynamical variable's own unit.
+        be an instance of :class:`PeriodicBounds`, :class:`ReflectiveBounds`, or
+        :class:`NoBounds` (for unbounded variables). If it is not
+        :class:`~openxps.NoBounds`, its unit of measurement must be compatible with
+        the dynamical variable's own unit.
 
     Example
     -------
@@ -52,12 +53,12 @@ class DynamicalVariable(Serializable):
     ...     "psi",
     ...     unit.radian,
     ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-    ...     xps.bounds.Periodic(-180, 180, unit.degree)
+    ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
     ... )
     >>> dv
     DynamicalVariable(name='psi', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)
     >>> dv.bounds
-    Periodic(lower=-3.14159..., upper=3.14159..., unit=rad)
+    PeriodicBounds(lower=-3.14159..., upper=3.14159..., unit=rad)
     >>> assert yaml.safe_load(yaml.safe_dump(dv)) == dv
     """
 
@@ -127,12 +128,12 @@ class DynamicalVariable(Serializable):
         ...     "psi",
         ...     unit.radian,
         ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-        ...     xps.bounds.Periodic(-180, 180, unit.degree)
+        ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
         ... )
         >>> dv.isPeriodic()
         True
         """
-        return isinstance(self.bounds, Periodic)
+        return isinstance(self.bounds, PeriodicBounds)
 
     def createCollectiveVariable(
         self, index: int, name: t.Optional[str] = None
@@ -163,7 +164,7 @@ class DynamicalVariable(Serializable):
         ...     "psi",
         ...     unit.radian,
         ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-        ...     xps.bounds.Periodic(-180, 180, unit.degree)
+        ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
         ... )
         >>> cv = dv.createCollectiveVariable(0)
         """
@@ -224,7 +225,7 @@ class DynamicalVariable(Serializable):
         ...     "psi0",
         ...     unit.radian,
         ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,
-        ...     xps.bounds.Periodic(-180, 180, unit.degree)
+        ...     xps.bounds.PeriodicBounds(-180, 180, unit.degree)
         ... )
         >>> psi = cvpack.Torsion(6, 8, 14, 16, name="psi")
         >>> dv.distanceTo(psi)

@@ -232,7 +232,7 @@ def test_extension_writer_coupling_functions():
         name="lambda",
         unit=unit.dimensionless,
         mass=1.0 * unit.dalton * unit.nanometer**2,
-        bounds=xps.bounds.Reflective(0.0, 1.0, unit.dimensionless),
+        bounds=xps.bounds.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
     )
 
     # Create InnerProductCoupling with a function that creates a protected parameter
@@ -301,7 +301,7 @@ def test_extension_writer_inner_product_coupling_multiple_functions():
         name="lambda",
         unit=unit.dimensionless,
         mass=1.0 * unit.dalton * unit.nanometer**2,
-        bounds=xps.bounds.Reflective(0.0, 1.0, unit.dimensionless),
+        bounds=xps.bounds.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
     )
 
     # Create InnerProductCoupling with multiple functions
@@ -368,7 +368,7 @@ def test_extension_writer_inner_product_coupling_no_functions():
         name="lambda",
         unit=unit.dimensionless,
         mass=1.0 * unit.dalton * unit.nanometer**2,
-        bounds=xps.bounds.Reflective(0.0, 1.0, unit.dimensionless),
+        bounds=xps.bounds.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
     )
 
     # Create InnerProductCoupling without functions (identity mapping)
@@ -429,7 +429,7 @@ def test_extension_writer_inner_product_coupling_with_other_parameters():
         name="lambda",
         unit=unit.dimensionless,
         mass=1.0 * unit.dalton * unit.nanometer**2,
-        bounds=xps.bounds.Reflective(0.0, 1.0, unit.dimensionless),
+        bounds=xps.bounds.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
     )
 
     coupling = xps.InnerProductCoupling(
