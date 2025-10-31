@@ -9,7 +9,7 @@
 
 import openmm as mm
 
-from .coupling import Coupling
+from .couplings import Coupling
 from .dynamical_variable import DynamicalVariable
 
 
@@ -35,7 +35,7 @@ class ExtendedSpaceSystem(mm.System):
     >>> from openmmtools import testsystems
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
-    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.bounds.CIRCULAR)
+    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
     >>> harmonic_force = xps.HarmonicCoupling(
     ...     cvpack.Torsion(6, 8, 14, 16, name="phi"),
     ...     phi0,

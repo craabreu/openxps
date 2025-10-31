@@ -24,7 +24,7 @@ import openxps
 sys.path.insert(0, os.path.abspath(".."))
 
 
-def create_class_rst_file(cls):
+def create_class_rst_file(cls, module_name="openxps"):
     name = cls.__name__
     methods = list(cls.__dict__.keys())
     excluded = ["yaml_tag"]
@@ -38,7 +38,7 @@ def create_class_rst_file(cls):
             [
                 f"{name}\n",
                 "=" * len(name) + "\n\n",
-                ".. currentmodule:: openxps\n",
+                f".. currentmodule:: {module_name}\n",
                 f".. autoclass:: {name}\n",
                 "    :member-order: alphabetical\n\n",
             ]
@@ -47,74 +47,165 @@ def create_class_rst_file(cls):
         )
 
 
-def create_function_rst_file(func):
+def create_function_rst_file(func, module_name="openxps"):
     name = func.__name__
     with open(f"api/{name}.rst", "w") as f:
         f.writelines(
             [
                 f"{name}\n",
                 "=" * len(name) + "\n\n",
-                ".. currentmodule:: openxps\n",
+                f".. currentmodule:: {module_name}\n",
                 f".. autofunction:: {name}\n",
             ]
         )
 
 
-classes = [item for item in openxps.__dict__.values() if inspect.isclass(item)]
-functions = [item for item in openxps.__dict__.values() if inspect.isfunction(item)]
+def create_constant_rst_file(const_name, const_value, module_name="openxps"):
+    """Create a .rst file for a constant/variable."""
+    with open(f"api/{const_name}.rst", "w") as f:
+        f.writelines(
+            [
+                f"{const_name}\n",
+                "=" * len(const_name) + "\n\n",
+                f".. currentmodule:: {module_name}\n",
+                f".. py:data:: {const_name}\n",
+                "    :type: " + type(const_value).__name__ + "\n\n",
+            ]
+        )
 
-if classes:
-    with open("api/classes.rst", "w") as f:
+
+def create_module_docs(module, module_name, output_dir="api", exclude=None):
+    """
+    Create documentation files for a module with one class/function/constant per file.
+
+    Parameters
+    ----------
+    module
+        The module object to document
+    module_name
+        The full module name (e.g., 'openxps', 'openxps.bounds')
+    output_dir
+        The output directory for .rst files (default: 'api')
+    exclude
+        A list of already documented modules to exclude from the documentation
+        (e.g., [openxps.bounds, openxps.integrators, openxps.couplings])
+    Returns
+    -------
+    str or None
+        The toctree filename, or None if module is empty
+    """
+    # Filter by __all__ if it exists, otherwise include all classes/functions
+    module_all = getattr(module, "__all__", [])
+    if module_all:
+        module_all_set = set(module_all)
+        # Collect names from excluded modules
+        excluded_names = set()
+        if exclude:
+            for m in exclude:
+                excluded_names.update(set(getattr(m, "__all__", [])))
+        # Remove excluded names from module_all_set
+        module_all_set -= excluded_names
+        classes = [
+            item
+            for item in module.__dict__.values()
+            if inspect.isclass(item) and item.__name__ in module_all_set
+        ]
+        functions = [
+            item
+            for item in module.__dict__.values()
+            if inspect.isfunction(item) and item.__name__ in module_all_set
+        ]
+        # Get constants/variables (items in __all__ that are not classes or functions)
+        constants = []
+        for name in module_all:
+            # Skip if this name is in excluded modules
+            if name in excluded_names:
+                continue
+            if name not in {item.__name__ for item in classes} and name not in {
+                item.__name__ for item in functions
+            }:
+                if name in module.__dict__:
+                    const_value = module.__dict__[name]
+                    # Skip modules and other special items
+                    if not inspect.ismodule(const_value) and not name.startswith("_"):
+                        constants.append((name, const_value))
+    else:
+        classes = [
+            item for item in module.__dict__.values() if inspect.isclass(item)
+        ]
+        functions = [
+            item for item in module.__dict__.values() if inspect.isfunction(item)
+        ]
+        constants = []
+
+    # If module has no items, return None
+    if not classes and not functions and not constants:
+        return None
+
+    # Determine toctree filename based on module
+    if module_name == "openxps":
+        toctree = "main.rst"
+        title = "Core"
+    else:
+        # For submodules, use the module name
+        module_short_name = module_name.split('.')[-1]
+        toctree = f"{module_short_name}.rst"
+        # Capitalize first letter and add "Module"
+        title = f"{module_short_name.capitalize()}"
+
+    # Create single toctree with all items
+    with open(f"{output_dir}/{toctree}", "w") as f:
         f.write(
-            "Classes\n"
-            "=======\n"
+            f"{title}\n"
+            f"{'=' * len(title)}\n"
             "\n"
             ".. toctree::\n"
             "    :titlesonly:\n"
             "\n"
         )
-        for item in classes:
+
+        # Add classes
+        for item in sorted(classes, key=lambda x: x.__name__):
             f.write(f"    {item.__name__}\n")
-            create_class_rst_file(item)
+            create_class_rst_file(item, module_name)
+
+        # Add functions
+        for item in sorted(functions, key=lambda x: x.__name__):
+            f.write(f"    {item.__name__}\n")
+            create_function_rst_file(item, module_name)
+
+        # Add constants
+        for const_name, const_value in sorted(constants, key=lambda x: x[0]):
+            f.write(f"    {const_name}\n")
+            create_constant_rst_file(const_name, const_value, module_name)
+
         f.write("\n.. testsetup::\n\n    from openxps import *")
 
-if functions:
-    with open("api/functions.rst", "w") as f:
-        f.write(
-            "Functions\n"
-            "=========\n"
-            "\n"
-            ".. toctree::\n"
-            "    :titlesonly:\n"
-            "\n"
-        )
-        for item in functions:
-            f.write(f"    {item.__name__}\n")
-            create_function_rst_file(item)
-        f.write("\n.. testsetup::\n\n    from openxps import *")
+    return toctree
+
 
 # Documentation entries for submodules
-with open("api/bounds.rst", "w") as f:
-    f.writelines([
-        "bounds module\n",
-        "=============\n\n",
-        ".. automodule:: openxps.bounds\n",
-        "    :members:\n",
-        "    :undoc-members:\n",
-        "    :show-inheritance:\n"
-    ])
+bounds_toctree = create_module_docs(openxps.bounds, "openxps.bounds")
+couplings_toctree = create_module_docs(openxps.couplings, "openxps.couplings")
+integrators_toctree = create_module_docs(openxps.integrators, "openxps.integrators")
 
-with open("api/integrators.rst", "w") as f:
-    f.writelines([
-        "integrators module\n",
-        "==================\n\n",
-        ".. automodule:: openxps.integrators\n",
-        "    :members:\n",
-        "    :undoc-members:\n",
-        "    :show-inheritance:\n"
-    ])
+# Documentation entries for main module
+main_toctree = create_module_docs(
+    openxps, "openxps", exclude=(openxps.bounds, openxps.integrators, openxps.couplings)
+)
+
 
 with open("api/index.rst", "w") as f:
+    entries = []
+    if main_toctree:
+        entries.append(f"    {main_toctree}\n")
+    if bounds_toctree:
+        entries.append(f"    {bounds_toctree}\n")
+    if couplings_toctree:
+        entries.append(f"    {couplings_toctree}\n")
+    if integrators_toctree:
+        entries.append(f"    {integrators_toctree}\n")
+
     f.write(
         "API Reference\n"
         "=============\n"
@@ -123,10 +214,7 @@ with open("api/index.rst", "w") as f:
         "    :maxdepth: 2\n"
         "    :titlesonly:\n"
         "\n"
-        + "    classes\n" * bool(classes)
-        + "    functions\n" * bool(functions)
-        + "    bounds\n"
-        + "    integrators\n"
+        + "".join(entries)
     )
 
 # -- Project information -----------------------------------------------------
