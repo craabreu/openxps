@@ -74,7 +74,7 @@ def create_constant_rst_file(const_name, const_value, module_name="openxps"):
         )
 
 
-def create_module_docs(module, module_name, output_dir="api"):
+def create_module_docs(module, module_name, output_dir="api", exclude=None):
     """
     Create documentation files for a module with one class/function/constant per file.
 
@@ -86,16 +86,25 @@ def create_module_docs(module, module_name, output_dir="api"):
         The full module name (e.g., 'openxps', 'openxps.bounds')
     output_dir
         The output directory for .rst files (default: 'api')
-
+    exclude
+        A list of already documented modules to exclude from the documentation
+        (e.g., [openxps.bounds, openxps.integrators, openxps.couplings])
     Returns
     -------
     str or None
         The toctree filename, or None if module is empty
     """
     # Filter by __all__ if it exists, otherwise include all classes/functions
-    module_all = getattr(module, "__all__", None)
+    module_all = getattr(module, "__all__", [])
     if module_all:
         module_all_set = set(module_all)
+        # Collect names from excluded modules
+        excluded_names = set()
+        if exclude:
+            for m in exclude:
+                excluded_names.update(set(getattr(m, "__all__", [])))
+        # Remove excluded names from module_all_set
+        module_all_set -= excluded_names
         classes = [
             item
             for item in module.__dict__.values()
@@ -109,6 +118,9 @@ def create_module_docs(module, module_name, output_dir="api"):
         # Get constants/variables (items in __all__ that are not classes or functions)
         constants = []
         for name in module_all:
+            # Skip if this name is in excluded modules
+            if name in excluded_names:
+                continue
             if name not in {item.__name__ for item in classes} and name not in {
                 item.__name__ for item in functions
             }:
@@ -133,13 +145,13 @@ def create_module_docs(module, module_name, output_dir="api"):
     # Determine toctree filename based on module
     if module_name == "openxps":
         toctree = "main.rst"
-        title = "Main Module"
+        title = "Core"
     else:
         # For submodules, use the module name
         module_short_name = module_name.split('.')[-1]
         toctree = f"{module_short_name}.rst"
         # Capitalize first letter and add "Module"
-        title = f"{module_short_name.capitalize()} Module"
+        title = f"{module_short_name.capitalize()}"
 
     # Create single toctree with all items
     with open(f"{output_dir}/{toctree}", "w") as f:
@@ -172,13 +184,16 @@ def create_module_docs(module, module_name, output_dir="api"):
     return toctree
 
 
-# Documentation entries for main module
-main_toctree = create_module_docs(openxps, "openxps")
-
 # Documentation entries for submodules
 bounds_toctree = create_module_docs(openxps.bounds, "openxps.bounds")
-integrators_toctree = create_module_docs(openxps.integrators, "openxps.integrators")
 couplings_toctree = create_module_docs(openxps.couplings, "openxps.couplings")
+integrators_toctree = create_module_docs(openxps.integrators, "openxps.integrators")
+
+# Documentation entries for main module
+main_toctree = create_module_docs(
+    openxps, "openxps", exclude=(openxps.bounds, openxps.integrators, openxps.couplings)
+)
+
 
 with open("api/index.rst", "w") as f:
     entries = []
@@ -186,10 +201,10 @@ with open("api/index.rst", "w") as f:
         entries.append(f"    {main_toctree}\n")
     if bounds_toctree:
         entries.append(f"    {bounds_toctree}\n")
-    if integrators_toctree:
-        entries.append(f"    {integrators_toctree}\n")
     if couplings_toctree:
         entries.append(f"    {couplings_toctree}\n")
+    if integrators_toctree:
+        entries.append(f"    {integrators_toctree}\n")
 
     f.write(
         "API Reference\n"

@@ -18,8 +18,4 @@ __all__ = [
     "ReflectiveBounds",
     "NoBounds",
     "CircularBounds",
-    "CIRCULAR",
 ]
-
-# Backward compatibility constant
-CIRCULAR = CircularBounds()
