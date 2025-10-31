@@ -20,7 +20,7 @@ from openxps import (
     InnerProductCoupling,
 )
 from openxps.bounds import CIRCULAR, NoBounds, Reflective
-from openxps.coupling import CouplingSum
+from openxps.couplings import CouplingSum
 
 
 # Helper functions

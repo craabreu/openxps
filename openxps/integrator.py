@@ -17,7 +17,7 @@ from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from . import integrators
-from .coupling import Coupling
+from .couplings import Coupling
 from .integrators.mixin import IntegratorMixin
 from .utils import STRING_SEPARATOR
 

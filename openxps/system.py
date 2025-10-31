@@ -9,7 +9,7 @@
 
 import openmm as mm
 
-from .coupling import Coupling
+from .couplings import Coupling
 from .dynamical_variable import DynamicalVariable
 
 
