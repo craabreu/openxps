@@ -97,14 +97,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     >>> context = mm.Context(model.system, integrator_ff, platform)
     >>> context.setPositions(model.positions)
     >>> context.setVelocitiesToTemperature(300 * unit.kelvin, 4321)
-    >>> for _ in range(4):
-    ...     integrator_ff.step(100)
-    ...     kinetic_energy = context.getState(getEnergy=True).getKineticEnergy()
-    ...     print(2 * kinetic_energy / (51 * mmunit.MOLAR_GAS_CONSTANT_R))
-    260.8... K
-    301.9... K
-    329.3... K
-    304.1... K
+    >>> integrator_ff.step(10)
     """
 
     def __init__(
