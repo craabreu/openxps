@@ -14,9 +14,15 @@ from .mixin import IntegratorMixin
 
 
 class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
-    """
-    Implements a massive variant of the Generalized Gaussian Moment Thermostat (GGMT)
-    integrator.
+    """A massive Generalized Gaussian Moment Thermostat integrator :cite:`Liu2000`.
+
+    The Generalized Gaussian Moment Thermostat (GGMT) is effective at maintaining
+    temperature control under steady-state conditions, such as in adiabatic free energy
+    dynamics (AFED) simulations :cite:`Abrams2008`.
+
+    .. warning::
+        This integrator does not support constraints due to its massive nature, i.e.,
+        independent thermostatting of each degree of freedom.
 
     Parameters
     ----------
@@ -38,44 +44,53 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     -------
     >>> import openxps as xps
     >>> from openmm import unit
-    >>> # Symmetric scheme (default)
+    >>> from openmmtools import testsystems
+
+    Symmetric scheme (default)
+
     >>> integrator = xps.integrators.MassiveGGMTIntegrator(
-    ...     300 * unit.kelvin, 20 * unit.femtoseconds, 2 * unit.femtoseconds, 4
+    ...     temperature=300 * unit.kelvin,
+    ...     timeConstant=20 * unit.femtoseconds,
+    ...     stepSize=2 * unit.femtoseconds,
+    ...     bathLoops=2
     ... )
     >>> integrator
     Per-dof variables:
       v1, v2
     Global variables:
-      kT = 2.494338785445972
-      Q1 = 0.000997735514178389
-      Q2 = 0.016553698576853793
+      kT = 2.4943387...
+      Q1 = 0.0009977...
+      Q2 = 0.0165536...
     Computation steps:
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m
-       2: constrain velocities
-       3: x <- x + 0.5*dt*v
-       4: v1 <- v1 + 0.125*dt*(m*v^2 - kT)/Q1
-       5: v2 <- v2 + 0.125*dt*((m*v^2)^2/3 - kT^2)/Q2
-       6: v <- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)
-       7: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
-       8: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
-       9: v <- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)
-      10: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
-      11: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
-      12: v <- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)
-      13: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
-      14: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
-      15: v <- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)
-      16: v1 <- v1 + 0.125*dt*(m*v^2 - kT)/Q1
-      17: v2 <- v2 + 0.125*dt*((m*v^2)^2/3 - kT^2)/Q2
-      18: x <- x + 0.5*dt*v
-      19: v <- v + 0.5*dt*f/m
-      20: constrain velocities
-    >>> # Force-first scheme
+       2: x <- x + 0.5*dt*v
+       3: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
+       4: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
+       5: v <- v*exp(-0.5*dt*(v1+kT*v2))/sqrt(1+1.0*dt*m*v^2*v2/3)
+       6: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
+       7: v2 <- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2
+       8: v <- v*exp(-0.5*dt*(v1+kT*v2))/sqrt(1+1.0*dt*m*v^2*v2/3)
+       9: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
+      10: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
+      11: x <- x + 0.5*dt*v
+      12: v <- v + 0.5*dt*f/m
+
+    Force-first scheme
+
     >>> integrator_ff = xps.integrators.MassiveGGMTIntegrator(
-    ...     300 * unit.kelvin, 20 * unit.femtoseconds, 2 * unit.femtoseconds, 4,
+    ...     temperature=300 * unit.kelvin,
+    ...     timeConstant=20 * unit.femtoseconds,
+    ...     stepSize=2 * unit.femtoseconds,
+    ...     bathLoops=2,
     ...     forceFirst=True
     ... )
+    >>> model = testsystems.AlanineDipeptideVacuum()
+    >>> try:
+    ...     integrator_ff.registerWithSystem(model.system)
+    ... except ValueError as e:
+    ...     print(e)
+    Massive GGMT integrators do not support constraints.
     """
 
     def __init__(
@@ -117,7 +132,6 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
 
     def _add_boost(self, fraction: float) -> None:
         self.addComputePerDof("v", f"v + {fraction}*dt*f/m")
-        self.addConstrainVelocities()
 
     def _update_v1_v2(self, fraction: float) -> None:
         self.addComputePerDof("v1", f"v1 + {fraction}*dt*(m*v^2 - kT)/Q1")
@@ -138,6 +152,6 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self._update_v(subfraction)
         self._update_v1_v2(0.5 * subfraction)
 
-    def register_with_system(self, system: mm.System) -> None:
+    def registerWithSystem(self, system: mm.System) -> None:
         if system.getNumConstraints() > 0:
             raise ValueError("Massive GGMT integrators do not support constraints.")

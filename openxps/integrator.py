@@ -129,7 +129,7 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
             (self._extension_integrator, extension_context),
         ):
             if isinstance(integrator, IntegratorMixin):
-                integrator.register_with_system(context.getSystem())
+                integrator.registerWithSystem(context.getSystem())
         self._physical_context = physical_context
         self._extension_context = extension_context
         self._coupling = coupling
