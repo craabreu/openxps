@@ -18,8 +18,8 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="ForceFirstCSVRIntegrator" href="ForceFirstCSVRIntegrator.html" />
-    <link rel="prev" title="BAOABIntegrator" href="BAOABIntegrator.html" />
+    <link rel="next" title="MassiveGGMTIntegrator" href="MassiveGGMTIntegrator.html" />
+    <link rel="prev" title="Integrators" href="integrators.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -41,7 +41,7 @@
 <h1>CSVRIntegrator<a class="headerlink" href="#csvrintegrator" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">CSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">splitting</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">CSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,
 also known as the Bussi-Donadio-Parrinello thermostat.</p>
 <dl class="field-list simple">
@@ -50,11 +50,51 @@ also known as the Bussi-Donadio-Parrinello thermostat.</p>
 <li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
 <li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient.</p></li>
 <li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
-<li><p><strong>splitting</strong> (<em>str</em>) – The splitting scheme. A sequence of “V”, “R”, and “O” characters representing
-the velocity boost, position update, and thermostat steps, respectively.</p></li>
+<li><p><strong>forceFirst</strong> (<em>bool</em>) – If True, the integrator will apply a force-first scheme rather than a
+symmetric operator splitting scheme.</p></li>
 </ul>
 </dd>
 </dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Symmetric scheme (default)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">CSVRIntegrator</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">10</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span>
+<span class="go">Per-dof variables:</span>
+<span class="go">  x1</span>
+<span class="go">Global variables:</span>
+<span class="go">  sumRsq = 0.0</span>
+<span class="go">  mvv = 0.0</span>
+<span class="go">  kT = 2.494338785445972</span>
+<span class="go">  friction = 10.0</span>
+<span class="go">Computation steps:</span>
+<span class="go">   0: allow forces to update the context state</span>
+<span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
+<span class="go">   2: constrain velocities</span>
+<span class="go">   3: x &lt;- x + 0.5*dt*v</span>
+<span class="go">   4: x1 &lt;- x</span>
+<span class="go">   5: constrain positions</span>
+<span class="go">   6: v &lt;- v + (x - x1)/(0.5*dt)</span>
+<span class="go">   7: constrain velocities</span>
+<span class="go">   8: mvv &lt;- sum(m*v*v)</span>
+<span class="go">   9: v &lt;- v*sqrt(A + BC*(R1 ^ 2 + sumRsq) + 2*sqrt(A*BC)*R1); ...</span>
+<span class="go">  10: x &lt;- x + 0.5*dt*v</span>
+<span class="go">  11: x1 &lt;- x</span>
+<span class="go">  12: constrain positions</span>
+<span class="go">  13: v &lt;- v + (x - x1)/(0.5*dt)</span>
+<span class="go">  14: constrain velocities</span>
+<span class="go">  15: v &lt;- v + 0.5*dt*f/m</span>
+<span class="go">  16: constrain velocities</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Force-first scheme</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator_ff</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">CSVRIntegrator</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">10</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">forceFirst</span><span class="o">=</span><span class="kc">True</span>
+<span class="gp">... </span><span class="p">)</span>
+</pre></div>
+</div>
 <p class="rubric">Methods</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.register_with_system">
@@ -117,14 +157,10 @@ numbers.
 <li class="toctree-l2"><a class="reference internal" href="bounds.html">Bounds</a></li>
 <li class="toctree-l2"><a class="reference internal" href="couplings.html">Couplings</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="integrators.html">Integrators</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="BAOABIntegrator.html">BAOABIntegrator</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">CSVRIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ForceFirstCSVRIntegrator.html">ForceFirstCSVRIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ForceFirstMassiveGGMTIntegrator.html">ForceFirstMassiveGGMTIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MassiveGGMTIntegrator.html">MassiveGGMTIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="SymmetricCSVRIntegrator.html">SymmetricCSVRIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="SymmetricMassiveGGMTIntegrator.html">SymmetricMassiveGGMTIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="VelocityVerletIntegrator.html">VelocityVerletIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SymmetricLangevinIntegrator.html">SymmetricLangevinIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SymmetricVerletIntegrator.html">SymmetricVerletIntegrator</a></li>
 </ul>
 </li>
 </ul>

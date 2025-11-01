@@ -1,7 +1,0 @@
-VelocityVerletIntegrator
-========================
-
-.. currentmodule:: openxps.integrators
-.. autoclass:: VelocityVerletIntegrator
-    :member-order: alphabetical
-

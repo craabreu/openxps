@@ -1,7 +1,0 @@
-ForceFirstCSVRIntegrator
-========================
-
-.. currentmodule:: openxps.integrators
-.. autoclass:: ForceFirstCSVRIntegrator
-    :member-order: alphabetical
-

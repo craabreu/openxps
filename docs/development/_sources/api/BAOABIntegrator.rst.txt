@@ -1,7 +1,0 @@
-BAOABIntegrator
-===============
-
-.. currentmodule:: openxps.integrators
-.. autoclass:: BAOABIntegrator
-    :member-order: alphabetical
-

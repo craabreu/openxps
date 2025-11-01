@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>BAOABIntegrator &#8212; OpenXPS dev  documentation</title>
+    <title>SymmetricLangevinIntegrator &#8212; OpenXPS dev  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
@@ -18,8 +18,8 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="CSVRIntegrator" href="CSVRIntegrator.html" />
-    <link rel="prev" title="Integrators" href="integrators.html" />
+    <link rel="next" title="SymmetricVerletIntegrator" href="SymmetricVerletIntegrator.html" />
+    <link rel="prev" title="MassiveGGMTIntegrator" href="MassiveGGMTIntegrator.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -37,11 +37,11 @@
 
           <div class="body" role="main">
             
-  <section id="baoabintegrator">
-<h1>BAOABIntegrator<a class="headerlink" href="#baoabintegrator" title="Link to this heading">¶</a></h1>
+  <section id="symmetriclangevinintegrator">
+<h1>SymmetricLangevinIntegrator<a class="headerlink" href="#symmetriclangevinintegrator" title="Link to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.BAOABIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">BAOABIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/baoab.html#BAOABIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.BAOABIntegrator" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.integrators.SymmetricLangevinIntegrator">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">SymmetricLangevinIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/baoab.html#SymmetricLangevinIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.SymmetricLangevinIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>A BAOAB integrator.</p>
 <p>This is a symmetric integrator.</p>
 <dl class="field-list simple">
@@ -56,7 +56,7 @@
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">BAOABIntegrator</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">SymmetricLangevinIntegrator</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtosecond</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span>
@@ -110,14 +110,10 @@
 <li class="toctree-l2"><a class="reference internal" href="bounds.html">Bounds</a></li>
 <li class="toctree-l2"><a class="reference internal" href="couplings.html">Couplings</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="integrators.html">Integrators</a><ul class="current">
-<li class="toctree-l3 current"><a class="current reference internal" href="#">BAOABIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="CSVRIntegrator.html">CSVRIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ForceFirstCSVRIntegrator.html">ForceFirstCSVRIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="ForceFirstMassiveGGMTIntegrator.html">ForceFirstMassiveGGMTIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MassiveGGMTIntegrator.html">MassiveGGMTIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="SymmetricCSVRIntegrator.html">SymmetricCSVRIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="SymmetricMassiveGGMTIntegrator.html">SymmetricMassiveGGMTIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="VelocityVerletIntegrator.html">VelocityVerletIntegrator</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">SymmetricLangevinIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SymmetricVerletIntegrator.html">SymmetricVerletIntegrator</a></li>
 </ul>
 </li>
 </ul>
@@ -147,7 +143,7 @@
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
-      <a href="../_sources/api/BAOABIntegrator.rst.txt"
+      <a href="../_sources/api/SymmetricLangevinIntegrator.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

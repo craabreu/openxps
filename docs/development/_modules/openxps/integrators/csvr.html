@@ -66,9 +66,49 @@
 <span class="sd">        The friction coefficient.</span>
 <span class="sd">    stepSize</span>
 <span class="sd">        The integration step size.</span>
-<span class="sd">    splitting</span>
-<span class="sd">        The splitting scheme. A sequence of &quot;V&quot;, &quot;R&quot;, and &quot;O&quot; characters representing</span>
-<span class="sd">        the velocity boost, position update, and thermostat steps, respectively.</span>
+<span class="sd">    forceFirst</span>
+<span class="sd">        If True, the integrator will apply a force-first scheme rather than a</span>
+<span class="sd">        symmetric operator splitting scheme.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; # Symmetric scheme (default)</span>
+<span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.CSVRIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 10 / unit.picosecond, 2 * unit.femtoseconds</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; integrator</span>
+<span class="sd">    Per-dof variables:</span>
+<span class="sd">      x1</span>
+<span class="sd">    Global variables:</span>
+<span class="sd">      sumRsq = 0.0</span>
+<span class="sd">      mvv = 0.0</span>
+<span class="sd">      kT = 2.494338785445972</span>
+<span class="sd">      friction = 10.0</span>
+<span class="sd">    Computation steps:</span>
+<span class="sd">       0: allow forces to update the context state</span>
+<span class="sd">       1: v &lt;- v + 0.5*dt*f/m</span>
+<span class="sd">       2: constrain velocities</span>
+<span class="sd">       3: x &lt;- x + 0.5*dt*v</span>
+<span class="sd">       4: x1 &lt;- x</span>
+<span class="sd">       5: constrain positions</span>
+<span class="sd">       6: v &lt;- v + (x - x1)/(0.5*dt)</span>
+<span class="sd">       7: constrain velocities</span>
+<span class="sd">       8: mvv &lt;- sum(m*v*v)</span>
+<span class="sd">       9: v &lt;- v*sqrt(A + BC*(R1 ^ 2 + sumRsq) + 2*sqrt(A*BC)*R1); ...</span>
+<span class="sd">      10: x &lt;- x + 0.5*dt*v</span>
+<span class="sd">      11: x1 &lt;- x</span>
+<span class="sd">      12: constrain positions</span>
+<span class="sd">      13: v &lt;- v + (x - x1)/(0.5*dt)</span>
+<span class="sd">      14: constrain velocities</span>
+<span class="sd">      15: v &lt;- v + 0.5*dt*f/m</span>
+<span class="sd">      16: constrain velocities</span>
+<span class="sd">    &gt;&gt;&gt; # Force-first scheme</span>
+<span class="sd">    &gt;&gt;&gt; integrator_ff = xps.integrators.CSVRIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 10 / unit.picosecond, 2 * unit.femtoseconds,</span>
+<span class="sd">    ...     forceFirst=True</span>
+<span class="sd">    ... )</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -76,15 +116,15 @@
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">splitting</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">forceFirst</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">splitting</span><span class="p">)</span> <span class="o">!=</span> <span class="p">{</span><span class="s2">&quot;V&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;O&quot;</span><span class="p">}:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid splitting scheme: </span><span class="si">{</span><span class="n">splitting</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forceFirst</span> <span class="o">=</span> <span class="n">forceFirst</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_global_variables</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addUpdateContextState</span><span class="p">()</span>
+        <span class="n">splitting</span> <span class="o">=</span> <span class="s2">&quot;VROR&quot;</span> <span class="k">if</span> <span class="n">forceFirst</span> <span class="k">else</span> <span class="s2">&quot;VRORV&quot;</span>
         <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="n">splitting</span><span class="p">:</span>
             <span class="n">n</span> <span class="o">=</span> <span class="n">splitting</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">letter</span><span class="p">)</span>
             <span class="n">timestep</span> <span class="o">=</span> <span class="s2">&quot;dt&quot;</span> <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="mi">1</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">n</span><span class="si">}</span><span class="s2">*dt&quot;</span>
@@ -134,7 +174,7 @@
 <div class="viewcode-block" id="CSVRIntegrator.register_with_system">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.register_with_system">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">register_with_system</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">IntegratorMixin</span><span class="o">.</span><span class="n">countDegreesOfFreedom</span><span class="p">(</span><span class="n">system</span><span class="p">)</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">IntegratorMixin</span><span class="o">.</span><span class="n">_countDegreesOfFreedom</span><span class="p">(</span><span class="n">system</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="CSVRIntegrator.setRandomNumberSeed">
@@ -169,60 +209,6 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;sumRsq&quot;</span><span class="p">,</span> <span class="n">sumRsq</span><span class="p">)</span>
             <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
 </div>
-
-
-
-<div class="viewcode-block" id="SymmetricCSVRIntegrator">
-<a class="viewcode-back" href="../../../api/SymmetricCSVRIntegrator.html#openxps.integrators.SymmetricCSVRIntegrator">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">SymmetricCSVRIntegrator</span><span class="p">(</span><span class="n">CSVRIntegrator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,</span>
-<span class="sd">    also known as the Bussi-Donadio-Parrinello thermostat.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    temperature</span>
-<span class="sd">        The temperature.</span>
-<span class="sd">    frictionCoeff</span>
-<span class="sd">        The friction coefficient.</span>
-<span class="sd">    stepSize</span>
-<span class="sd">        The integration step size.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">,</span> <span class="n">stepSize</span><span class="p">,</span> <span class="s2">&quot;VRORV&quot;</span><span class="p">)</span></div>
-
-
-
-<div class="viewcode-block" id="ForceFirstCSVRIntegrator">
-<a class="viewcode-back" href="../../../api/ForceFirstCSVRIntegrator.html#openxps.integrators.ForceFirstCSVRIntegrator">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">ForceFirstCSVRIntegrator</span><span class="p">(</span><span class="n">CSVRIntegrator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Implements a force-first variant of the Canonical Sampling through Velocity</span>
-<span class="sd">    Rescaling (CSVR) integrator, also known as the Bussi-Donadio-Parrinello thermostat.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    temperature</span>
-<span class="sd">        The temperature.</span>
-<span class="sd">    frictionCoeff</span>
-<span class="sd">        The friction coefficient.</span>
-<span class="sd">    stepSize</span>
-<span class="sd">        The integration step size.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">,</span> <span class="n">stepSize</span><span class="p">,</span> <span class="s2">&quot;VROR&quot;</span><span class="p">)</span></div>
 
 </pre></div>
 

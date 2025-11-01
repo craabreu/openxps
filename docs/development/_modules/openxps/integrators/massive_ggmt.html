@@ -69,9 +69,52 @@
 <span class="sd">        The number of internal loops in the thermostat. A larger number will increase</span>
 <span class="sd">        the accuracy and stability of the integrator but will also increase the</span>
 <span class="sd">        computational cost.</span>
-<span class="sd">    splitting</span>
-<span class="sd">        The splitting scheme. A sequence of &quot;V&quot;, &quot;R&quot;, and &quot;O&quot; characters representing</span>
-<span class="sd">        the velocity boost, position update, and thermostat steps, respectively.</span>
+<span class="sd">    forceFirst</span>
+<span class="sd">        If True, the integrator will apply a force-first scheme rather than a</span>
+<span class="sd">        symmetric operator splitting scheme.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+<span class="sd">    &gt;&gt;&gt; # Symmetric scheme (default)</span>
+<span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.MassiveGGMTIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 20 * unit.femtoseconds, 2 * unit.femtoseconds, 4</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; integrator</span>
+<span class="sd">    Per-dof variables:</span>
+<span class="sd">      v1, v2</span>
+<span class="sd">    Global variables:</span>
+<span class="sd">      kT = 2.494338785445972</span>
+<span class="sd">      Q1 = 0.000997735514178389</span>
+<span class="sd">      Q2 = 0.016553698576853793</span>
+<span class="sd">    Computation steps:</span>
+<span class="sd">       0: allow forces to update the context state</span>
+<span class="sd">       1: v &lt;- v + 0.5*dt*f/m</span>
+<span class="sd">       2: constrain velocities</span>
+<span class="sd">       3: x &lt;- x + 0.5*dt*v</span>
+<span class="sd">       4: v1 &lt;- v1 + 0.125*dt*(m*v^2 - kT)/Q1</span>
+<span class="sd">       5: v2 &lt;- v2 + 0.125*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="sd">       6: v &lt;- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)</span>
+<span class="sd">       7: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)/Q1</span>
+<span class="sd">       8: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="sd">       9: v &lt;- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)</span>
+<span class="sd">      10: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)/Q1</span>
+<span class="sd">      11: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="sd">      12: v &lt;- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)</span>
+<span class="sd">      13: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)/Q1</span>
+<span class="sd">      14: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="sd">      15: v &lt;- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)</span>
+<span class="sd">      16: v1 &lt;- v1 + 0.125*dt*(m*v^2 - kT)/Q1</span>
+<span class="sd">      17: v2 &lt;- v2 + 0.125*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="sd">      18: x &lt;- x + 0.5*dt*v</span>
+<span class="sd">      19: v &lt;- v + 0.5*dt*f/m</span>
+<span class="sd">      20: constrain velocities</span>
+<span class="sd">    &gt;&gt;&gt; # Force-first scheme</span>
+<span class="sd">    &gt;&gt;&gt; integrator_ff = xps.integrators.MassiveGGMTIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 20 * unit.femtoseconds, 2 * unit.femtoseconds, 4,</span>
+<span class="sd">    ...     forceFirst=True</span>
+<span class="sd">    ... )</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -80,15 +123,15 @@
         <span class="n">timeConstant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">splitting</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">forceFirst</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="nb">set</span><span class="p">(</span><span class="n">splitting</span><span class="p">)</span> <span class="o">!=</span> <span class="p">{</span><span class="s2">&quot;V&quot;</span><span class="p">,</span> <span class="s2">&quot;R&quot;</span><span class="p">,</span> <span class="s2">&quot;O&quot;</span><span class="p">}:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid splitting scheme: </span><span class="si">{</span><span class="n">splitting</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">bathLoops</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of bath loops must be at least 1.&quot;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_forceFirst</span> <span class="o">=</span> <span class="n">forceFirst</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_variables</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">timeConstant</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addUpdateContextState</span><span class="p">()</span>
+        <span class="n">splitting</span> <span class="o">=</span> <span class="s2">&quot;VROR&quot;</span> <span class="k">if</span> <span class="n">forceFirst</span> <span class="k">else</span> <span class="s2">&quot;VRORV&quot;</span>
         <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="n">splitting</span><span class="p">:</span>
             <span class="n">fraction</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">splitting</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">letter</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;V&quot;</span><span class="p">:</span>
@@ -140,70 +183,6 @@
         <span class="k">if</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Massive GGMT integrators do not support constraints.&quot;</span><span class="p">)</span></div>
 </div>
-
-
-
-<div class="viewcode-block" id="SymmetricMassiveGGMTIntegrator">
-<a class="viewcode-back" href="../../../api/SymmetricMassiveGGMTIntegrator.html#openxps.integrators.SymmetricMassiveGGMTIntegrator">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">SymmetricMassiveGGMTIntegrator</span><span class="p">(</span><span class="n">MassiveGGMTIntegrator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Implements a symmetric, massive variant of the Generalized Gaussian Moment</span>
-<span class="sd">    Thermostat (GGMT) integrator.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    temperature</span>
-<span class="sd">        The temperature.</span>
-<span class="sd">    timeConstant</span>
-<span class="sd">        The time constant of the thermostat.</span>
-<span class="sd">    stepSize</span>
-<span class="sd">        The integration step size.</span>
-<span class="sd">    bathLoops</span>
-<span class="sd">        The number of internal loops in the thermostat. A larger number will increase</span>
-<span class="sd">        the accuracy and stability of the integrator but will also increase the</span>
-<span class="sd">        computational cost.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">timeConstant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">timeConstant</span><span class="p">,</span> <span class="n">stepSize</span><span class="p">,</span> <span class="n">bathLoops</span><span class="p">,</span> <span class="s2">&quot;VRORV&quot;</span><span class="p">)</span></div>
-
-
-
-<div class="viewcode-block" id="ForceFirstMassiveGGMTIntegrator">
-<a class="viewcode-back" href="../../../api/ForceFirstMassiveGGMTIntegrator.html#openxps.integrators.ForceFirstMassiveGGMTIntegrator">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">ForceFirstMassiveGGMTIntegrator</span><span class="p">(</span><span class="n">MassiveGGMTIntegrator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Implements a force-first, massive variant of the Generalized Gaussian Moment</span>
-<span class="sd">    Thermostat (GGMT) integrator.</span>
-
-<span class="sd">    Parameters</span>
-<span class="sd">    ----------</span>
-<span class="sd">    temperature</span>
-<span class="sd">        The temperature.</span>
-<span class="sd">    timeConstant</span>
-<span class="sd">        The time constant of the thermostat.</span>
-<span class="sd">    stepSize</span>
-<span class="sd">        The integration step size.</span>
-<span class="sd">    bathLoops</span>
-<span class="sd">        The number of internal loops in the thermostat. A larger number will increase</span>
-<span class="sd">        the accuracy and stability of the integrator but will also increase the</span>
-<span class="sd">        computational cost.</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">timeConstant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">timeConstant</span><span class="p">,</span> <span class="n">stepSize</span><span class="p">,</span> <span class="n">bathLoops</span><span class="p">,</span> <span class="s2">&quot;VROR&quot;</span><span class="p">)</span></div>
 
 </pre></div>
 

@@ -50,9 +50,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.mixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span>
 
 
-<div class="viewcode-block" id="VelocityVerletIntegrator">
-<a class="viewcode-back" href="../../../api/VelocityVerletIntegrator.html#openxps.integrators.VelocityVerletIntegrator">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">VelocityVerletIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
+<div class="viewcode-block" id="SymmetricVerletIntegrator">
+<a class="viewcode-back" href="../../../api/SymmetricVerletIntegrator.html#openxps.integrators.SymmetricVerletIntegrator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SymmetricVerletIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A velocity Verlet integrator.</span>
 
@@ -67,7 +67,7 @@
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
 <span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
-<span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.VelocityVerletIntegrator(1 * unit.femtosecond)</span>
+<span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.SymmetricVerletIntegrator(1 * unit.femtosecond)</span>
 <span class="sd">    &gt;&gt;&gt; integrator</span>
 <span class="sd">    Per-dof variables:</span>
 <span class="sd">      x1</span>

@@ -51,9 +51,9 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.mixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span>
 
 
-<div class="viewcode-block" id="BAOABIntegrator">
-<a class="viewcode-back" href="../../../api/BAOABIntegrator.html#openxps.integrators.BAOABIntegrator">[docs]</a>
-<span class="k">class</span><span class="w"> </span><span class="nc">BAOABIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
+<div class="viewcode-block" id="SymmetricLangevinIntegrator">
+<a class="viewcode-back" href="../../../api/SymmetricLangevinIntegrator.html#openxps.integrators.SymmetricLangevinIntegrator">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">SymmetricLangevinIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    A BAOAB integrator.</span>
 
@@ -72,7 +72,7 @@
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
 <span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
-<span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.BAOABIntegrator(</span>
+<span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.SymmetricLangevinIntegrator(</span>
 <span class="sd">    ...     300 * unit.kelvin, 1 / unit.picosecond, 1 * unit.femtosecond</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator</span>

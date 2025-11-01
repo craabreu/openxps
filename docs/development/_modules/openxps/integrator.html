@@ -65,17 +65,13 @@
     <span class="n">mm</span><span class="o">.</span><span class="n">LangevinIntegrator</span><span class="p">,</span>
     <span class="n">mm</span><span class="o">.</span><span class="n">LangevinMiddleIntegrator</span><span class="p">,</span>
     <span class="n">mm</span><span class="o">.</span><span class="n">NoseHooverIntegrator</span><span class="p">,</span>
-    <span class="n">integrators</span><span class="o">.</span><span class="n">ForceFirstCSVRIntegrator</span><span class="p">,</span>
-    <span class="n">integrators</span><span class="o">.</span><span class="n">ForceFirstMassiveGGMTIntegrator</span><span class="p">,</span>
 <span class="p">)</span>
 
 <span class="c1">#: Tuple of OpenMM integrator classes known to be symmetric in the sense of operator</span>
 <span class="c1">#: splitting, i.e., they can be represented as a palindromic sequence of operations.</span>
 <span class="n">KNOWN_SYMMETRIC_INTEGRATORS</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">integrators</span><span class="o">.</span><span class="n">VelocityVerletIntegrator</span><span class="p">,</span>
-    <span class="n">integrators</span><span class="o">.</span><span class="n">BAOABIntegrator</span><span class="p">,</span>
-    <span class="n">integrators</span><span class="o">.</span><span class="n">SymmetricCSVRIntegrator</span><span class="p">,</span>
-    <span class="n">integrators</span><span class="o">.</span><span class="n">SymmetricMassiveGGMTIntegrator</span><span class="p">,</span>
+    <span class="n">integrators</span><span class="o">.</span><span class="n">SymmetricVerletIntegrator</span><span class="p">,</span>
+    <span class="n">integrators</span><span class="o">.</span><span class="n">SymmetricLangevinIntegrator</span><span class="p">,</span>
 <span class="p">)</span>
 
 
@@ -293,9 +289,9 @@
             <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
             <span class="n">assume_force_first</span>
-            <span class="ow">or</span> <span class="nb">all</span><span class="p">(</span>
-                <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_FORCE_FIRST_INTEGRATORS</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">integrator</span> <span class="ow">in</span> <span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_is_force_first</span><span class="p">(</span><span class="n">physical_integrator</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_force_first</span><span class="p">(</span><span class="n">extension_integrator</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -304,6 +300,15 @@
                 <span class="s2">&quot;set assume_force_first=True.&quot;</span>
             <span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_is_force_first</span><span class="p">(</span><span class="n">integrator</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if an integrator follows a force-first scheme.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_FORCE_FIRST_INTEGRATORS</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">IntegratorMixin</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">integrator</span><span class="o">.</span><span class="n">isForceFirst</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">False</span>
 
 <div class="viewcode-block" id="LockstepIntegrator.step">
 <a class="viewcode-back" href="../../api/LockstepIntegrator.html#openxps.LockstepIntegrator.step">[docs]</a>
@@ -387,9 +392,9 @@
             <span class="n">extension_step_size</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Integrator_getStepSize</span><span class="p">(</span><span class="n">extension_integrator</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
             <span class="n">assume_symmetric</span>
-            <span class="ow">or</span> <span class="nb">all</span><span class="p">(</span>
-                <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_SYMMETRIC_INTEGRATORS</span><span class="p">)</span>
-                <span class="k">for</span> <span class="n">integrator</span> <span class="ow">in</span> <span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
+            <span class="ow">or</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_is_symmetric</span><span class="p">(</span><span class="n">physical_integrator</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_symmetric</span><span class="p">(</span><span class="n">extension_integrator</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -405,6 +410,15 @@
                 <span class="s2">&quot;an even integer ratio.&quot;</span>
             <span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">physical_integrator</span><span class="p">,</span> <span class="n">extension_integrator</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_is_symmetric</span><span class="p">(</span><span class="n">integrator</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Integrator</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if an integrator is symmetric in terms of operator splitting.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">KNOWN_SYMMETRIC_INTEGRATORS</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">IntegratorMixin</span><span class="p">):</span>
+            <span class="k">return</span> <span class="ow">not</span> <span class="n">integrator</span><span class="o">.</span><span class="n">isForceFirst</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">False</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_is_even_division</span><span class="p">(</span><span class="n">a</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">b</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>

@@ -4,14 +4,10 @@ Integrators
 .. toctree::
     :titlesonly:
 
-    BAOABIntegrator
     CSVRIntegrator
-    ForceFirstCSVRIntegrator
-    ForceFirstMassiveGGMTIntegrator
     MassiveGGMTIntegrator
-    SymmetricCSVRIntegrator
-    SymmetricMassiveGGMTIntegrator
-    VelocityVerletIntegrator
+    SymmetricLangevinIntegrator
+    SymmetricVerletIntegrator
 
 .. testsetup::
 
