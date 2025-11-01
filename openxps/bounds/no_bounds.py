@@ -35,7 +35,7 @@ class NoBounds(Bounds):
     >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *_) -> None:
         super().__init__(-np.inf, np.inf, mmunit.dimensionless)
 
     def in_md_units(self) -> "NoBounds":

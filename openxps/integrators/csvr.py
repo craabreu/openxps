@@ -40,6 +40,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     Example
     -------
     >>> import openxps as xps
+    >>> import openmm as mm
     >>> from openmm import unit
     >>> from openmmtools import testsystems
 
@@ -87,10 +88,23 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ... )
     >>> integrator_ff.getNumDegreesOfFreedom() is None
     True
-    >>> system = testsystems.AlanineDipeptideVacuum()
-    >>> integrator_ff.registerWithSystem(system.system)
+    >>> model = testsystems.AlanineDipeptideVacuum()
+    >>> integrator_ff.registerWithSystem(model.system)
     >>> integrator_ff.getNumDegreesOfFreedom()
     51
+    >>> integrator_ff.setRandomNumberSeed(1234)
+    >>> platform = mm.Platform.getPlatformByName("Reference")
+    >>> context = mm.Context(model.system, integrator_ff, platform)
+    >>> context.setPositions(model.positions)
+    >>> context.setVelocitiesToTemperature(300 * unit.kelvin, 4321)
+    >>> for _ in range(4):
+    ...     integrator_ff.step(100)
+    ...     kinetic_energy = context.getState(getEnergy=True).getKineticEnergy()
+    ...     print(2 * kinetic_energy / (51 * mmunit.MOLAR_GAS_CONSTANT_R))
+    260.8... K
+    301.9... K
+    329.3... K
+    304.1... K
     """
 
     def __init__(

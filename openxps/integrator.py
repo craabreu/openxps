@@ -231,6 +231,29 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     ValueError
         If the physical and extension integrators do not follow a force-first scheme or
         do not have the same step size.
+
+    Example
+    -------
+    >>> import openxps as xps
+    >>> import openmm as mm
+    >>> from openmm import unit
+
+    Using OpenMM's LangevinMiddleIntegrator integrator (force-first)
+
+    >>> integrator = mm.LangevinMiddleIntegrator(
+    ...     300 * unit.kelvin, 1 / unit.picosecond, 1 * unit.femtosecond
+    ... )
+    >>> xps_integrator = xps.LockstepIntegrator(integrator)
+    >>> xps_integrator.getStepSize()
+    0.001 ps
+
+    Using CSVR integrator with force-first scheme for the extension system
+
+    >>> csvr = xps.integrators.CSVRIntegrator(
+    ...     300 * unit.kelvin, 10 / unit.picosecond, 1 * unit.femtosecond,
+    ...     forceFirst=True
+    ... )
+    >>> xps_integrator_ff = xps.LockstepIntegrator(integrator, csvr)
     """
 
     def __init__(
@@ -330,6 +353,49 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         If the physical and extension integrators are not symmetric in terms of
         operator splitting, or do not have a step size ratio equal to an even integer
         number.
+
+    Example
+    -------
+    >>> import openxps as xps
+    >>> import openmm as mm
+    >>> from openmm import unit
+
+    Using symmetric Verlet integrator with half step size
+
+    >>> integrator = xps.integrators.SymmetricVerletIntegrator(4 * unit.femtosecond)
+    >>> xps_integrator = xps.SplitIntegrator(integrator)
+    >>> xps_integrator.getStepSize()
+    0.004 ps
+    >>> xps_integrator.getNumSubsteps()
+    1
+
+    Using symmetric Langevin integrator with 4:1 step size ratio
+
+    >>> physical = xps.integrators.SymmetricLangevinIntegrator(
+    ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond
+    ... )
+    >>> extension = xps.integrators.SymmetricLangevinIntegrator(
+    ...     300 * unit.kelvin, 1 / unit.picosecond, 1 * unit.femtosecond
+    ... )
+    >>> xps_integrator = xps.SplitIntegrator(physical, extension)
+    >>> xps_integrator.getStepSize()
+    0.004 ps
+    >>> xps_integrator.getNumSubsteps()
+    2
+
+    Using symmetric Langevin integrator with 1:4 step size ratio
+
+    >>> physical = xps.integrators.SymmetricLangevinIntegrator(
+    ...     300 * unit.kelvin, 1 / unit.picosecond, 2 * unit.femtosecond
+    ... )
+    >>> extension = xps.integrators.SymmetricLangevinIntegrator(
+    ...     300 * unit.kelvin, 1 / unit.picosecond, 8 * unit.femtosecond
+    ... )
+    >>> xps_integrator = xps.SplitIntegrator(physical, extension)
+    >>> xps_integrator.getStepSize()
+    0.008 ps
+    >>> xps_integrator.getNumSubsteps()
+    2
     """
 
     def __init__(
@@ -408,6 +474,16 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         else:
             self._update_middle_context = self._coupling.updateExtensionContext
             self._update_end_context = self._coupling.updatePhysicalContext
+
+    def getNumSubsteps(self) -> int:
+        """Get the number of substeps for the integrator.
+
+        Returns
+        -------
+        int
+            The number of substeps for the integrator.
+        """
+        return self._num_substeps
 
     def step(self, steps: int) -> None:
         """Advance the extended phase-space simulation by integrating the physical and
