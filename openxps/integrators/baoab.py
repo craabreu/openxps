@@ -14,7 +14,7 @@ from openmm import unit as mmunit
 from .mixin import IntegratorMixin
 
 
-class BAOABIntegrator(IntegratorMixin, mm.CustomIntegrator):
+class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """
     A BAOAB integrator.
 
@@ -33,7 +33,7 @@ class BAOABIntegrator(IntegratorMixin, mm.CustomIntegrator):
     -------
     >>> import openxps as xps
     >>> from openmm import unit
-    >>> integrator = xps.integrators.BAOABIntegrator(
+    >>> integrator = xps.integrators.SymmetricLangevinIntegrator(
     ...     300 * unit.kelvin, 1 / unit.picosecond, 1 * unit.femtosecond
     ... )
     >>> integrator

@@ -30,9 +30,52 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         The number of internal loops in the thermostat. A larger number will increase
         the accuracy and stability of the integrator but will also increase the
         computational cost.
-    splitting
-        The splitting scheme. A sequence of "V", "R", and "O" characters representing
-        the velocity boost, position update, and thermostat steps, respectively.
+    forceFirst
+        If True, the integrator will apply a force-first scheme rather than a
+        symmetric operator splitting scheme.
+
+    Example
+    -------
+    >>> import openxps as xps
+    >>> from openmm import unit
+    >>> # Symmetric scheme (default)
+    >>> integrator = xps.integrators.MassiveGGMTIntegrator(
+    ...     300 * unit.kelvin, 20 * unit.femtoseconds, 2 * unit.femtoseconds, 4
+    ... )
+    >>> integrator
+    Per-dof variables:
+      v1, v2
+    Global variables:
+      kT = 2.494338785445972
+      Q1 = 0.000997735514178389
+      Q2 = 0.016553698576853793
+    Computation steps:
+       0: allow forces to update the context state
+       1: v <- v + 0.5*dt*f/m
+       2: constrain velocities
+       3: x <- x + 0.5*dt*v
+       4: v1 <- v1 + 0.125*dt*(m*v^2 - kT)/Q1
+       5: v2 <- v2 + 0.125*dt*((m*v^2)^2/3 - kT^2)/Q2
+       6: v <- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)
+       7: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
+       8: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
+       9: v <- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)
+      10: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
+      11: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
+      12: v <- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)
+      13: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
+      14: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
+      15: v <- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)
+      16: v1 <- v1 + 0.125*dt*(m*v^2 - kT)/Q1
+      17: v2 <- v2 + 0.125*dt*((m*v^2)^2/3 - kT^2)/Q2
+      18: x <- x + 0.5*dt*v
+      19: v <- v + 0.5*dt*f/m
+      20: constrain velocities
+    >>> # Force-first scheme
+    >>> integrator_ff = xps.integrators.MassiveGGMTIntegrator(
+    ...     300 * unit.kelvin, 20 * unit.femtoseconds, 2 * unit.femtoseconds, 4,
+    ...     forceFirst=True
+    ... )
     """
 
     def __init__(
@@ -41,15 +84,15 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         timeConstant: mmunit.Quantity,
         stepSize: mmunit.Quantity,
         bathLoops: int,
-        splitting: str,
+        forceFirst: bool = False,
     ) -> None:
-        if set(splitting) != {"V", "R", "O"}:
-            raise ValueError(f"Invalid splitting scheme: {splitting}")
         if bathLoops < 1:
             raise ValueError("The number of bath loops must be at least 1.")
         super().__init__(stepSize)
+        self._forceFirst = forceFirst
         self._add_variables(temperature, timeConstant)
         self.addUpdateContextState()
+        splitting = "VROR" if forceFirst else "VRORV"
         for letter in splitting:
             fraction = 1 / splitting.count(letter)
             if letter == "V":
@@ -98,61 +141,3 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def register_with_system(self, system: mm.System) -> None:
         if system.getNumConstraints() > 0:
             raise ValueError("Massive GGMT integrators do not support constraints.")
-
-
-class SymmetricMassiveGGMTIntegrator(MassiveGGMTIntegrator):
-    """
-    Implements a symmetric, massive variant of the Generalized Gaussian Moment
-    Thermostat (GGMT) integrator.
-
-    Parameters
-    ----------
-    temperature
-        The temperature.
-    timeConstant
-        The time constant of the thermostat.
-    stepSize
-        The integration step size.
-    bathLoops
-        The number of internal loops in the thermostat. A larger number will increase
-        the accuracy and stability of the integrator but will also increase the
-        computational cost.
-    """
-
-    def __init__(
-        self,
-        temperature: mmunit.Quantity,
-        timeConstant: mmunit.Quantity,
-        stepSize: mmunit.Quantity,
-        bathLoops: int,
-    ) -> None:
-        super().__init__(temperature, timeConstant, stepSize, bathLoops, "VRORV")
-
-
-class ForceFirstMassiveGGMTIntegrator(MassiveGGMTIntegrator):
-    """
-    Implements a force-first, massive variant of the Generalized Gaussian Moment
-    Thermostat (GGMT) integrator.
-
-    Parameters
-    ----------
-    temperature
-        The temperature.
-    timeConstant
-        The time constant of the thermostat.
-    stepSize
-        The integration step size.
-    bathLoops
-        The number of internal loops in the thermostat. A larger number will increase
-        the accuracy and stability of the integrator but will also increase the
-        computational cost.
-    """
-
-    def __init__(
-        self,
-        temperature: mmunit.Quantity,
-        timeConstant: mmunit.Quantity,
-        stepSize: mmunit.Quantity,
-        bathLoops: int,
-    ) -> None:
-        super().__init__(temperature, timeConstant, stepSize, bathLoops, "VROR")

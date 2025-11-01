@@ -17,6 +17,8 @@ BLOCK_END = 8
 class IntegratorMixin:
     """A mixin for integrators that provides extra functionality."""
 
+    _forceFirst: bool = False
+
     def __repr__(self) -> str:
         """Return a human-readable version of each integrator step."""
         readable_lines = []
@@ -64,7 +66,7 @@ class IntegratorMixin:
         pass
 
     @staticmethod
-    def countDegreesOfFreedom(system: mm.System) -> int:
+    def _countDegreesOfFreedom(system: mm.System) -> int:
         """Count the degrees of freedom in a system.
 
         Parameters
@@ -93,3 +95,13 @@ class IntegratorMixin:
         ):
             dof -= 3
         return dof
+
+    def isForceFirst(self) -> bool:
+        """Check if the integrator follows a force-first scheme.
+
+        Returns
+        -------
+        bool
+            True if the integrator is force-first, False otherwise.
+        """
+        return self._forceFirst
