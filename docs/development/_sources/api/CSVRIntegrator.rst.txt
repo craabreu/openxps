@@ -7,6 +7,7 @@ CSVRIntegrator
 
     .. rubric:: Methods
 
-    .. automethod:: register_with_system
+    .. automethod:: getNumDegreesOfFreedom
+    .. automethod:: registerWithSystem
     .. automethod:: setRandomNumberSeed
     .. automethod:: step

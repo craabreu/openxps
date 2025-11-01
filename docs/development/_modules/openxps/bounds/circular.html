@@ -70,28 +70,17 @@
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
-<span class="sd">    &gt;&gt;&gt; bounds = xps.CircularBounds()</span>
+<span class="sd">    &gt;&gt;&gt; bounds = xps.bounds.CircularBounds()</span>
 <span class="sd">    &gt;&gt;&gt; bounds.lower == -3.141592653589793</span>
 <span class="sd">    True</span>
 <span class="sd">    &gt;&gt;&gt; bounds.upper == 3.141592653589793</span>
 <span class="sd">    True</span>
-<span class="sd">    &gt;&gt;&gt; bounds.unit == xps.CircularBounds().unit</span>
+<span class="sd">    &gt;&gt;&gt; bounds.unit == xps.bounds.CircularBounds().unit</span>
 <span class="sd">    True</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">lower</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">upper</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">unit</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Unit</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">lower</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">lower</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span>
-        <span class="k">if</span> <span class="n">upper</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">upper</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span>
-        <span class="k">if</span> <span class="n">unit</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">radians</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">unit</span><span class="p">)</span></div>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">radians</span><span class="p">)</span></div>
 
 
 

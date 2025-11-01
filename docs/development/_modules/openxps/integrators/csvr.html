@@ -54,9 +54,15 @@
 <div class="viewcode-block" id="CSVRIntegrator">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CSVRIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,</span>
-<span class="sd">    also known as the Bussi-Donadio-Parrinello thermostat.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;The Canonical Sampling through Velocity Rescaling integrator :cite:`Bussi2007`.</span>
+
+<span class="sd">    The Canonical Sampling through Velocity Rescaling (CSVR) thermostat scales all</span>
+<span class="sd">    velocities by a single factor stochastically determined in order to preserve the</span>
+<span class="sd">    canonical distribution at the specified temperature.</span>
+
+<span class="sd">    .. warning::</span>
+<span class="sd">        If this integrator is used outside the context of OpenXPS, the method</span>
+<span class="sd">        :meth:`registerWithSystem` must be called before starting a simulation.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -73,10 +79,16 @@
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; import openmm as mm</span>
 <span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
-<span class="sd">    &gt;&gt;&gt; # Symmetric scheme (default)</span>
+<span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
+
+<span class="sd">    Symmetric scheme (default)</span>
+
 <span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.CSVRIntegrator(</span>
-<span class="sd">    ...     300 * unit.kelvin, 10 / unit.picosecond, 2 * unit.femtoseconds</span>
+<span class="sd">    ...     temperature=300 * unit.kelvin,</span>
+<span class="sd">    ...     frictionCoeff=10 / unit.picosecond,</span>
+<span class="sd">    ...     stepSize=2 * unit.femtoseconds,</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator</span>
 <span class="sd">    Per-dof variables:</span>
@@ -84,7 +96,7 @@
 <span class="sd">    Global variables:</span>
 <span class="sd">      sumRsq = 0.0</span>
 <span class="sd">      mvv = 0.0</span>
-<span class="sd">      kT = 2.494338785445972</span>
+<span class="sd">      kT = 2.49433...</span>
 <span class="sd">      friction = 10.0</span>
 <span class="sd">    Computation steps:</span>
 <span class="sd">       0: allow forces to update the context state</span>
@@ -104,11 +116,27 @@
 <span class="sd">      14: constrain velocities</span>
 <span class="sd">      15: v &lt;- v + 0.5*dt*f/m</span>
 <span class="sd">      16: constrain velocities</span>
-<span class="sd">    &gt;&gt;&gt; # Force-first scheme</span>
+
+<span class="sd">    Force-first scheme</span>
+
 <span class="sd">    &gt;&gt;&gt; integrator_ff = xps.integrators.CSVRIntegrator(</span>
-<span class="sd">    ...     300 * unit.kelvin, 10 / unit.picosecond, 2 * unit.femtoseconds,</span>
+<span class="sd">    ...     temperature=300 * unit.kelvin,</span>
+<span class="sd">    ...     frictionCoeff=10 / unit.picosecond,</span>
+<span class="sd">    ...     stepSize=2 * unit.femtoseconds,</span>
 <span class="sd">    ...     forceFirst=True</span>
 <span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; integrator_ff.getNumDegreesOfFreedom() is None</span>
+<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
+<span class="sd">    &gt;&gt;&gt; integrator_ff.registerWithSystem(model.system)</span>
+<span class="sd">    &gt;&gt;&gt; integrator_ff.getNumDegreesOfFreedom()</span>
+<span class="sd">    51</span>
+<span class="sd">    &gt;&gt;&gt; integrator_ff.setRandomNumberSeed(1234)</span>
+<span class="sd">    &gt;&gt;&gt; platform = mm.Platform.getPlatformByName(&quot;Reference&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; context = mm.Context(model.system, integrator_ff, platform)</span>
+<span class="sd">    &gt;&gt;&gt; context.setPositions(model.positions)</span>
+<span class="sd">    &gt;&gt;&gt; context.setVelocitiesToTemperature(300 * unit.kelvin, 4321)</span>
+<span class="sd">    &gt;&gt;&gt; integrator_ff.step(10)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -171,9 +199,16 @@
             <span class="n">sumRsq</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="n">num_steps</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="k">return</span> <span class="n">sumRsq</span>
 
-<div class="viewcode-block" id="CSVRIntegrator.register_with_system">
-<a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.register_with_system">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">register_with_system</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<div class="viewcode-block" id="CSVRIntegrator.getNumDegreesOfFreedom">
+<a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.getNumDegreesOfFreedom">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getNumDegreesOfFreedom</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of degrees of freedom in the system.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span></div>
+
+
+<div class="viewcode-block" id="CSVRIntegrator.registerWithSystem">
+<a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.registerWithSystem">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">registerWithSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">IntegratorMixin</span><span class="o">.</span><span class="n">_countDegreesOfFreedom</span><span class="p">(</span><span class="n">system</span><span class="p">)</span></div>
 
 

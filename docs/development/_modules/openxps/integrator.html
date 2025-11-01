@@ -166,7 +166,7 @@
             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_integrator</span><span class="p">,</span> <span class="n">extension_context</span><span class="p">),</span>
         <span class="p">):</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">IntegratorMixin</span><span class="p">):</span>
-                <span class="n">integrator</span><span class="o">.</span><span class="n">register_with_system</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">())</span>
+                <span class="n">integrator</span><span class="o">.</span><span class="n">registerWithSystem</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">())</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span> <span class="o">=</span> <span class="n">physical_context</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span> <span class="o">=</span> <span class="n">extension_context</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span> <span class="o">=</span> <span class="n">coupling</span>
@@ -270,6 +270,29 @@
 <span class="sd">    ValueError</span>
 <span class="sd">        If the physical and extension integrators do not follow a force-first scheme or</span>
 <span class="sd">        do not have the same step size.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; import openmm as mm</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+
+<span class="sd">    Using OpenMM&#39;s LangevinMiddleIntegrator integrator (force-first)</span>
+
+<span class="sd">    &gt;&gt;&gt; integrator = mm.LangevinMiddleIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 1 / unit.picosecond, 1 * unit.femtosecond</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator = xps.LockstepIntegrator(integrator)</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator.getStepSize()</span>
+<span class="sd">    0.001 ps</span>
+
+<span class="sd">    Using CSVR integrator with force-first scheme for the extension system</span>
+
+<span class="sd">    &gt;&gt;&gt; csvr = xps.integrators.CSVRIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 10 / unit.picosecond, 1 * unit.femtosecond,</span>
+<span class="sd">    ...     forceFirst=True</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator_ff = xps.LockstepIntegrator(integrator, csvr)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -375,6 +398,49 @@
 <span class="sd">        If the physical and extension integrators are not symmetric in terms of</span>
 <span class="sd">        operator splitting, or do not have a step size ratio equal to an even integer</span>
 <span class="sd">        number.</span>
+
+<span class="sd">    Example</span>
+<span class="sd">    -------</span>
+<span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
+<span class="sd">    &gt;&gt;&gt; import openmm as mm</span>
+<span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
+
+<span class="sd">    Using symmetric Verlet integrator with half step size</span>
+
+<span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.SymmetricVerletIntegrator(4 * unit.femtosecond)</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator = xps.SplitIntegrator(integrator)</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator.getStepSize()</span>
+<span class="sd">    0.004 ps</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator.getNumSubsteps()</span>
+<span class="sd">    1</span>
+
+<span class="sd">    Using symmetric Langevin integrator with 4:1 step size ratio</span>
+
+<span class="sd">    &gt;&gt;&gt; physical = xps.integrators.SymmetricLangevinIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; extension = xps.integrators.SymmetricLangevinIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 1 / unit.picosecond, 1 * unit.femtosecond</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator = xps.SplitIntegrator(physical, extension)</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator.getStepSize()</span>
+<span class="sd">    0.004 ps</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator.getNumSubsteps()</span>
+<span class="sd">    2</span>
+
+<span class="sd">    Using symmetric Langevin integrator with 1:4 step size ratio</span>
+
+<span class="sd">    &gt;&gt;&gt; physical = xps.integrators.SymmetricLangevinIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 1 / unit.picosecond, 2 * unit.femtosecond</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; extension = xps.integrators.SymmetricLangevinIntegrator(</span>
+<span class="sd">    ...     300 * unit.kelvin, 1 / unit.picosecond, 8 * unit.femtosecond</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator = xps.SplitIntegrator(physical, extension)</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator.getStepSize()</span>
+<span class="sd">    0.008 ps</span>
+<span class="sd">    &gt;&gt;&gt; xps_integrator.getNumSubsteps()</span>
+<span class="sd">    2</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -455,6 +521,19 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updateExtensionContext</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updatePhysicalContext</span></div>
+
+
+<div class="viewcode-block" id="SplitIntegrator.getNumSubsteps">
+<a class="viewcode-back" href="../../api/SplitIntegrator.html#openxps.SplitIntegrator.getNumSubsteps">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getNumSubsteps</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of substeps for the integrator.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int</span>
+<span class="sd">            The number of substeps for the integrator.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span></div>
 
 
 <div class="viewcode-block" id="SplitIntegrator.step">

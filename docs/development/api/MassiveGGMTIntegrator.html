@@ -42,8 +42,15 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">MassiveGGMTIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeConstant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bathLoops</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>Implements a massive variant of the Generalized Gaussian Moment Thermostat (GGMT)
-integrator.</p>
+<dd><p>A massive Generalized Gaussian Moment Thermostat integrator <span id="id1">[<a class="reference internal" href="../references.html#id5" title="Yi Liu and Mark E. Tuckerman. Generalized gaussian moment thermostatting: a new continuous dynamical approach to the canonical ensemble. The Journal of Chemical Physics, 112(4):1685–1700, January 2000. doi:10.1063/1.480769.">2</a>]</span>.</p>
+<p>The Generalized Gaussian Moment Thermostat (GGMT) is effective at maintaining
+temperature control under steady-state conditions, such as in adiabatic free energy
+dynamics (AFED) simulations <span id="id2">[<a class="reference internal" href="../references.html#id10" title="Jerry B. Abrams and Mark E. Tuckerman. Efficient and direct generation of multidimensional free energy surfaces via adiabatic dynamics without coordinate transformations. The Journal of Physical Chemistry B, 112(49):15742–15757, November 2008. doi:10.1021/jp805039u.">3</a>]</span>.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This integrator does not support constraints due to its massive nature, i.e.,
+independent thermostatting of each degree of freedom.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -61,50 +68,59 @@ symmetric operator splitting scheme.</p></li>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Symmetric scheme (default)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">MassiveGGMTIntegrator</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span> <span class="mi">4</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmmtools</span><span class="w"> </span><span class="kn">import</span> <span class="n">testsystems</span>
+</pre></div>
+</div>
+<p>Symmetric scheme (default)</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">MassiveGGMTIntegrator</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">temperature</span><span class="o">=</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">timeConstant</span><span class="o">=</span><span class="mi">20</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">stepSize</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">bathLoops</span><span class="o">=</span><span class="mi">2</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span>
 <span class="go">Per-dof variables:</span>
 <span class="go">  v1, v2</span>
 <span class="go">Global variables:</span>
-<span class="go">  kT = 2.494338785445972</span>
-<span class="go">  Q1 = 0.000997735514178389</span>
-<span class="go">  Q2 = 0.016553698576853793</span>
+<span class="go">  kT = 2.4943387...</span>
+<span class="go">  Q1 = 0.0009977...</span>
+<span class="go">  Q2 = 0.0165536...</span>
 <span class="go">Computation steps:</span>
 <span class="go">   0: allow forces to update the context state</span>
 <span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
-<span class="go">   2: constrain velocities</span>
-<span class="go">   3: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   4: v1 &lt;- v1 + 0.125*dt*(m*v^2 - kT)/Q1</span>
-<span class="go">   5: v2 &lt;- v2 + 0.125*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
-<span class="go">   6: v &lt;- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)</span>
-<span class="go">   7: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)/Q1</span>
-<span class="go">   8: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
-<span class="go">   9: v &lt;- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)</span>
-<span class="go">  10: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)/Q1</span>
-<span class="go">  11: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
-<span class="go">  12: v &lt;- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)</span>
-<span class="go">  13: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)/Q1</span>
-<span class="go">  14: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
-<span class="go">  15: v &lt;- v*exp(-0.25*dt*(v1+kT*v2))/sqrt(1+0.5*dt*m*v^2*v2/3)</span>
-<span class="go">  16: v1 &lt;- v1 + 0.125*dt*(m*v^2 - kT)/Q1</span>
-<span class="go">  17: v2 &lt;- v2 + 0.125*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
-<span class="go">  18: x &lt;- x + 0.5*dt*v</span>
-<span class="go">  19: v &lt;- v + 0.5*dt*f/m</span>
-<span class="go">  20: constrain velocities</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Force-first scheme</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator_ff</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">MassiveGGMTIntegrator</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">20</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span>
+<span class="go">   2: x &lt;- x + 0.5*dt*v</span>
+<span class="go">   3: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)/Q1</span>
+<span class="go">   4: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="go">   5: v &lt;- v*exp(-0.5*dt*(v1+kT*v2))/sqrt(1+1.0*dt*m*v^2*v2/3)</span>
+<span class="go">   6: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)/Q1</span>
+<span class="go">   7: v2 &lt;- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="go">   8: v &lt;- v*exp(-0.5*dt*(v1+kT*v2))/sqrt(1+1.0*dt*m*v^2*v2/3)</span>
+<span class="go">   9: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)/Q1</span>
+<span class="go">  10: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2</span>
+<span class="go">  11: x &lt;- x + 0.5*dt*v</span>
+<span class="go">  12: v &lt;- v + 0.5*dt*f/m</span>
+</pre></div>
+</div>
+<p>Force-first scheme</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integrator_ff</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">MassiveGGMTIntegrator</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">temperature</span><span class="o">=</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">timeConstant</span><span class="o">=</span><span class="mi">20</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">stepSize</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">bathLoops</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">forceFirst</span><span class="o">=</span><span class="kc">True</span>
 <span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">testsystems</span><span class="o">.</span><span class="n">AlanineDipeptideVacuum</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">integrator_ff</span><span class="o">.</span><span class="n">registerWithSystem</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">)</span>
+<span class="gp">... </span><span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+<span class="go">Massive GGMT integrators do not support constraints.</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator.register_with_system">
-<span class="sig-name descname"><span class="pre">register_with_system</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator.register_with_system"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.register_with_system" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator.registerWithSystem">
+<span class="sig-name descname"><span class="pre">registerWithSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator.registerWithSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.registerWithSystem" title="Link to this definition">¶</a></dt>
 <dd><p>Register the integrator with the system.</p>
 <dl class="field-list simple">
 </dl>

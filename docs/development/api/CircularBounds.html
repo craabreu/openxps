@@ -41,30 +41,30 @@
 <h1>CircularBounds<a class="headerlink" href="#circularbounds" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.bounds.CircularBounds">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.bounds.</span></span><span class="sig-name descname"><span class="pre">CircularBounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lower</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">upper</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">unit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds/circular.html#CircularBounds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.CircularBounds" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.bounds.</span></span><span class="sig-name descname"><span class="pre">CircularBounds</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">_</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds/circular.html#CircularBounds"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.CircularBounds" title="Link to this definition">¶</a></dt>
 <dd><p>A circular boundary condition equivalent to PeriodicBounds(-π, π, radians).</p>
 <p>This is a convenience class for the common case of a periodic boundary condition
 spanning from -π to π radians, which corresponds to a full circle.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>lower</strong> (<em>float</em>) – Optional arguments for internal use (e.g., during deserialization).
+<li><p><strong>lower</strong> – Optional arguments for internal use (e.g., during deserialization).
 If not provided, defaults to -π, π, radians respectively.</p></li>
-<li><p><strong>upper</strong> (<em>float</em>) – Optional arguments for internal use (e.g., during deserialization).
+<li><p><strong>upper</strong> – Optional arguments for internal use (e.g., during deserialization).
 If not provided, defaults to -π, π, radians respectively.</p></li>
-<li><p><strong>unit</strong> (<em>Unit</em>) – Optional arguments for internal use (e.g., during deserialization).
+<li><p><strong>unit</strong> – Optional arguments for internal use (e.g., during deserialization).
 If not provided, defaults to -π, π, radians respectively.</p></li>
 </ul>
 </dd>
 </dl>
 <p class="rubric">Example</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">CircularBounds</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CircularBounds</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span><span class="o">.</span><span class="n">lower</span> <span class="o">==</span> <span class="o">-</span><span class="mf">3.141592653589793</span>
 <span class="go">True</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span><span class="o">.</span><span class="n">upper</span> <span class="o">==</span> <span class="mf">3.141592653589793</span>
 <span class="go">True</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span><span class="o">.</span><span class="n">unit</span> <span class="o">==</span> <span class="n">xps</span><span class="o">.</span><span class="n">CircularBounds</span><span class="p">()</span><span class="o">.</span><span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span><span class="o">.</span><span class="n">unit</span> <span class="o">==</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">CircularBounds</span><span class="p">()</span><span class="o">.</span><span class="n">unit</span>
 <span class="go">True</span>
 </pre></div>
 </div>

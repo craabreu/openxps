@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Coverage for openxps/integrators/mixin.py: 69%</title>
+    <title>Coverage for openxps/integrators/mixin.py: 94%</title>
     <link rel="icon" sizes="32x32" href="favicon_32_cb_58284776.png">
     <link rel="stylesheet" href="style_cb_6b508a39.css" type="text/css">
     <script src="coverage_html_cb_6fb7b396.js" defer></script>
@@ -12,7 +12,7 @@
     <div class="content">
         <h1>
             <span class="text">Coverage for </span><b>openxps/integrators/mixin.py</b>:
-            <span class="pc_cov">69%</span>
+            <span class="pc_cov">94%</span>
         </h1>
         <aside id="help_panel_wrapper">
             <input id="help_panel_state" type="checkbox">
@@ -55,17 +55,17 @@
         </aside>
         <h2>
             <span class="text">49 statements &nbsp;</span>
-            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">34<span class="text"> run</span></button>
-            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">15<span class="text"> missing</span></button>
+            <button type="button" class="run button_toggle_run" value="run" data-shortcut="r" title="Toggle lines run">46<span class="text"> run</span></button>
+            <button type="button" class="mis show_mis button_toggle_mis" value="mis" data-shortcut="m" title="Toggle lines missing">3<span class="text"> missing</span></button>
             <button type="button" class="exc show_exc button_toggle_exc" value="exc" data-shortcut="x" title="Toggle lines excluded">0<span class="text"> excluded</span></button>
         </h2>
         <p class="text">
             <a id="prevFileLink" class="nav" href="z_b306865a0699ce23_massive_ggmt_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a id="indexLink" class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a id="nextFileLink" class="nav" href="z_b306865a0699ce23_velocity_verlet_py.html">&#xbb; next</a>
+            <a id="nextFileLink" class="nav" href="z_b306865a0699ce23_symmetric_langevin_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-11-01 02:12 +0000
+            created at 2025-11-01 20:23 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -143,7 +143,7 @@
     <p class="run"><span class="n"><a id="t61" href="#t61">61</a></span><span class="t">            <span class="nam">readable_lines</span><span class="op">.</span><span class="nam">append</span><span class="op">(</span><span class="nam">line</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t62" href="#t62">62</a></span><span class="t">        <span class="key">return</span> <span class="str">"\n"</span><span class="op">.</span><span class="nam">join</span><span class="op">(</span><span class="nam">readable_lines</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t63" href="#t63">63</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="key">def</span> <span class="nam">register_with_system</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">system</span><span class="op">:</span> <span class="nam">mm</span><span class="op">.</span><span class="nam">System</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t64" href="#t64">64</a></span><span class="t">    <span class="key">def</span> <span class="nam">registerWithSystem</span><span class="op">(</span><span class="nam">self</span><span class="op">,</span> <span class="nam">system</span><span class="op">:</span> <span class="nam">mm</span><span class="op">.</span><span class="nam">System</span><span class="op">)</span> <span class="op">-></span> <span class="key">None</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t65" href="#t65">65</a></span><span class="t">        <span class="str">"""Register the integrator with the system."""</span>&nbsp;</span><span class="r"></span></p>
     <p class="mis show_mis"><span class="n"><a id="t66" href="#t66">66</a></span><span class="t">        <span class="key">pass</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t67" href="#t67">67</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
@@ -161,22 +161,22 @@
     <p class="pln"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t"><span class="str">        int</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t"><span class="str">            The number of degrees of freedom in the system.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t"><span class="str">        """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">        <span class="nam">dof</span> <span class="op">=</span> <span class="num">0</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">        <span class="key">for</span> <span class="nam">i</span> <span class="key">in</span> <span class="nam">range</span><span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getNumParticles</span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">            <span class="key">if</span> <span class="nam">system</span><span class="op">.</span><span class="nam">getParticleMass</span><span class="op">(</span><span class="nam">i</span><span class="op">)</span> <span class="op">></span> <span class="num">0</span> <span class="op">*</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">dalton</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">                <span class="nam">dof</span> <span class="op">+=</span> <span class="num">3</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">        <span class="key">for</span> <span class="nam">i</span> <span class="key">in</span> <span class="nam">range</span><span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getNumConstraints</span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">            <span class="nam">p1</span><span class="op">,</span> <span class="nam">p2</span><span class="op">,</span> <span class="nam">_</span> <span class="op">=</span> <span class="nam">system</span><span class="op">.</span><span class="nam">getConstraintParameters</span><span class="op">(</span><span class="nam">i</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">            <span class="key">if</span> <span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getParticleMass</span><span class="op">(</span><span class="nam">p1</span><span class="op">)</span> <span class="op">></span> <span class="num">0</span> <span class="op">*</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">dalton</span><span class="op">)</span> <span class="key">or</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">                <span class="nam">system</span><span class="op">.</span><span class="nam">getParticleMass</span><span class="op">(</span><span class="nam">p2</span><span class="op">)</span> <span class="op">></span> <span class="num">0</span> <span class="op">*</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">dalton</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">            <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">                <span class="nam">dof</span> <span class="op">-=</span> <span class="num">1</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">        <span class="key">if</span> <span class="nam">any</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">            <span class="nam">isinstance</span><span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getForce</span><span class="op">(</span><span class="nam">i</span><span class="op">)</span><span class="op">,</span> <span class="nam">mm</span><span class="op">.</span><span class="nam">CMMotionRemover</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">            <span class="key">for</span> <span class="nam">i</span> <span class="key">in</span> <span class="nam">range</span><span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getNumForces</span><span class="op">(</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis mis2 show_mis"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">            <span class="nam">dof</span> <span class="op">-=</span> <span class="num">3</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">        <span class="key">return</span> <span class="nam">dof</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">        <span class="nam">dof</span> <span class="op">=</span> <span class="num">0</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">        <span class="key">for</span> <span class="nam">i</span> <span class="key">in</span> <span class="nam">range</span><span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getNumParticles</span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">            <span class="key">if</span> <span class="nam">system</span><span class="op">.</span><span class="nam">getParticleMass</span><span class="op">(</span><span class="nam">i</span><span class="op">)</span> <span class="op">></span> <span class="num">0</span> <span class="op">*</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">dalton</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">                <span class="nam">dof</span> <span class="op">+=</span> <span class="num">3</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">        <span class="key">for</span> <span class="nam">i</span> <span class="key">in</span> <span class="nam">range</span><span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getNumConstraints</span><span class="op">(</span><span class="op">)</span><span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">            <span class="nam">p1</span><span class="op">,</span> <span class="nam">p2</span><span class="op">,</span> <span class="nam">_</span> <span class="op">=</span> <span class="nam">system</span><span class="op">.</span><span class="nam">getConstraintParameters</span><span class="op">(</span><span class="nam">i</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">            <span class="key">if</span> <span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getParticleMass</span><span class="op">(</span><span class="nam">p1</span><span class="op">)</span> <span class="op">></span> <span class="num">0</span> <span class="op">*</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">dalton</span><span class="op">)</span> <span class="key">or</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">                <span class="nam">system</span><span class="op">.</span><span class="nam">getParticleMass</span><span class="op">(</span><span class="nam">p2</span><span class="op">)</span> <span class="op">></span> <span class="num">0</span> <span class="op">*</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">dalton</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">            <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">                <span class="nam">dof</span> <span class="op">-=</span> <span class="num">1</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t">        <span class="key">if</span> <span class="nam">any</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t93" href="#t93">93</a></span><span class="t">            <span class="nam">isinstance</span><span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getForce</span><span class="op">(</span><span class="nam">i</span><span class="op">)</span><span class="op">,</span> <span class="nam">mm</span><span class="op">.</span><span class="nam">CMMotionRemover</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t94" href="#t94">94</a></span><span class="t">            <span class="key">for</span> <span class="nam">i</span> <span class="key">in</span> <span class="nam">range</span><span class="op">(</span><span class="nam">system</span><span class="op">.</span><span class="nam">getNumForces</span><span class="op">(</span><span class="op">)</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t95" href="#t95">95</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t96" href="#t96">96</a></span><span class="t">            <span class="nam">dof</span> <span class="op">-=</span> <span class="num">3</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t97" href="#t97">97</a></span><span class="t">        <span class="key">return</span> <span class="nam">dof</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t98" href="#t98">98</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
     <p class="run"><span class="n"><a id="t99" href="#t99">99</a></span><span class="t">    <span class="key">def</span> <span class="nam">isForceFirst</span><span class="op">(</span><span class="nam">self</span><span class="op">)</span> <span class="op">-></span> <span class="nam">bool</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t100" href="#t100">100</a></span><span class="t">        <span class="str">"""Check if the integrator follows a force-first scheme.</span>&nbsp;</span><span class="r"></span></p>
@@ -186,17 +186,17 @@
     <p class="pln"><span class="n"><a id="t104" href="#t104">104</a></span><span class="t"><span class="str">        bool</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t105" href="#t105">105</a></span><span class="t"><span class="str">            True if the integrator is force-first, False otherwise.</span>&nbsp;</span><span class="r"></span></p>
     <p class="pln"><span class="n"><a id="t106" href="#t106">106</a></span><span class="t"><span class="str">        """</span>&nbsp;</span><span class="r"></span></p>
-    <p class="mis show_mis"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">        <span class="key">return</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_forceFirst</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t107" href="#t107">107</a></span><span class="t">        <span class="key">return</span> <span class="nam">self</span><span class="op">.</span><span class="nam">_forceFirst</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
         <p>
             <a class="nav" href="z_b306865a0699ce23_massive_ggmt_py.html">&#xab; prev</a> &nbsp; &nbsp;
             <a class="nav" href="index.html">&Hat; index</a> &nbsp; &nbsp;
-            <a class="nav" href="z_b306865a0699ce23_velocity_verlet_py.html">&#xbb; next</a>
+            <a class="nav" href="z_b306865a0699ce23_symmetric_langevin_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.11.0">coverage.py v7.11.0</a>,
-            created at 2025-11-01 02:12 +0000
+            created at 2025-11-01 20:23 +0000
         </p>
     </div>
 </footer>

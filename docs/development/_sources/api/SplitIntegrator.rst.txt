@@ -8,4 +8,5 @@ SplitIntegrator
     .. rubric:: Methods
 
     .. automethod:: configure
+    .. automethod:: getNumSubsteps
     .. automethod:: step
