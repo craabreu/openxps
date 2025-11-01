@@ -2,16 +2,16 @@
 Integrators for extended phase-space simulations with OpenMM.
 """
 
-from .baoab import BAOABIntegrator
+from .baoab import SymmetricLangevinIntegrator
 from .csvr import CSVRIntegrator
 from .massive_ggmt import (
     MassiveGGMTIntegrator,
 )
-from .velocity_verlet import VelocityVerletIntegrator
+from .velocity_verlet import SymmetricVerletIntegrator
 
 __all__ = [
-    "VelocityVerletIntegrator",
-    "BAOABIntegrator",
+    "SymmetricVerletIntegrator",
+    "SymmetricLangevinIntegrator",
     "CSVRIntegrator",
     "MassiveGGMTIntegrator",
 ]

@@ -13,7 +13,7 @@ from openmm import unit as mmunit
 from .mixin import IntegratorMixin
 
 
-class VelocityVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
+class SymmetricVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """
     A velocity Verlet integrator.
 
@@ -28,7 +28,7 @@ class VelocityVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
     -------
     >>> import openxps as xps
     >>> from openmm import unit
-    >>> integrator = xps.integrators.VelocityVerletIntegrator(1 * unit.femtosecond)
+    >>> integrator = xps.integrators.SymmetricVerletIntegrator(1 * unit.femtosecond)
     >>> integrator
     Per-dof variables:
       x1

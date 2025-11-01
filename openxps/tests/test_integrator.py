@@ -20,8 +20,8 @@ def create_force_first_integrator(step_size):
 
 
 def create_symmetric_integrator(step_size):
-    """Create a symmetric VelocityVerletIntegrator with given step size."""
-    return integrators.VelocityVerletIntegrator(step_size)
+    """Create a symmetric SymmetricVerletIntegrator with given step size."""
+    return integrators.SymmetricVerletIntegrator(step_size)
 
 
 def create_non_force_first_integrator(step_size):

@@ -15,10 +15,10 @@ from .dynamical_variable import DynamicalVariable  # noqa: F401
 from .extension_writer import ExtensionWriter  # noqa: F401
 from .integrator import LockstepIntegrator, SplitIntegrator  # noqa: F401
 from .integrators import (
-    BAOABIntegrator,
     CSVRIntegrator,
     MassiveGGMTIntegrator,
-    VelocityVerletIntegrator,
+    SymmetricLangevinIntegrator,
+    SymmetricVerletIntegrator,
 )
 from .metadynamics import (  # noqa: F401
     ExtendedSpaceBiasVariable,
@@ -45,8 +45,8 @@ __all__ = [
     "ExtendedSpaceSimulation",
     "LockstepIntegrator",
     "SplitIntegrator",
-    "BAOABIntegrator",
+    "SymmetricLangevinIntegrator",
     "CSVRIntegrator",
     "MassiveGGMTIntegrator",
-    "VelocityVerletIntegrator",
+    "SymmetricVerletIntegrator",
 ]

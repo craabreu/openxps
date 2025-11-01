@@ -33,8 +33,8 @@ KNOWN_FORCE_FIRST_INTEGRATORS = (
 #: Tuple of OpenMM integrator classes known to be symmetric in the sense of operator
 #: splitting, i.e., they can be represented as a palindromic sequence of operations.
 KNOWN_SYMMETRIC_INTEGRATORS = (
-    integrators.VelocityVerletIntegrator,
-    integrators.BAOABIntegrator,
+    integrators.SymmetricVerletIntegrator,
+    integrators.SymmetricLangevinIntegrator,
 )
 
 
