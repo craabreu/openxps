@@ -17,10 +17,7 @@ from .integrator import LockstepIntegrator, SplitIntegrator  # noqa: F401
 from .integrators import (
     BAOABIntegrator,
     CSVRIntegrator,
-    ForceFirstCSVRIntegrator,
-    ForceFirstMassiveGGMTIntegrator,
     MassiveGGMTIntegrator,
-    SymmetricMassiveGGMTIntegrator,
     VelocityVerletIntegrator,
 )
 from .metadynamics import (  # noqa: F401
@@ -50,9 +47,6 @@ __all__ = [
     "SplitIntegrator",
     "BAOABIntegrator",
     "CSVRIntegrator",
-    "ForceFirstCSVRIntegrator",
     "MassiveGGMTIntegrator",
-    "ForceFirstMassiveGGMTIntegrator",
-    "SymmetricMassiveGGMTIntegrator",
     "VelocityVerletIntegrator",
 ]

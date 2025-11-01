@@ -28,8 +28,6 @@ KNOWN_FORCE_FIRST_INTEGRATORS = (
     mm.LangevinIntegrator,
     mm.LangevinMiddleIntegrator,
     mm.NoseHooverIntegrator,
-    integrators.ForceFirstCSVRIntegrator,
-    integrators.ForceFirstMassiveGGMTIntegrator,
 )
 
 #: Tuple of OpenMM integrator classes known to be symmetric in the sense of operator
@@ -37,8 +35,6 @@ KNOWN_FORCE_FIRST_INTEGRATORS = (
 KNOWN_SYMMETRIC_INTEGRATORS = (
     integrators.VelocityVerletIntegrator,
     integrators.BAOABIntegrator,
-    integrators.SymmetricCSVRIntegrator,
-    integrators.SymmetricMassiveGGMTIntegrator,
 )
 
 
@@ -254,9 +250,9 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
             )
         if not (
             assume_force_first
-            or all(
-                isinstance(integrator, KNOWN_FORCE_FIRST_INTEGRATORS)
-                for integrator in (physical_integrator, extension_integrator)
+            or (
+                self._is_force_first(physical_integrator)
+                and self._is_force_first(extension_integrator)
             )
         ):
             raise ValueError(
@@ -265,6 +261,15 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
                 "set assume_force_first=True."
             )
         super().__init__(physical_integrator, extension_integrator)
+
+    @staticmethod
+    def _is_force_first(integrator: mm.Integrator) -> bool:
+        """Check if an integrator follows a force-first scheme."""
+        if isinstance(integrator, KNOWN_FORCE_FIRST_INTEGRATORS):
+            return True
+        if isinstance(integrator, IntegratorMixin):
+            return integrator.isForceFirst()
+        return False
 
     def step(self, steps: int) -> None:
         """Advance the extended phase-space simulation by a specified number of steps.
@@ -342,9 +347,9 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             extension_step_size = mmswig.Integrator_getStepSize(extension_integrator)
         if not (
             assume_symmetric
-            or all(
-                isinstance(integrator, KNOWN_SYMMETRIC_INTEGRATORS)
-                for integrator in (physical_integrator, extension_integrator)
+            or (
+                self._is_symmetric(physical_integrator)
+                and self._is_symmetric(extension_integrator)
             )
         ):
             raise ValueError(
@@ -360,6 +365,15 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
                 "an even integer ratio."
             )
         super().__init__(physical_integrator, extension_integrator)
+
+    @staticmethod
+    def _is_symmetric(integrator: mm.Integrator) -> bool:
+        """Check if an integrator is symmetric in terms of operator splitting."""
+        if isinstance(integrator, KNOWN_SYMMETRIC_INTEGRATORS):
+            return True
+        if isinstance(integrator, IntegratorMixin):
+            return not integrator.isForceFirst()
+        return False
 
     @staticmethod
     def _is_even_division(a: float, b: float) -> bool:

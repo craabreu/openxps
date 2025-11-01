@@ -27,9 +27,9 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         The friction coefficient.
     stepSize
         The integration step size.
-    splitting
-        The splitting scheme. A sequence of "V", "R", and "O" characters representing
-        the velocity boost, position update, and thermostat steps, respectively.
+    forceFirst
+        If True, the integrator will apply a force-first scheme rather than a
+        symmetric operator splitting scheme.
     """
 
     def __init__(
@@ -37,15 +37,15 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         temperature: mmunit.Quantity,
         frictionCoeff: mmunit.Quantity,
         stepSize: mmunit.Quantity,
-        splitting: str,
+        forceFirst: bool = False,
     ) -> None:
-        if set(splitting) != {"V", "R", "O"}:
-            raise ValueError(f"Invalid splitting scheme: {splitting}")
         super().__init__(stepSize)
+        self._forceFirst = forceFirst
         self._num_dof = None
         self._rng = np.random.default_rng(None)
         self._add_global_variables(temperature, frictionCoeff)
         self.addUpdateContextState()
+        splitting = "VROR" if forceFirst else "VRORV"
         for letter in splitting:
             n = splitting.count(letter)
             timestep = "dt" if n == 1 else f"{1 / n}*dt"
@@ -93,7 +93,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         return sumRsq
 
     def register_with_system(self, system: mm.System) -> None:
-        self._num_dof = IntegratorMixin.countDegreesOfFreedom(system)
+        self._num_dof = IntegratorMixin._countDegreesOfFreedom(system)
 
     def setRandomNumberSeed(self, seed: int) -> None:
         """
@@ -121,51 +121,3 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         for sumRsq in self._sums_of_squared_gaussians(steps):
             self.setGlobalVariableByName("sumRsq", sumRsq)
             super().step(1)
-
-
-class SymmetricCSVRIntegrator(CSVRIntegrator):
-    """
-    Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,
-    also known as the Bussi-Donadio-Parrinello thermostat.
-
-    Parameters
-    ----------
-    temperature
-        The temperature.
-    frictionCoeff
-        The friction coefficient.
-    stepSize
-        The integration step size.
-    """
-
-    def __init__(
-        self,
-        temperature: mmunit.Quantity,
-        frictionCoeff: mmunit.Quantity,
-        stepSize: mmunit.Quantity,
-    ) -> None:
-        super().__init__(temperature, frictionCoeff, stepSize, "VRORV")
-
-
-class ForceFirstCSVRIntegrator(CSVRIntegrator):
-    """
-    Implements a force-first variant of the Canonical Sampling through Velocity
-    Rescaling (CSVR) integrator, also known as the Bussi-Donadio-Parrinello thermostat.
-
-    Parameters
-    ----------
-    temperature
-        The temperature.
-    frictionCoeff
-        The friction coefficient.
-    stepSize
-        The integration step size.
-    """
-
-    def __init__(
-        self,
-        temperature: mmunit.Quantity,
-        frictionCoeff: mmunit.Quantity,
-        stepSize: mmunit.Quantity,
-    ) -> None:
-        super().__init__(temperature, frictionCoeff, stepSize, "VROR")

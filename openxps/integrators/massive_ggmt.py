@@ -30,9 +30,9 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         The number of internal loops in the thermostat. A larger number will increase
         the accuracy and stability of the integrator but will also increase the
         computational cost.
-    splitting
-        The splitting scheme. A sequence of "V", "R", and "O" characters representing
-        the velocity boost, position update, and thermostat steps, respectively.
+    forceFirst
+        If True, the integrator will apply a force-first scheme rather than a
+        symmetric operator splitting scheme.
     """
 
     def __init__(
@@ -41,15 +41,15 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         timeConstant: mmunit.Quantity,
         stepSize: mmunit.Quantity,
         bathLoops: int,
-        splitting: str,
+        forceFirst: bool = False,
     ) -> None:
-        if set(splitting) != {"V", "R", "O"}:
-            raise ValueError(f"Invalid splitting scheme: {splitting}")
         if bathLoops < 1:
             raise ValueError("The number of bath loops must be at least 1.")
         super().__init__(stepSize)
+        self._forceFirst = forceFirst
         self._add_variables(temperature, timeConstant)
         self.addUpdateContextState()
+        splitting = "VROR" if forceFirst else "VRORV"
         for letter in splitting:
             fraction = 1 / splitting.count(letter)
             if letter == "V":
@@ -98,61 +98,3 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def register_with_system(self, system: mm.System) -> None:
         if system.getNumConstraints() > 0:
             raise ValueError("Massive GGMT integrators do not support constraints.")
-
-
-class SymmetricMassiveGGMTIntegrator(MassiveGGMTIntegrator):
-    """
-    Implements a symmetric, massive variant of the Generalized Gaussian Moment
-    Thermostat (GGMT) integrator.
-
-    Parameters
-    ----------
-    temperature
-        The temperature.
-    timeConstant
-        The time constant of the thermostat.
-    stepSize
-        The integration step size.
-    bathLoops
-        The number of internal loops in the thermostat. A larger number will increase
-        the accuracy and stability of the integrator but will also increase the
-        computational cost.
-    """
-
-    def __init__(
-        self,
-        temperature: mmunit.Quantity,
-        timeConstant: mmunit.Quantity,
-        stepSize: mmunit.Quantity,
-        bathLoops: int,
-    ) -> None:
-        super().__init__(temperature, timeConstant, stepSize, bathLoops, "VRORV")
-
-
-class ForceFirstMassiveGGMTIntegrator(MassiveGGMTIntegrator):
-    """
-    Implements a force-first, massive variant of the Generalized Gaussian Moment
-    Thermostat (GGMT) integrator.
-
-    Parameters
-    ----------
-    temperature
-        The temperature.
-    timeConstant
-        The time constant of the thermostat.
-    stepSize
-        The integration step size.
-    bathLoops
-        The number of internal loops in the thermostat. A larger number will increase
-        the accuracy and stability of the integrator but will also increase the
-        computational cost.
-    """
-
-    def __init__(
-        self,
-        temperature: mmunit.Quantity,
-        timeConstant: mmunit.Quantity,
-        stepSize: mmunit.Quantity,
-        bathLoops: int,
-    ) -> None:
-        super().__init__(temperature, timeConstant, stepSize, bathLoops, "VROR")
