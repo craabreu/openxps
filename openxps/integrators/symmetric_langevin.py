@@ -1,5 +1,5 @@
 """
-.. module:: openxps.integrators.baoab
+.. module:: openxps.integrators.symmetric_langevin
    :platform: Linux, MacOS, Windows
    :synopsis: BAOAB integrator.
 
@@ -15,10 +15,7 @@ from .mixin import IntegratorMixin
 
 
 class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
-    """
-    A BAOAB integrator.
-
-    This is a symmetric integrator.
+    """A symmetric Langevin integrator using the BAOAB algorithm :cite:`Leimkuhler2013`.
 
     Parameters
     ----------
@@ -40,9 +37,9 @@ class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
     Per-dof variables:
       x1
     Global variables:
-      a = 0.999000499833375
-      b = 0.044699008184376096
-      kT = 2.494338785445972
+      a = 0.999000...
+      b = 0.044699...
+      kT = 2.49433...
     Computation steps:
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m

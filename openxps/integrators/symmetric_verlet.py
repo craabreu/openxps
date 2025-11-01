@@ -1,5 +1,5 @@
 """
-.. module:: openxps.integrators.velocity_verlet
+.. module:: openxps.integrators.symmetric_verlet
    :platform: Linux, MacOS, Windows
    :synopsis: Velocity Verlet integrator.
 
@@ -14,10 +14,7 @@ from .mixin import IntegratorMixin
 
 
 class SymmetricVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
-    """
-    A velocity Verlet integrator.
-
-    This is a symmetric integrator.
+    """A symmetric velocity Verlet integrator.
 
     Parameters
     ----------

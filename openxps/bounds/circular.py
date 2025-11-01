@@ -31,28 +31,17 @@ class CircularBounds(PeriodicBounds):
     Example
     -------
     >>> import openxps as xps
-    >>> bounds = xps.CircularBounds()
+    >>> bounds = xps.bounds.CircularBounds()
     >>> bounds.lower == -3.141592653589793
     True
     >>> bounds.upper == 3.141592653589793
     True
-    >>> bounds.unit == xps.CircularBounds().unit
+    >>> bounds.unit == xps.bounds.CircularBounds().unit
     True
     """
 
-    def __init__(
-        self,
-        lower: float | None = None,
-        upper: float | None = None,
-        unit: mmunit.Unit | None = None,
-    ) -> None:
-        if lower is None:
-            lower = -np.pi
-        if upper is None:
-            upper = np.pi
-        if unit is None:
-            unit = mmunit.radians
-        super().__init__(lower, upper, unit)
+    def __init__(self, *_) -> None:
+        super().__init__(-np.pi, np.pi, mmunit.radians)
 
 
 CircularBounds.registerTag("!openxps.bounds.CircularBounds")
