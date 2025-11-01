@@ -15,9 +15,15 @@ from .mixin import IntegratorMixin
 
 
 class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
-    """
-    Implements the Canonical Sampling through Velocity Rescaling (CSVR) integrator,
-    also known as the Bussi-Donadio-Parrinello thermostat.
+    """The Canonical Sampling through Velocity Rescaling integrator :cite:`Bussi2007`.
+
+    The Canonical Sampling through Velocity Rescaling (CSVR) thermostat scales all
+    velocities by a single factor stochastically determined in order to preserve the
+    canonical distribution at the specified temperature.
+
+    .. warning::
+        If this integrator is used outside the context of OpenXPS, the method
+        :meth:`registerWithSystem` must be called before starting a simulation.
 
     Parameters
     ----------
@@ -34,10 +40,16 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     Example
     -------
     >>> import openxps as xps
+    >>> import openmm as mm
     >>> from openmm import unit
-    >>> # Symmetric scheme (default)
+    >>> from openmmtools import testsystems
+
+    Symmetric scheme (default)
+
     >>> integrator = xps.integrators.CSVRIntegrator(
-    ...     300 * unit.kelvin, 10 / unit.picosecond, 2 * unit.femtoseconds
+    ...     temperature=300 * unit.kelvin,
+    ...     frictionCoeff=10 / unit.picosecond,
+    ...     stepSize=2 * unit.femtoseconds,
     ... )
     >>> integrator
     Per-dof variables:
@@ -45,7 +57,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     Global variables:
       sumRsq = 0.0
       mvv = 0.0
-      kT = 2.494338785445972
+      kT = 2.49433...
       friction = 10.0
     Computation steps:
        0: allow forces to update the context state
@@ -65,11 +77,27 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
       14: constrain velocities
       15: v <- v + 0.5*dt*f/m
       16: constrain velocities
-    >>> # Force-first scheme
+
+    Force-first scheme
+
     >>> integrator_ff = xps.integrators.CSVRIntegrator(
-    ...     300 * unit.kelvin, 10 / unit.picosecond, 2 * unit.femtoseconds,
+    ...     temperature=300 * unit.kelvin,
+    ...     frictionCoeff=10 / unit.picosecond,
+    ...     stepSize=2 * unit.femtoseconds,
     ...     forceFirst=True
     ... )
+    >>> integrator_ff.getNumDegreesOfFreedom() is None
+    True
+    >>> model = testsystems.AlanineDipeptideVacuum()
+    >>> integrator_ff.registerWithSystem(model.system)
+    >>> integrator_ff.getNumDegreesOfFreedom()
+    51
+    >>> integrator_ff.setRandomNumberSeed(1234)
+    >>> platform = mm.Platform.getPlatformByName("Reference")
+    >>> context = mm.Context(model.system, integrator_ff, platform)
+    >>> context.setPositions(model.positions)
+    >>> context.setVelocitiesToTemperature(300 * unit.kelvin, 4321)
+    >>> integrator_ff.step(10)
     """
 
     def __init__(
@@ -132,7 +160,11 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
             sumRsq += self._rng.standard_normal(num_steps) ** 2
         return sumRsq
 
-    def register_with_system(self, system: mm.System) -> None:
+    def getNumDegreesOfFreedom(self) -> int:
+        """Get the number of degrees of freedom in the system."""
+        return self._num_dof
+
+    def registerWithSystem(self, system: mm.System) -> None:
         self._num_dof = IntegratorMixin._countDegreesOfFreedom(system)
 
     def setRandomNumberSeed(self, seed: int) -> None:
