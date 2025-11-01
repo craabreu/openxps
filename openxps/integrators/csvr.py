@@ -30,6 +30,46 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     forceFirst
         If True, the integrator will apply a force-first scheme rather than a
         symmetric operator splitting scheme.
+
+    Example
+    -------
+    >>> import openxps as xps
+    >>> from openmm import unit
+    >>> # Symmetric scheme (default)
+    >>> integrator = xps.integrators.CSVRIntegrator(
+    ...     300 * unit.kelvin, 10 / unit.picosecond, 2 * unit.femtoseconds
+    ... )
+    >>> integrator
+    Per-dof variables:
+      x1
+    Global variables:
+      sumRsq = 0.0
+      mvv = 0.0
+      kT = 2.494338785445972
+      friction = 10.0
+    Computation steps:
+       0: allow forces to update the context state
+       1: v <- v + 0.5*dt*f/m
+       2: constrain velocities
+       3: x <- x + 0.5*dt*v
+       4: x1 <- x
+       5: constrain positions
+       6: v <- v + (x - x1)/(0.5*dt)
+       7: constrain velocities
+       8: mvv <- sum(m*v*v)
+       9: v <- v*sqrt(A + BC*(R1 ^ 2 + sumRsq) + 2*sqrt(A*BC)*R1); ...
+      10: x <- x + 0.5*dt*v
+      11: x1 <- x
+      12: constrain positions
+      13: v <- v + (x - x1)/(0.5*dt)
+      14: constrain velocities
+      15: v <- v + 0.5*dt*f/m
+      16: constrain velocities
+    >>> # Force-first scheme
+    >>> integrator_ff = xps.integrators.CSVRIntegrator(
+    ...     300 * unit.kelvin, 10 / unit.picosecond, 2 * unit.femtoseconds,
+    ...     forceFirst=True
+    ... )
     """
 
     def __init__(
