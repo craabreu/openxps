@@ -64,17 +64,20 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     Computation steps:
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m
-       2: x <- x + 0.5*dt*v
+       2: x <- x + 0.25*dt*v
        3: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
        4: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
        5: v <- v*exp(-0.5*dt*(v1+kT*v2))/sqrt(1+1.0*dt*m*v^2*v2/3)
-       6: v1 <- v1 + 0.5*dt*(m*v^2 - kT)/Q1
-       7: v2 <- v2 + 0.5*dt*((m*v^2)^2/3 - kT^2)/Q2
-       8: v <- v*exp(-0.5*dt*(v1+kT*v2))/sqrt(1+1.0*dt*m*v^2*v2/3)
+       6: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
+       7: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
+       8: x <- x + 0.5*dt*v
        9: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
       10: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
-      11: x <- x + 0.5*dt*v
-      12: v <- v + 0.5*dt*f/m
+      11: v <- v*exp(-0.5*dt*(v1+kT*v2))/sqrt(1+1.0*dt*m*v^2*v2/3)
+      12: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
+      13: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
+      14: x <- x + 0.25*dt*v
+      15: v <- v + 0.5*dt*f/m
 
     Force-first scheme
 
@@ -107,15 +110,15 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self._forceFirst = forceFirst
         self._add_variables(temperature, timeConstant)
         self.addUpdateContextState()
-        splitting = "VROR" if forceFirst else "VRORV"
-        for letter in splitting:
-            fraction = 1 / splitting.count(letter)
-            if letter == "V":
-                self._add_boost(fraction)
-            elif letter == "R":
-                self._add_translation(fraction)
-            elif letter == "O":
-                self._add_thermostat(fraction, bathLoops)
+        self._add_boost(1 if forceFirst else 0.5)
+        self._add_translation(0.5 / bathLoops)
+        for _ in range(bathLoops - 1):
+            self._add_thermostat(1 / bathLoops)
+            self._add_translation(1 / bathLoops)
+        self._add_thermostat(1 / bathLoops)
+        self._add_translation(0.5 / bathLoops)
+        if not forceFirst:
+            self._add_boost(0.5)
 
     def _add_variables(
         self, temperature: mmunit.Quantity, timeConstant: mmunit.Quantity
@@ -133,24 +136,15 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def _add_boost(self, fraction: float) -> None:
         self.addComputePerDof("v", f"v + {fraction}*dt*f/m")
 
-    def _update_v1_v2(self, fraction: float) -> None:
-        self.addComputePerDof("v1", f"v1 + {fraction}*dt*(m*v^2 - kT)/Q1")
-        self.addComputePerDof("v2", f"v2 + {fraction}*dt*((m*v^2)^2/3 - kT^2)/Q2")
-
-    def _update_v(self, fraction: float) -> None:
+    def _add_thermostat(self, fraction: float) -> None:
+        self.addComputePerDof("v1", f"v1 + {0.5 * fraction}*dt*(m*v^2 - kT)/Q1")
+        self.addComputePerDof("v2", f"v2 + {0.5 * fraction}*dt*((m*v^2)^2/3 - kT^2)/Q2")
         self.addComputePerDof(
             "v",
             f"v*exp(-{fraction}*dt*(v1+kT*v2))/sqrt(1+{2 * fraction}*dt*m*v^2*v2/3)",
         )
-
-    def _add_thermostat(self, fraction: float, bathLoops: int) -> None:
-        subfraction = fraction / bathLoops
-        self._update_v1_v2(0.5 * subfraction)
-        for _ in range(bathLoops - 1):
-            self._update_v(subfraction)
-            self._update_v1_v2(subfraction)
-        self._update_v(subfraction)
-        self._update_v1_v2(0.5 * subfraction)
+        self.addComputePerDof("v2", f"v2 + {0.5 * fraction}*dt*((m*v^2)^2/3 - kT^2)/Q2")
+        self.addComputePerDof("v1", f"v1 + {0.5 * fraction}*dt*(m*v^2 - kT)/Q1")
 
     def registerWithSystem(self, system: mm.System) -> None:
         if system.getNumConstraints() > 0:
