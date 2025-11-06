@@ -10,7 +10,7 @@
 import openmm as mm
 from openmm import unit as mmunit
 
-from .mixin import IntegratorMixin
+from .mixins import IntegratorMixin
 
 
 class SymmetricVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):

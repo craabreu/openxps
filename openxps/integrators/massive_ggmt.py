@@ -10,10 +10,19 @@
 import openmm as mm
 from openmm import unit as mmunit
 
-from .mixin import IntegratorMixin
+from .mixins import (
+    IntegratorMixin,
+    TemperatureMixin,
+    TimeConstantMixin,
+)
 
 
-class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
+class MassiveGGMTIntegrator(
+    IntegratorMixin,
+    TemperatureMixin,
+    TimeConstantMixin,
+    mm.CustomIntegrator,
+):
     """A massive Generalized Gaussian Moment Thermostat integrator :cite:`Liu2000`.
 
     The Generalized Gaussian Moment Thermostat (GGMT) is effective at maintaining
@@ -59,23 +68,23 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
       v1, v2
     Global variables:
       kT = 2.4943387...
-      Q1 = 0.0009977...
-      Q2 = 0.0165536...
+      invQ = 300680...
+      invQ2 = 281250...
     Computation steps:
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m
        2: x <- x + 0.25*dt*v
-       3: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
-       4: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
+       3: v1 <- v1 + 0.25*dt*(m*v^2 - kT)*invQ
+       4: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2
        5: v <- v*exp(-0.5*dt*(v1+kT*v2))/sqrt(1+1.0*dt*m*v^2*v2/3)
-       6: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
-       7: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
+       6: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2
+       7: v1 <- v1 + 0.25*dt*(m*v^2 - kT)*invQ
        8: x <- x + 0.5*dt*v
-       9: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
-      10: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
+       9: v1 <- v1 + 0.25*dt*(m*v^2 - kT)*invQ
+      10: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2
       11: v <- v*exp(-0.5*dt*(v1+kT*v2))/sqrt(1+1.0*dt*m*v^2*v2/3)
-      12: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)/Q2
-      13: v1 <- v1 + 0.25*dt*(m*v^2 - kT)/Q1
+      12: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2
+      13: v1 <- v1 + 0.25*dt*(m*v^2 - kT)*invQ
       14: x <- x + 0.25*dt*v
       15: v <- v + 0.5*dt*f/m
 
@@ -123,10 +132,9 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def _add_variables(
         self, temperature: mmunit.Quantity, timeConstant: mmunit.Quantity
     ) -> None:
-        kT = mmunit.MOLAR_GAS_CONSTANT_R * temperature
-        self.addGlobalVariable("kT", kT)
-        self.addGlobalVariable("Q1", kT * timeConstant**2)
-        self.addGlobalVariable("Q2", 8 / 3 * kT**3 * timeConstant**2)
+        self._add_temperature(temperature)
+        self._add_timeConstant(timeConstant)
+        self.addGlobalVariable("invQ2", (3 / 8) * self._kT * self._invQ)
         self.addPerDofVariable("v1", 0)
         self.addPerDofVariable("v2", 0)
 
@@ -137,14 +145,18 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addComputePerDof("v", f"v + {fraction}*dt*f/m")
 
     def _add_thermostat(self, fraction: float) -> None:
-        self.addComputePerDof("v1", f"v1 + {0.5 * fraction}*dt*(m*v^2 - kT)/Q1")
-        self.addComputePerDof("v2", f"v2 + {0.5 * fraction}*dt*((m*v^2)^2/3 - kT^2)/Q2")
+        self.addComputePerDof("v1", f"v1 + {0.5 * fraction}*dt*(m*v^2 - kT)*invQ")
+        self.addComputePerDof(
+            "v2", f"v2 + {0.5 * fraction}*dt*((m*v^2)^2/3 - kT^2)*invQ2"
+        )
         self.addComputePerDof(
             "v",
             f"v*exp(-{fraction}*dt*(v1+kT*v2))/sqrt(1+{2 * fraction}*dt*m*v^2*v2/3)",
         )
-        self.addComputePerDof("v2", f"v2 + {0.5 * fraction}*dt*((m*v^2)^2/3 - kT^2)/Q2")
-        self.addComputePerDof("v1", f"v1 + {0.5 * fraction}*dt*(m*v^2 - kT)/Q1")
+        self.addComputePerDof(
+            "v2", f"v2 + {0.5 * fraction}*dt*((m*v^2)^2/3 - kT^2)*invQ2"
+        )
+        self.addComputePerDof("v1", f"v1 + {0.5 * fraction}*dt*(m*v^2 - kT)*invQ")
 
     def registerWithSystem(self, system: mm.System) -> None:
         if system.getNumConstraints() > 0:

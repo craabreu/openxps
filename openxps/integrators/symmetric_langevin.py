@@ -7,14 +7,22 @@
 
 """
 
-import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
 
-from .mixin import IntegratorMixin
+from .mixins import (
+    FrictionCoefficientMixin,
+    IntegratorMixin,
+    TemperatureMixin,
+)
 
 
-class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
+class SymmetricLangevinIntegrator(
+    IntegratorMixin,
+    TemperatureMixin,
+    FrictionCoefficientMixin,
+    mm.CustomIntegrator,
+):
     """A symmetric Langevin integrator using the BAOAB algorithm :cite:`Leimkuhler2013`.
 
     Parameters
@@ -37,9 +45,9 @@ class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
     Per-dof variables:
       x1
     Global variables:
+      kT = 2.49433...
       a = 0.999000...
       b = 0.044699...
-      kT = 2.49433...
     Computation steps:
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m
@@ -60,9 +68,8 @@ class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
         stepSize: mmunit.Quantity,
     ) -> None:
         super().__init__(stepSize)
-        self.addGlobalVariable("a", np.exp(-frictionCoeff * stepSize))
-        self.addGlobalVariable("b", np.sqrt(1 - np.exp(-2 * frictionCoeff * stepSize)))
-        self.addGlobalVariable("kT", mmunit.MOLAR_GAS_CONSTANT_R * temperature)
+        self._add_temperature(temperature)
+        self._add_frictionCoeff(frictionCoeff)
         self.addPerDofVariable("x1", 0)
         self.addUpdateContextState()
         self.addComputePerDof("v", "v + 0.5*dt*f/m")
@@ -74,3 +81,14 @@ class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addConstrainPositions()
         self.addComputePerDof("v", "v + (x-x1)/dt + 0.5*dt*f/m")
         self.addConstrainVelocities()
+
+    def setStepSize(self, size: mmunit.Quantity) -> None:
+        """Set the step size.
+
+        Parameters
+        ----------
+        size
+            The step size.
+        """
+        super().setStepSize(size)
+        self.setFrictionCoeff(self.getFrictionCoeff())
