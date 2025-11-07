@@ -7,24 +7,19 @@
 
 """
 
+import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
 
-from .mixins import (
-    FrictionCoefficientMixin,
-    IntegratorMixin,
-    TemperatureMixin,
-    TimeConstantMixin,
-)
+from openxps.utils import preprocess_args
+
+from .utils import IntegratorMixin, add_property
 
 
-class RegulatedNHLIntegrator(
-    IntegratorMixin,
-    TemperatureMixin,
-    TimeConstantMixin,
-    FrictionCoefficientMixin,
-    mm.CustomIntegrator,
-):
+@add_property("temperature")
+@add_property("time constant")
+@add_property("friction coefficient")
+class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """A Regulated Nosé-Hoover-Langevin (NHL) integrator :cite:`Abreu2021`.
 
     Parameters
@@ -55,7 +50,7 @@ class RegulatedNHLIntegrator(
 
     >>> integrator = xps.integrators.RegulatedNHLIntegrator(
     ...     temperature=300 * unit.kelvin,
-    ...     timeConstant=20 * unit.femtoseconds,
+    ...     timeConstant=40 * unit.femtoseconds,
     ...     frictionCoeff=1 / unit.picosecond,
     ...     stepSize=2 * unit.femtoseconds,
     ... )
@@ -63,18 +58,18 @@ class RegulatedNHLIntegrator(
     Per-dof variables:
       v1
     Global variables:
-      kT = 2.494338785445972
-      invQ = 300680.88760681514
-      a = 0.9980019986673331
-      b = 0.06318236032318289
+      kT = 2.494...
+      invQ = 250.56...
+      a = 0.9980...
+      b = 0.00157...
     Computation steps:
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m
        2: x <- x + c*tanh(v/c)*0.5*dt; c=sqrt(1*kT/m)
        3: v1 <- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c = sqrt(1*kT/m)
-       4: v <- v*exp(-v1*0.5*dt)
+       4: v <- v*exp(-0.5*dt*v1)
        5: v1 <- a*v1 + b*gaussian
-       6: v <- v*exp(-v1*0.5*dt)
+       6: v <- v*exp(-0.5*dt*v1)
        7: v1 <- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c = sqrt(1*kT/m)
        8: x <- x + c*tanh(v/c)*0.5*dt; c=sqrt(1*kT/m)
        9: v <- v + 0.5*dt*f/m
@@ -83,7 +78,7 @@ class RegulatedNHLIntegrator(
 
     >>> integrator_ff = xps.integrators.RegulatedNHLIntegrator(
     ...     temperature=300 * unit.kelvin,
-    ...     timeConstant=20 * unit.femtoseconds,
+    ...     timeConstant=40 * unit.femtoseconds,
     ...     frictionCoeff=1 / unit.picosecond,
     ...     stepSize=2 * unit.femtoseconds,
     ...     forceFirst=True
@@ -96,6 +91,7 @@ class RegulatedNHLIntegrator(
     Regulated NHL integrators do not support constraints.
     """
 
+    @preprocess_args
     def __init__(  # noqa: PLR0913
         self,
         temperature: mmunit.Quantity,
@@ -111,10 +107,10 @@ class RegulatedNHLIntegrator(
         super().__init__(stepSize)
         self._forceFirst = forceFirst
         self._regulation_parameter = regulation_parameter
-        self._add_temperature(temperature)
-        self._add_timeConstant(timeConstant)
-        self._add_frictionCoeff(frictionCoeff)
-        self.addPerDofVariable("v1", 0)
+        self._temperature = temperature
+        self._time_constant = timeConstant
+        self._friction_coefficient = frictionCoeff
+        self._add_variables()
         self.addUpdateContextState()
         self.setKineticEnergyExpression(
             f"0.5*m*v*c*tanh(v/c); c=sqrt({self._regulation_parameter}*kT/m)"
@@ -128,6 +124,27 @@ class RegulatedNHLIntegrator(
         self._add_translation(0.5 / bathLoops)
         if not forceFirst:
             self._add_boost(0.5)
+
+    def _add_variables(self) -> None:
+        self.addGlobalVariable("kT", 0)
+        self.addGlobalVariable("invQ", 0)
+        self.addGlobalVariable("a", 0)
+        self.addGlobalVariable("b", 0)
+        self.addPerDofVariable("v1", 0)
+        self._update_global_variables()
+
+    def _update_global_variables(self) -> None:
+        tau = self.getTimeConstant()
+        dt = self.getStepSize()
+        friction = self.getFrictionCoefficient()
+        kt = mmunit.MOLAR_GAS_CONSTANT_R * self.getTemperature()
+        inv_q = 1 / (kt * tau**2)
+        a = np.exp(-friction * dt)
+        b = np.sqrt((1 - a**2) * kt * inv_q)
+        self.setGlobalVariableByName("kT", kt)
+        self.setGlobalVariableByName("invQ", inv_q)
+        self.setGlobalVariableByName("a", a)
+        self.setGlobalVariableByName("b", b)
 
     def _add_translation(self, fraction: float) -> None:
         self.addComputePerDof(
@@ -146,7 +163,7 @@ class RegulatedNHLIntegrator(
         )
 
     def _add_v_scaling(self, fraction: float) -> str:
-        return self.addComputePerDof("v", f"v*exp(-v1*{fraction}*dt)")
+        return self.addComputePerDof("v", f"v*exp(-{fraction}*dt*v1)")
 
     def _add_thermostat(self, fraction: float) -> None:
         self._add_v1_boost(0.5 * fraction)

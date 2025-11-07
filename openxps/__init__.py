@@ -17,6 +17,7 @@ from .integrator import LockstepIntegrator, SplitIntegrator  # noqa: F401
 from .integrators import (
     CSVRIntegrator,
     MassiveGGMTIntegrator,
+    RegulatedNHLIntegrator,
     SymmetricLangevinIntegrator,
     SymmetricVerletIntegrator,
 )
@@ -48,5 +49,6 @@ __all__ = [
     "SymmetricLangevinIntegrator",
     "CSVRIntegrator",
     "MassiveGGMTIntegrator",
+    "RegulatedNHLIntegrator",
     "SymmetricVerletIntegrator",
 ]

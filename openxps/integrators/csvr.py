@@ -11,9 +11,13 @@ import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
 
-from .mixins import IntegratorMixin
+from openxps.utils import preprocess_args
+
+from .utils import IntegratorMixin, add_property
 
 
+@add_property("temperature")
+@add_property("friction coefficient")
 class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """The Canonical Sampling through Velocity Rescaling integrator :cite:`Bussi2007`.
 
@@ -93,8 +97,11 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ...     stepSize=2 * unit.femtoseconds,
     ...     forceFirst=True
     ... )
-    >>> integrator_ff.getNumDegreesOfFreedom() is None
-    True
+    >>> try:
+    ...     integrator_ff.getNumDegreesOfFreedom()
+    ... except ValueError as e:
+    ...     print(e)
+    The number of degrees of freedom has not been determined...
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> integrator_ff.registerWithSystem(model.system)
     >>> integrator_ff.getNumDegreesOfFreedom()
@@ -107,6 +114,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     >>> integrator_ff.step(10)
     """
 
+    @preprocess_args
     def __init__(
         self,
         temperature: mmunit.Quantity,
@@ -116,11 +124,13 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         forceFirst: bool = False,
     ) -> None:
         super().__init__(stepSize)
+        self._temperature = temperature
+        self._friction_coefficient = frictionCoeff
         self._forceFirst = forceFirst
         self._oneDimensional = oneDimensional
         self._num_dof = None
         self._rng = np.random.default_rng(None)
-        self._add_global_variables(temperature, frictionCoeff)
+        self._add_variables()
         self.addUpdateContextState()
         self._add_boost(1 if forceFirst else 0.5)
         self._add_translation(0.5)
@@ -129,14 +139,19 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         if not forceFirst:
             self._add_boost(0.5)
 
-    def _add_global_variables(
-        self, temperature: mmunit.Quantity, frictionCoeff: mmunit.Quantity
-    ) -> None:
+    def _add_variables(self) -> None:
         self.addPerDofVariable("x1", 0)
         self.addGlobalVariable("sumRsq", 0)
         self.addGlobalVariable("mvv", 0)
-        self.addGlobalVariable("kT", mmunit.MOLAR_GAS_CONSTANT_R * temperature)
-        self.addGlobalVariable("friction", frictionCoeff)
+        self.addGlobalVariable("kT", 0)
+        self.addGlobalVariable("friction", 0)
+        self._update_global_variables()
+
+    def _update_global_variables(self) -> None:
+        kt = mmunit.MOLAR_GAS_CONSTANT_R * self.getTemperature()
+        friction = self.getFrictionCoefficient()
+        self.setGlobalVariableByName("kT", kt)
+        self.setGlobalVariableByName("friction", friction)
 
     def _add_translation(self, fraction: float) -> None:
         self.addComputePerDof("x", f"x + {fraction}*dt*v")
@@ -170,7 +185,18 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         return self._oneDimensional
 
     def getNumDegreesOfFreedom(self) -> int:
-        """Get the number of degrees of freedom in the system."""
+        """Get the number of degrees of freedom in the system.
+
+        Raises
+        ------
+        ValueError
+            If registerWithSystem has not been called first.
+        """
+        if self._num_dof is None:
+            raise ValueError(
+                "The number of degrees of freedom has not been determined. "
+                "Call the `registerWithSystem` method first to determine it."
+            )
         return self._num_dof
 
     def registerWithSystem(self, system: mm.System) -> None:

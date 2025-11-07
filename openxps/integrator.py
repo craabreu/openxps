@@ -18,7 +18,7 @@ from openmm import unit as mmunit
 
 from . import integrators
 from .couplings import Coupling
-from .integrators.mixins import IntegratorMixin
+from .integrators.utils import IntegratorMixin
 from .utils import STRING_SEPARATOR
 
 #: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the

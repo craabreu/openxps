@@ -10,7 +10,9 @@
 import openmm as mm
 from openmm import unit as mmunit
 
-from .mixins import IntegratorMixin
+from openxps.utils import preprocess_args
+
+from .utils import IntegratorMixin
 
 
 class SymmetricVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
@@ -39,6 +41,7 @@ class SymmetricVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
        6: constrain velocities
     """
 
+    @preprocess_args
     def __init__(self, stepSize: mmunit.Quantity):
         super().__init__(stepSize)
         self.addPerDofVariable("x1", 0)

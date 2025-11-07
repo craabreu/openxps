@@ -7,22 +7,18 @@
 
 """
 
+import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
 
-from .mixins import (
-    FrictionCoefficientMixin,
-    IntegratorMixin,
-    TemperatureMixin,
-)
+from openxps.utils import preprocess_args
+
+from .utils import IntegratorMixin, add_property
 
 
-class SymmetricLangevinIntegrator(
-    IntegratorMixin,
-    TemperatureMixin,
-    FrictionCoefficientMixin,
-    mm.CustomIntegrator,
-):
+@add_property("temperature")
+@add_property("friction coefficient")
+class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """A symmetric Langevin integrator using the BAOAB algorithm :cite:`Leimkuhler2013`.
 
     Parameters
@@ -61,6 +57,7 @@ class SymmetricLangevinIntegrator(
        9: constrain velocities
     """
 
+    @preprocess_args
     def __init__(
         self,
         temperature: mmunit.Quantity,
@@ -68,9 +65,9 @@ class SymmetricLangevinIntegrator(
         stepSize: mmunit.Quantity,
     ) -> None:
         super().__init__(stepSize)
-        self._add_temperature(temperature)
-        self._add_frictionCoeff(frictionCoeff)
-        self.addPerDofVariable("x1", 0)
+        self._temperature = temperature
+        self._friction_coefficient = frictionCoeff
+        self._add_variables()
         self.addUpdateContextState()
         self.addComputePerDof("v", "v + 0.5*dt*f/m")
         self.addConstrainVelocities()
@@ -82,13 +79,23 @@ class SymmetricLangevinIntegrator(
         self.addComputePerDof("v", "v + (x-x1)/dt + 0.5*dt*f/m")
         self.addConstrainVelocities()
 
-    def setStepSize(self, size: mmunit.Quantity) -> None:
-        """Set the step size.
+    def _add_variables(self) -> None:
+        self.addGlobalVariable("kT", 0)
+        self.addGlobalVariable("a", 0)
+        self.addGlobalVariable("b", 0)
+        self.addPerDofVariable("x1", 0)
+        self._update_global_variables()
 
-        Parameters
-        ----------
-        size
-            The step size.
-        """
+    def _update_global_variables(self) -> None:
+        kt = mmunit.MOLAR_GAS_CONSTANT_R * self.getTemperature()
+        friction = self.getFrictionCoefficient()
+        dt = self.getStepSize()
+        a = np.exp(-friction * dt)
+        b = np.sqrt(1 - a**2)
+        self.setGlobalVariableByName("kT", kt)
+        self.setGlobalVariableByName("a", a)
+        self.setGlobalVariableByName("b", b)
+
+    def setStepSize(self, size: mmunit.Quantity) -> None:
         super().setStepSize(size)
-        self.setFrictionCoeff(self.getFrictionCoeff())
+        self._update_global_variables()
