@@ -16,8 +16,8 @@ from openxps.utils import preprocess_args
 from .utils import IntegratorMixin, add_property
 
 
-@add_property("temperature")
-@add_property("friction coefficient")
+@add_property("temperature", mmunit.kelvin)
+@add_property("friction coefficient", 1 / mmunit.picosecond)
 class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """The Canonical Sampling through Velocity Rescaling integrator :cite:`Bussi2007`.
 
@@ -124,8 +124,8 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         forceFirst: bool = False,
     ) -> None:
         super().__init__(stepSize)
-        self._temperature = temperature
-        self._friction_coefficient = frictionCoeff
+        self._init_temperature(temperature)
+        self._init_friction_coefficient(frictionCoeff)
         self._forceFirst = forceFirst
         self._oneDimensional = oneDimensional
         self._num_dof = None
@@ -194,8 +194,8 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         """
         if self._num_dof is None:
             raise ValueError(
-                "The number of degrees of freedom has not been determined. "
-                "Call the `registerWithSystem` method first to determine it."
+                "The number of degrees of freedom has not been determined.\n"
+                "Call the `registerWithSystem` method first."
             )
         return self._num_dof
 

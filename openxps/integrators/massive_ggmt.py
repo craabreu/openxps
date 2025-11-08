@@ -14,8 +14,8 @@ from openxps.integrators.utils import IntegratorMixin, add_property
 from openxps.utils import preprocess_args
 
 
-@add_property("temperature")
-@add_property("time constant")
+@add_property("temperature", mmunit.kelvin)
+@add_property("time constant", 1 / mmunit.picosecond)
 class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """A massive Generalized Gaussian Moment Thermostat integrator :cite:`Liu2000`.
 
@@ -112,8 +112,8 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
             raise ValueError("The number of bath loops must be at least 1.")
         super().__init__(stepSize)
         self._forceFirst = forceFirst
-        self._temperature = temperature
-        self._time_constant = timeConstant
+        self._init_temperature(temperature)
+        self._init_time_constant(timeConstant)
         self._add_variables()
         self.addUpdateContextState()
         self._add_boost(1 if forceFirst else 0.5)
@@ -137,11 +137,9 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def _update_global_variables(self) -> None:
         tau = self.getTimeConstant()
         kt = mmunit.MOLAR_GAS_CONSTANT_R * self.getTemperature()
-        inv_q = 1 / (kt * tau**2)
-        inv_q2 = 3 * inv_q / (8 * kt**2)
         self.setGlobalVariableByName("kT", kt)
-        self.setGlobalVariableByName("invQ", inv_q)
-        self.setGlobalVariableByName("invQ2", inv_q2)
+        self.setGlobalVariableByName("invQ", 1 / (kt * tau**2))
+        self.setGlobalVariableByName("invQ2", 3 / (8 * kt**3 * tau**2))
 
     def _add_translation(self, fraction: float) -> None:
         self.addComputePerDof("x", f"x + {fraction}*dt*v")

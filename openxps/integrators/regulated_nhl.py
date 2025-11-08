@@ -16,9 +16,9 @@ from openxps.utils import preprocess_args
 from .utils import IntegratorMixin, add_property
 
 
-@add_property("temperature")
-@add_property("time constant")
-@add_property("friction coefficient")
+@add_property("temperature", mmunit.kelvin)
+@add_property("time constant", mmunit.picosecond)
+@add_property("friction coefficient", 1 / mmunit.picosecond)
 class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """A Regulated Nosé-Hoover-Langevin (NHL) integrator :cite:`Abreu2021`.
 
@@ -61,17 +61,17 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
       kT = 2.494...
       invQ = 250.56...
       a = 0.9980...
-      b = 0.00157...
+      b = 1.5795...
     Computation steps:
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m
-       2: x <- x + c*tanh(v/c)*0.5*dt; c=sqrt(1*kT/m)
-       3: v1 <- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c = sqrt(1*kT/m)
+       2: x <- x + 0.5*dt*c*tanh(v/c); c=sqrt(1*kT/m)
+       3: v1 <- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c=sqrt(1*kT/m)
        4: v <- v*exp(-0.5*dt*v1)
        5: v1 <- a*v1 + b*gaussian
        6: v <- v*exp(-0.5*dt*v1)
-       7: v1 <- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c = sqrt(1*kT/m)
-       8: x <- x + c*tanh(v/c)*0.5*dt; c=sqrt(1*kT/m)
+       7: v1 <- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c=sqrt(1*kT/m)
+       8: x <- x + 0.5*dt*c*tanh(v/c); c=sqrt(1*kT/m)
        9: v <- v + 0.5*dt*f/m
 
     Force-first scheme
@@ -107,21 +107,22 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
         super().__init__(stepSize)
         self._forceFirst = forceFirst
         self._regulation_parameter = regulation_parameter
-        self._temperature = temperature
-        self._time_constant = timeConstant
-        self._friction_coefficient = frictionCoeff
+        self._init_temperature(temperature)
+        self._init_time_constant(timeConstant)
+        self._init_friction_coefficient(frictionCoeff)
+        self._bath_loops = bathLoops
         self._add_variables()
         self.addUpdateContextState()
         self.setKineticEnergyExpression(
             f"0.5*m*v*c*tanh(v/c); c=sqrt({self._regulation_parameter}*kT/m)"
         )
         self._add_boost(1 if forceFirst else 0.5)
-        self._add_translation(0.5 / bathLoops)
-        for _ in range(bathLoops - 1):
-            self._add_thermostat(1 / bathLoops)
-            self._add_translation(1 / bathLoops)
-        self._add_thermostat(1 / bathLoops)
-        self._add_translation(0.5 / bathLoops)
+        self._add_translation(0.5 / self._bath_loops)
+        for _ in range(self._bath_loops - 1):
+            self._add_thermostat(1 / self._bath_loops)
+            self._add_translation(1 / self._bath_loops)
+        self._add_thermostat(1 / self._bath_loops)
+        self._add_translation(0.5 / self._bath_loops)
         if not forceFirst:
             self._add_boost(0.5)
 
@@ -135,21 +136,18 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
 
     def _update_global_variables(self) -> None:
         tau = self.getTimeConstant()
-        dt = self.getStepSize()
+        dt = self.getStepSize() / self._bath_loops
         friction = self.getFrictionCoefficient()
         kt = mmunit.MOLAR_GAS_CONSTANT_R * self.getTemperature()
-        inv_q = 1 / (kt * tau**2)
-        a = np.exp(-friction * dt)
-        b = np.sqrt((1 - a**2) * kt * inv_q)
         self.setGlobalVariableByName("kT", kt)
-        self.setGlobalVariableByName("invQ", inv_q)
-        self.setGlobalVariableByName("a", a)
-        self.setGlobalVariableByName("b", b)
+        self.setGlobalVariableByName("invQ", 1 / (kt * tau**2))
+        self.setGlobalVariableByName("a", np.exp(-friction * dt))
+        self.setGlobalVariableByName("b", np.sqrt(1 - np.exp(-2 * friction * dt)) / tau)
 
     def _add_translation(self, fraction: float) -> None:
         self.addComputePerDof(
             "x",
-            f"x + c*tanh(v/c)*{fraction}*dt; c=sqrt({self._regulation_parameter}*kT/m)",
+            f"x + {fraction}*dt*c*tanh(v/c); c=sqrt({self._regulation_parameter}*kT/m)",
         )
 
     def _add_boost(self, fraction: float) -> None:
@@ -159,7 +157,7 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addComputePerDof(
             "v1",
             f"v1 + {fraction}*dt*(m*v*c*tanh(v/c) - kT)*invQ"
-            f"; c = sqrt({self._regulation_parameter}*kT/m)",
+            f"; c=sqrt({self._regulation_parameter}*kT/m)",
         )
 
     def _add_v_scaling(self, fraction: float) -> str:

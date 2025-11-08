@@ -79,7 +79,7 @@ def test_lockstep_integrator_error_different_step_sizes():
     physical_integrator = create_force_first_integrator(2.0 * mmunit.femtosecond)
     extension_integrator = create_force_first_integrator(1.0 * mmunit.femtosecond)
 
-    with pytest.raises(ValueError, match="must have the same step size"):
+    with pytest.raises(ValueError, match="The step sizes must be equal."):
         LockstepIntegrator(physical_integrator, extension_integrator)
 
 

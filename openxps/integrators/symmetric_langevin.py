@@ -16,8 +16,8 @@ from openxps.utils import preprocess_args
 from .utils import IntegratorMixin, add_property
 
 
-@add_property("temperature")
-@add_property("friction coefficient")
+@add_property("temperature", mmunit.kelvin)
+@add_property("friction coefficient", 1 / mmunit.picosecond)
 class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """A symmetric Langevin integrator using the BAOAB algorithm :cite:`Leimkuhler2013`.
 
@@ -65,8 +65,8 @@ class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
         stepSize: mmunit.Quantity,
     ) -> None:
         super().__init__(stepSize)
-        self._temperature = temperature
-        self._friction_coefficient = frictionCoeff
+        self._init_temperature(temperature)
+        self._init_friction_coefficient(frictionCoeff)
         self._add_variables()
         self.addUpdateContextState()
         self.addComputePerDof("v", "v + 0.5*dt*f/m")
