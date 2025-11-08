@@ -48,11 +48,15 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.mixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openxps.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">add_property</span>
 
 
 <div class="viewcode-block" id="CSVRIntegrator">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator">[docs]</a>
+<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">)</span>
+<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;friction coefficient&quot;</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">CSVRIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;The Canonical Sampling through Velocity Rescaling integrator :cite:`Bussi2007`.</span>
 
@@ -60,9 +64,13 @@
 <span class="sd">    velocities by a single factor stochastically determined in order to preserve the</span>
 <span class="sd">    canonical distribution at the specified temperature.</span>
 
+<span class="sd">    .. note::</span>
+<span class="sd">        In an extended phase-space simulation, the integrator must be used in</span>
+<span class="sd">        one-dimensional mode for the extension system.</span>
+
 <span class="sd">    .. warning::</span>
-<span class="sd">        If this integrator is used outside the context of OpenXPS, the method</span>
-<span class="sd">        :meth:`registerWithSystem` must be called before starting a simulation.</span>
+<span class="sd">        When used outside the context of OpenXPS, the :meth:`registerWithSystem` method</span>
+<span class="sd">        must be called before starting a simulation.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -72,6 +80,9 @@
 <span class="sd">        The friction coefficient.</span>
 <span class="sd">    stepSize</span>
 <span class="sd">        The integration step size.</span>
+<span class="sd">    oneDimensional</span>
+<span class="sd">        If True, the integrator will be used in one-dimensional mode, with only the</span>
+<span class="sd">        x-coordinate of the velocity vectors being rescaled.</span>
 <span class="sd">    forceFirst</span>
 <span class="sd">        If True, the integrator will apply a force-first scheme rather than a</span>
 <span class="sd">        symmetric operator splitting scheme.</span>
@@ -108,7 +119,7 @@
 <span class="sd">       6: v &lt;- v + (x - x1)/(0.5*dt)</span>
 <span class="sd">       7: constrain velocities</span>
 <span class="sd">       8: mvv &lt;- sum(m*v*v)</span>
-<span class="sd">       9: v &lt;- v*sqrt(A + BC*(R1 ^ 2 + sumRsq) + 2*sqrt(A*BC)*R1); ...</span>
+<span class="sd">       9: v &lt;- v*sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1); ...</span>
 <span class="sd">      10: x &lt;- x + 0.5*dt*v</span>
 <span class="sd">      11: x1 &lt;- x</span>
 <span class="sd">      12: constrain positions</span>
@@ -125,8 +136,11 @@
 <span class="sd">    ...     stepSize=2 * unit.femtoseconds,</span>
 <span class="sd">    ...     forceFirst=True</span>
 <span class="sd">    ... )</span>
-<span class="sd">    &gt;&gt;&gt; integrator_ff.getNumDegreesOfFreedom() is None</span>
-<span class="sd">    True</span>
+<span class="sd">    &gt;&gt;&gt; try:</span>
+<span class="sd">    ...     integrator_ff.getNumDegreesOfFreedom()</span>
+<span class="sd">    ... except ValueError as e:</span>
+<span class="sd">    ...     print(e)</span>
+<span class="sd">    The number of degrees of freedom has not been determined...</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
 <span class="sd">    &gt;&gt;&gt; integrator_ff.registerWithSystem(model.system)</span>
 <span class="sd">    &gt;&gt;&gt; integrator_ff.getNumDegreesOfFreedom()</span>
@@ -139,58 +153,64 @@
 <span class="sd">    &gt;&gt;&gt; integrator_ff.step(10)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="nd">@preprocess_args</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">oneDimensional</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">forceFirst</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span> <span class="o">=</span> <span class="n">temperature</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_friction_coefficient</span> <span class="o">=</span> <span class="n">frictionCoeff</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_forceFirst</span> <span class="o">=</span> <span class="n">forceFirst</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_oneDimensional</span> <span class="o">=</span> <span class="n">oneDimensional</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_global_variables</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_variables</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addUpdateContextState</span><span class="p">()</span>
-        <span class="n">splitting</span> <span class="o">=</span> <span class="s2">&quot;VROR&quot;</span> <span class="k">if</span> <span class="n">forceFirst</span> <span class="k">else</span> <span class="s2">&quot;VRORV&quot;</span>
-        <span class="k">for</span> <span class="n">letter</span> <span class="ow">in</span> <span class="n">splitting</span><span class="p">:</span>
-            <span class="n">n</span> <span class="o">=</span> <span class="n">splitting</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">letter</span><span class="p">)</span>
-            <span class="n">timestep</span> <span class="o">=</span> <span class="s2">&quot;dt&quot;</span> <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="mi">1</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="n">n</span><span class="si">}</span><span class="s2">*dt&quot;</span>
-            <span class="k">if</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;V&quot;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="n">timestep</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;R&quot;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="n">timestep</span><span class="p">)</span>
-            <span class="k">elif</span> <span class="n">letter</span> <span class="o">==</span> <span class="s2">&quot;O&quot;</span><span class="p">:</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">_add_rescaling</span><span class="p">(</span><span class="n">timestep</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">forceFirst</span> <span class="k">else</span> <span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_rescaling</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">forceFirst</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_add_global_variables</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span>
-    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;x1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;sumRsq&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;mvv&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="n">temperature</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;friction&quot;</span><span class="p">,</span> <span class="n">frictionCoeff</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;friction&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_global_variables</span><span class="p">()</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_add_translation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;x + </span><span class="si">{</span><span class="n">timestep</span><span class="si">}</span><span class="s2">*v&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_global_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">kt</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">getTemperature</span><span class="p">()</span>
+        <span class="n">friction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFrictionCoefficient</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="n">kt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;friction&quot;</span><span class="p">,</span> <span class="n">friction</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_translation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;x + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*v&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x1&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainPositions</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v + (x - x1)/(</span><span class="si">{</span><span class="n">timestep</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v + (x - x1)/(</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt)&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainVelocities</span><span class="p">()</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_add_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v + </span><span class="si">{</span><span class="n">timestep</span><span class="si">}</span><span class="s2">*f/m&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*f/m&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainVelocities</span><span class="p">()</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_add_rescaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">timestep</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeSum</span><span class="p">(</span><span class="s2">&quot;mvv&quot;</span><span class="p">,</span> <span class="s2">&quot;m*v*v&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_rescaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeSum</span><span class="p">(</span><span class="s2">&quot;mvv&quot;</span><span class="p">,</span> <span class="s2">&quot;m*_x(v)^2/3&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_oneDimensional</span> <span class="k">else</span> <span class="s2">&quot;m*v*v&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
             <span class="s2">&quot;v&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;v*sqrt(A + BC*(R1 ^ 2 + sumRsq) + 2*sqrt(A*BC)*R1)&quot;</span>
+            <span class="s2">&quot;v*sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1)&quot;</span>
             <span class="s2">&quot;; R1 = gaussian&quot;</span>
             <span class="s2">&quot;; BC = (1 - A)*kT/mvv&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;; A = exp(-friction*</span><span class="si">{</span><span class="n">timestep</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;; A = exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*friction)&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_sums_of_squared_gaussians</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -199,17 +219,42 @@
             <span class="n">sumRsq</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="n">num_steps</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="k">return</span> <span class="n">sumRsq</span>
 
+<div class="viewcode-block" id="CSVRIntegrator.isOneDimensional">
+<a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.isOneDimensional">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">isOneDimensional</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if the integrator is one-dimensional.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_oneDimensional</span></div>
+
+
 <div class="viewcode-block" id="CSVRIntegrator.getNumDegreesOfFreedom">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.getNumDegreesOfFreedom">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getNumDegreesOfFreedom</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of degrees of freedom in the system.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of degrees of freedom in the system.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If registerWithSystem has not been called first.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;The number of degrees of freedom has not been determined. &quot;</span>
+                <span class="s2">&quot;Call the `registerWithSystem` method first to determine it.&quot;</span>
+            <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span></div>
 
 
 <div class="viewcode-block" id="CSVRIntegrator.registerWithSystem">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.registerWithSystem">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">registerWithSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">IntegratorMixin</span><span class="o">.</span><span class="n">_countDegreesOfFreedom</span><span class="p">(</span><span class="n">system</span><span class="p">)</span></div>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_oneDimensional</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;One-dimensional CSVR integrator cannot be used with constraints.&quot;</span>
+                <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">IntegratorMixin</span><span class="o">.</span><span class="n">_countDegreesOfFreedom</span><span class="p">(</span><span class="n">system</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="CSVRIntegrator.setRandomNumberSeed">

@@ -7,7 +7,12 @@ CSVRIntegrator
 
     .. rubric:: Methods
 
+    .. automethod:: getFrictionCoefficient
     .. automethod:: getNumDegreesOfFreedom
+    .. automethod:: getTemperature
+    .. automethod:: isOneDimensional
     .. automethod:: registerWithSystem
+    .. automethod:: setFrictionCoefficient
     .. automethod:: setRandomNumberSeed
+    .. automethod:: setTemperature
     .. automethod:: step

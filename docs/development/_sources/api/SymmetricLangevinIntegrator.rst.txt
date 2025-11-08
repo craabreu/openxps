@@ -5,3 +5,10 @@ SymmetricLangevinIntegrator
 .. autoclass:: SymmetricLangevinIntegrator
     :member-order: alphabetical
 
+    .. rubric:: Methods
+
+    .. automethod:: getFrictionCoefficient
+    .. automethod:: getTemperature
+    .. automethod:: setFrictionCoefficient
+    .. automethod:: setStepSize
+    .. automethod:: setTemperature

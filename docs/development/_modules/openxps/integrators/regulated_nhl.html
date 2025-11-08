@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>openxps.integrators.massive_ggmt &#8212; OpenXPS dev  documentation</title>
+    <title>openxps.integrators.regulated_nhl &#8212; OpenXPS dev  documentation</title>
     <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../../../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../../../_static/alabaster.css?v=27fed22d" />
@@ -34,37 +34,32 @@
 
           <div class="body" role="main">
             
-  <h1>Source code for openxps.integrators.massive_ggmt</h1><div class="highlight"><pre>
+  <h1>Source code for openxps.integrators.regulated_nhl</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">.. module:: openxps.integrators.massive_ggmt</span>
+<span class="sd">.. module:: openxps.integrators.regulated_nhl</span>
 <span class="sd">   :platform: Linux, MacOS, Windows</span>
-<span class="sd">   :synopsis: Massive Generalized Gaussian Moment Thermostat (GGMT) integrator.</span>
+<span class="sd">   :synopsis: Regulated Nosé-Hoover-Langevin (NHL) integrator.</span>
 
 <span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">openxps.integrators.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">add_property</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openxps.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">add_property</span>
 
-<div class="viewcode-block" id="MassiveGGMTIntegrator">
-<a class="viewcode-back" href="../../../api/MassiveGGMTIntegrator.html#openxps.integrators.MassiveGGMTIntegrator">[docs]</a>
+
+<div class="viewcode-block" id="RegulatedNHLIntegrator">
+<a class="viewcode-back" href="../../../api/RegulatedNHLIntegrator.html#openxps.integrators.RegulatedNHLIntegrator">[docs]</a>
 <span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">)</span>
 <span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;time constant&quot;</span><span class="p">)</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">MassiveGGMTIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;A massive Generalized Gaussian Moment Thermostat integrator :cite:`Liu2000`.</span>
-
-<span class="sd">    The Generalized Gaussian Moment Thermostat (GGMT) is effective at maintaining</span>
-<span class="sd">    temperature control under steady-state conditions, such as in adiabatic free energy</span>
-<span class="sd">    dynamics (AFED) simulations :cite:`Abrams2008`.</span>
-
-<span class="sd">    .. warning::</span>
-<span class="sd">        This integrator does not support constraints due to its massive nature, i.e.,</span>
-<span class="sd">        independent thermostatting of each degree of freedom.</span>
+<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;friction coefficient&quot;</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">RegulatedNHLIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;A Regulated Nosé-Hoover-Langevin (NHL) integrator :cite:`Abreu2021`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -72,6 +67,8 @@
 <span class="sd">        The temperature.</span>
 <span class="sd">    timeConstant</span>
 <span class="sd">        The time constant of the thermostat.</span>
+<span class="sd">    frictionCoeff</span>
+<span class="sd">        The friction coefficient which couples the system to the heat bath.</span>
 <span class="sd">    stepSize</span>
 <span class="sd">        The integration step size.</span>
 <span class="sd">    bathLoops</span>
@@ -90,44 +87,39 @@
 
 <span class="sd">    Symmetric scheme (default)</span>
 
-<span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.MassiveGGMTIntegrator(</span>
+<span class="sd">    &gt;&gt;&gt; integrator = xps.integrators.RegulatedNHLIntegrator(</span>
 <span class="sd">    ...     temperature=300 * unit.kelvin,</span>
 <span class="sd">    ...     timeConstant=40 * unit.femtoseconds,</span>
+<span class="sd">    ...     frictionCoeff=1 / unit.picosecond,</span>
 <span class="sd">    ...     stepSize=2 * unit.femtoseconds,</span>
-<span class="sd">    ...     bathLoops=2</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator</span>
 <span class="sd">    Per-dof variables:</span>
-<span class="sd">      v1, v2</span>
+<span class="sd">      v1</span>
 <span class="sd">    Global variables:</span>
-<span class="sd">      kT = 2.4943387...</span>
-<span class="sd">      invQ = 250.567...</span>
-<span class="sd">      invQ2 = 15.1023...</span>
+<span class="sd">      kT = 2.494...</span>
+<span class="sd">      invQ = 250.56...</span>
+<span class="sd">      a = 0.9980...</span>
+<span class="sd">      b = 0.00157...</span>
 <span class="sd">    Computation steps:</span>
 <span class="sd">       0: allow forces to update the context state</span>
 <span class="sd">       1: v &lt;- v + 0.5*dt*f/m</span>
-<span class="sd">       2: x &lt;- x + 0.25*dt*v</span>
-<span class="sd">       3: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="sd">       4: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="sd">       5: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 1.0*dt*m*v^2*v2/3)</span>
-<span class="sd">       6: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="sd">       7: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="sd">       8: x &lt;- x + 0.5*dt*v</span>
-<span class="sd">       9: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="sd">      10: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="sd">      11: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 1.0*dt*m*v^2*v2/3)</span>
-<span class="sd">      12: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="sd">      13: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="sd">      14: x &lt;- x + 0.25*dt*v</span>
-<span class="sd">      15: v &lt;- v + 0.5*dt*f/m</span>
+<span class="sd">       2: x &lt;- x + c*tanh(v/c)*0.5*dt; c=sqrt(1*kT/m)</span>
+<span class="sd">       3: v1 &lt;- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c = sqrt(1*kT/m)</span>
+<span class="sd">       4: v &lt;- v*exp(-0.5*dt*v1)</span>
+<span class="sd">       5: v1 &lt;- a*v1 + b*gaussian</span>
+<span class="sd">       6: v &lt;- v*exp(-0.5*dt*v1)</span>
+<span class="sd">       7: v1 &lt;- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c = sqrt(1*kT/m)</span>
+<span class="sd">       8: x &lt;- x + c*tanh(v/c)*0.5*dt; c=sqrt(1*kT/m)</span>
+<span class="sd">       9: v &lt;- v + 0.5*dt*f/m</span>
 
 <span class="sd">    Force-first scheme</span>
 
-<span class="sd">    &gt;&gt;&gt; integrator_ff = xps.integrators.MassiveGGMTIntegrator(</span>
+<span class="sd">    &gt;&gt;&gt; integrator_ff = xps.integrators.RegulatedNHLIntegrator(</span>
 <span class="sd">    ...     temperature=300 * unit.kelvin,</span>
 <span class="sd">    ...     timeConstant=40 * unit.femtoseconds,</span>
+<span class="sd">    ...     frictionCoeff=1 / unit.picosecond,</span>
 <span class="sd">    ...     stepSize=2 * unit.femtoseconds,</span>
-<span class="sd">    ...     bathLoops=2,</span>
 <span class="sd">    ...     forceFirst=True</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
@@ -135,26 +127,33 @@
 <span class="sd">    ...     integrator_ff.registerWithSystem(model.system)</span>
 <span class="sd">    ... except ValueError as e:</span>
 <span class="sd">    ...     print(e)</span>
-<span class="sd">    Massive GGMT integrators do not support constraints.</span>
+<span class="sd">    Regulated NHL integrators do not support constraints.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="nd">@preprocess_args</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">timeConstant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
+        <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">regulation_parameter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="n">forceFirst</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">bathLoops</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of bath loops must be at least 1.&quot;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_forceFirst</span> <span class="o">=</span> <span class="n">forceFirst</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_regulation_parameter</span> <span class="o">=</span> <span class="n">regulation_parameter</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span> <span class="o">=</span> <span class="n">temperature</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_time_constant</span> <span class="o">=</span> <span class="n">timeConstant</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_friction_coefficient</span> <span class="o">=</span> <span class="n">frictionCoeff</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_variables</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addUpdateContextState</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setKineticEnergyExpression</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;0.5*m*v*c*tanh(v/c); c=sqrt(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_regulation_parameter</span><span class="si">}</span><span class="s2">*kT/m)&quot;</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">forceFirst</span> <span class="k">else</span> <span class="mf">0.5</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">/</span> <span class="n">bathLoops</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">bathLoops</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
@@ -168,49 +167,55 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;invQ&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;invQ2&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;v1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;v2&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_global_variables</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_global_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">tau</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getTimeConstant</span><span class="p">()</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">()</span>
+        <span class="n">friction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFrictionCoefficient</span><span class="p">()</span>
         <span class="n">kt</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">getTemperature</span><span class="p">()</span>
         <span class="n">inv_q</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">kt</span> <span class="o">*</span> <span class="n">tau</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
-        <span class="n">inv_q2</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">inv_q</span> <span class="o">/</span> <span class="p">(</span><span class="mi">8</span> <span class="o">*</span> <span class="n">kt</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">friction</span> <span class="o">*</span> <span class="n">dt</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">((</span><span class="mi">1</span> <span class="o">-</span> <span class="n">a</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">*</span> <span class="n">kt</span> <span class="o">*</span> <span class="n">inv_q</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="n">kt</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;invQ&quot;</span><span class="p">,</span> <span class="n">inv_q</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;invQ2&quot;</span><span class="p">,</span> <span class="n">inv_q2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_translation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;x + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*v&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
+            <span class="s2">&quot;x&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;x + c*tanh(v/c)*</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt; c=sqrt(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_regulation_parameter</span><span class="si">}</span><span class="s2">*kT/m)&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*f/m&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_add_v1_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v1&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(m*v^2 - kT)*invQ&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_v1_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
+            <span class="s2">&quot;v1&quot;</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(m*v*c*tanh(v/c) - kT)*invQ&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;; c = sqrt(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_regulation_parameter</span><span class="si">}</span><span class="s2">*kT/m)&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_add_v2_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v2&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v2 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*((m*v^2)^2/3 - kT^2)*invQ2&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_v_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v*exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*v1)&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_thermostat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_v1_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v2_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
-            <span class="s2">&quot;v&quot;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">&quot;v*exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(v1 + kT*v2))&quot;</span>
-            <span class="s2">&quot;/&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;sqrt(1 + </span><span class="si">{</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*m*v^2*v2/3)&quot;</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v2_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v1&quot;</span><span class="p">,</span> <span class="s2">&quot;a*v1 + b*gaussian&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_v1_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
 
-<div class="viewcode-block" id="MassiveGGMTIntegrator.registerWithSystem">
-<a class="viewcode-back" href="../../../api/MassiveGGMTIntegrator.html#openxps.integrators.MassiveGGMTIntegrator.registerWithSystem">[docs]</a>
+<div class="viewcode-block" id="RegulatedNHLIntegrator.registerWithSystem">
+<a class="viewcode-back" href="../../../api/RegulatedNHLIntegrator.html#openxps.integrators.RegulatedNHLIntegrator.registerWithSystem">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">registerWithSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Massive GGMT integrators do not support constraints.&quot;</span><span class="p">)</span></div>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Regulated NHL integrators do not support constraints.&quot;</span><span class="p">)</span></div>
 </div>
 
 </pre></div>

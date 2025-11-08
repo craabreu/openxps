@@ -10,3 +10,4 @@ ExtendedSpaceSystem
     .. automethod:: getCoupling
     .. automethod:: getDynamicalVariables
     .. automethod:: getExtensionSystem
+    .. automethod:: getTetheringForce

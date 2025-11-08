@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>MassiveGGMTIntegrator &#8212; OpenXPS dev  documentation</title>
+    <title>RegulatedNHLIntegrator &#8212; OpenXPS dev  documentation</title>
     <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
     <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
     <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
@@ -18,8 +18,8 @@
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="RegulatedNHLIntegrator" href="RegulatedNHLIntegrator.html" />
-    <link rel="prev" title="CSVRIntegrator" href="CSVRIntegrator.html" />
+    <link rel="next" title="SymmetricLangevinIntegrator" href="SymmetricLangevinIntegrator.html" />
+    <link rel="prev" title="MassiveGGMTIntegrator" href="MassiveGGMTIntegrator.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -37,25 +37,18 @@
 
           <div class="body" role="main">
             
-  <section id="massiveggmtintegrator">
-<h1>MassiveGGMTIntegrator<a class="headerlink" href="#massiveggmtintegrator" title="Link to this heading">¶</a></h1>
+  <section id="regulatednhlintegrator">
+<h1>RegulatedNHLIntegrator<a class="headerlink" href="#regulatednhlintegrator" title="Link to this heading">¶</a></h1>
 <dl class="py class">
-<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">MassiveGGMTIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeConstant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bathLoops</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>A massive Generalized Gaussian Moment Thermostat integrator <span id="id1">[<a class="reference internal" href="../references.html#id5" title="Yi Liu and Mark E. Tuckerman. Generalized gaussian moment thermostatting: a new continuous dynamical approach to the canonical ensemble. The Journal of Chemical Physics, 112(4):1685–1700, January 2000. doi:10.1063/1.480769.">2</a>]</span>.</p>
-<p>The Generalized Gaussian Moment Thermostat (GGMT) is effective at maintaining
-temperature control under steady-state conditions, such as in adiabatic free energy
-dynamics (AFED) simulations <span id="id2">[<a class="reference internal" href="../references.html#id10" title="Jerry B. Abrams and Mark E. Tuckerman. Efficient and direct generation of multidimensional free energy surfaces via adiabatic dynamics without coordinate transformations. The Journal of Physical Chemistry B, 112(49):15742–15757, November 2008. doi:10.1021/jp805039u.">3</a>]</span>.</p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>This integrator does not support constraints due to its massive nature, i.e.,
-independent thermostatting of each degree of freedom.</p>
-</div>
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">RegulatedNHLIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeConstant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">regulation_parameter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bathLoops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/regulated_nhl.html#RegulatedNHLIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator" title="Link to this definition">¶</a></dt>
+<dd><p>A Regulated Nosé-Hoover-Langevin (NHL) integrator <span id="id1">[<a class="reference internal" href="../references.html#id17" title="Charlles R. A. Abreu and Mark E. Tuckerman. Hamiltonian based resonance-free approach for enabling very large time steps in multiple time-scale molecular dynamics. Molecular Physics, May 2021. doi:10.1080/00268976.2021.1923848.">4</a>]</span>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
 <li><p><strong>timeConstant</strong> (<em>Quantity</em>) – The time constant of the thermostat.</p></li>
+<li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient which couples the system to the heat bath.</p></li>
 <li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
 <li><p><strong>bathLoops</strong> (<em>int</em>) – The number of internal loops in the thermostat. A larger number will increase
 the accuracy and stability of the integrator but will also increase the
@@ -72,44 +65,39 @@ symmetric operator splitting scheme.</p></li>
 </pre></div>
 </div>
 <p>Symmetric scheme (default)</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">MassiveGGMTIntegrator</span><span class="p">(</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">RegulatedNHLIntegrator</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">temperature</span><span class="o">=</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">timeConstant</span><span class="o">=</span><span class="mi">40</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">frictionCoeff</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">stepSize</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">bathLoops</span><span class="o">=</span><span class="mi">2</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span>
 <span class="go">Per-dof variables:</span>
-<span class="go">  v1, v2</span>
+<span class="go">  v1</span>
 <span class="go">Global variables:</span>
-<span class="go">  kT = 2.4943387...</span>
-<span class="go">  invQ = 250.567...</span>
-<span class="go">  invQ2 = 15.1023...</span>
+<span class="go">  kT = 2.494...</span>
+<span class="go">  invQ = 250.56...</span>
+<span class="go">  a = 0.9980...</span>
+<span class="go">  b = 0.00157...</span>
 <span class="go">Computation steps:</span>
 <span class="go">   0: allow forces to update the context state</span>
 <span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
-<span class="go">   2: x &lt;- x + 0.25*dt*v</span>
-<span class="go">   3: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="go">   4: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="go">   5: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 1.0*dt*m*v^2*v2/3)</span>
-<span class="go">   6: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="go">   7: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="go">   8: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   9: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="go">  10: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="go">  11: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 1.0*dt*m*v^2*v2/3)</span>
-<span class="go">  12: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="go">  13: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="go">  14: x &lt;- x + 0.25*dt*v</span>
-<span class="go">  15: v &lt;- v + 0.5*dt*f/m</span>
+<span class="go">   2: x &lt;- x + c*tanh(v/c)*0.5*dt; c=sqrt(1*kT/m)</span>
+<span class="go">   3: v1 &lt;- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c = sqrt(1*kT/m)</span>
+<span class="go">   4: v &lt;- v*exp(-0.5*dt*v1)</span>
+<span class="go">   5: v1 &lt;- a*v1 + b*gaussian</span>
+<span class="go">   6: v &lt;- v*exp(-0.5*dt*v1)</span>
+<span class="go">   7: v1 &lt;- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c = sqrt(1*kT/m)</span>
+<span class="go">   8: x &lt;- x + c*tanh(v/c)*0.5*dt; c=sqrt(1*kT/m)</span>
+<span class="go">   9: v &lt;- v + 0.5*dt*f/m</span>
 </pre></div>
 </div>
 <p>Force-first scheme</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integrator_ff</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">MassiveGGMTIntegrator</span><span class="p">(</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integrator_ff</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">RegulatedNHLIntegrator</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">temperature</span><span class="o">=</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">timeConstant</span><span class="o">=</span><span class="mi">40</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">frictionCoeff</span><span class="o">=</span><span class="mi">1</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">stepSize</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">bathLoops</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">forceFirst</span><span class="o">=</span><span class="kc">True</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">testsystems</span><span class="o">.</span><span class="n">AlanineDipeptideVacuum</span><span class="p">()</span>
@@ -117,13 +105,27 @@ symmetric operator splitting scheme.</p></li>
 <span class="gp">... </span>    <span class="n">integrator_ff</span><span class="o">.</span><span class="n">registerWithSystem</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">)</span>
 <span class="gp">... </span><span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
 <span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
-<span class="go">Massive GGMT integrators do not support constraints.</span>
+<span class="go">Regulated NHL integrators do not support constraints.</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator.getTemperature">
-<span class="sig-name descname"><span class="pre">getTemperature</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.getTemperature" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.getFrictionCoefficient">
+<span class="sig-name descname"><span class="pre">getFrictionCoefficient</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.getFrictionCoefficient" title="Link to this definition">¶</a></dt>
+<dd><p>Get the friction coefficient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The friction coefficient.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>openmm.unit.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.getTemperature">
+<span class="sig-name descname"><span class="pre">getTemperature</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.getTemperature" title="Link to this definition">¶</a></dt>
 <dd><p>Get the temperature.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -136,8 +138,8 @@ symmetric operator splitting scheme.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator.getTimeConstant">
-<span class="sig-name descname"><span class="pre">getTimeConstant</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.getTimeConstant" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.getTimeConstant">
+<span class="sig-name descname"><span class="pre">getTimeConstant</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.getTimeConstant" title="Link to this definition">¶</a></dt>
 <dd><p>Get the time constant.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
@@ -150,16 +152,27 @@ symmetric operator splitting scheme.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator.registerWithSystem">
-<span class="sig-name descname"><span class="pre">registerWithSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator.registerWithSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.registerWithSystem" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.registerWithSystem">
+<span class="sig-name descname"><span class="pre">registerWithSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/regulated_nhl.html#RegulatedNHLIntegrator.registerWithSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.registerWithSystem" title="Link to this definition">¶</a></dt>
 <dd><p>Register the integrator with the system.</p>
 <dl class="field-list simple">
 </dl>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator.setTemperature">
-<span class="sig-name descname"><span class="pre">setTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.setTemperature" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.setFrictionCoefficient">
+<span class="sig-name descname"><span class="pre">setFrictionCoefficient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.setFrictionCoefficient" title="Link to this definition">¶</a></dt>
+<dd><p>Set the friction coefficient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Quantity</em>) – The friction coefficient.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.setTemperature">
+<span class="sig-name descname"><span class="pre">setTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.setTemperature" title="Link to this definition">¶</a></dt>
 <dd><p>Set the temperature.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -169,8 +182,8 @@ symmetric operator splitting scheme.</p></li>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator.setTimeConstant">
-<span class="sig-name descname"><span class="pre">setTimeConstant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.setTimeConstant" title="Link to this definition">¶</a></dt>
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.setTimeConstant">
+<span class="sig-name descname"><span class="pre">setTimeConstant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.setTimeConstant" title="Link to this definition">¶</a></dt>
 <dd><p>Set the time constant.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -211,8 +224,8 @@ symmetric operator splitting scheme.</p></li>
 <li class="toctree-l2"><a class="reference internal" href="couplings.html">Couplings</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="integrators.html">Integrators</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="CSVRIntegrator.html">CSVRIntegrator</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">MassiveGGMTIntegrator</a></li>
-<li class="toctree-l3"><a class="reference internal" href="RegulatedNHLIntegrator.html">RegulatedNHLIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="MassiveGGMTIntegrator.html">MassiveGGMTIntegrator</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">RegulatedNHLIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="SymmetricLangevinIntegrator.html">SymmetricLangevinIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="SymmetricVerletIntegrator.html">SymmetricVerletIntegrator</a></li>
 </ul>
@@ -244,7 +257,7 @@ symmetric operator splitting scheme.</p></li>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |
-      <a href="../_sources/api/MassiveGGMTIntegrator.rst.txt"
+      <a href="../_sources/api/RegulatedNHLIntegrator.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

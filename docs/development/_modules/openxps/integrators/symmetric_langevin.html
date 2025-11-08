@@ -48,11 +48,15 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.mixin</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">openxps.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">add_property</span>
 
 
 <div class="viewcode-block" id="SymmetricLangevinIntegrator">
 <a class="viewcode-back" href="../../../api/SymmetricLangevinIntegrator.html#openxps.integrators.SymmetricLangevinIntegrator">[docs]</a>
+<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">)</span>
+<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;friction coefficient&quot;</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">SymmetricLangevinIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;A symmetric Langevin integrator using the BAOAB algorithm :cite:`Leimkuhler2013`.</span>
 
@@ -76,9 +80,9 @@
 <span class="sd">    Per-dof variables:</span>
 <span class="sd">      x1</span>
 <span class="sd">    Global variables:</span>
+<span class="sd">      kT = 2.49433...</span>
 <span class="sd">      a = 0.999000...</span>
 <span class="sd">      b = 0.044699...</span>
-<span class="sd">      kT = 2.49433...</span>
 <span class="sd">    Computation steps:</span>
 <span class="sd">       0: allow forces to update the context state</span>
 <span class="sd">       1: v &lt;- v + 0.5*dt*f/m</span>
@@ -92,6 +96,7 @@
 <span class="sd">       9: constrain velocities</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
+    <span class="nd">@preprocess_args</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
@@ -99,10 +104,9 @@
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">frictionCoeff</span> <span class="o">*</span> <span class="n">stepSize</span><span class="p">))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="n">frictionCoeff</span> <span class="o">*</span> <span class="n">stepSize</span><span class="p">)))</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="n">temperature</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;x1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span> <span class="o">=</span> <span class="n">temperature</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_friction_coefficient</span> <span class="o">=</span> <span class="n">frictionCoeff</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_variables</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addUpdateContextState</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;v + 0.5*dt*f/m&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainVelocities</span><span class="p">()</span>
@@ -112,7 +116,31 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x1&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainPositions</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;v + (x-x1)/dt + 0.5*dt*f/m&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainVelocities</span><span class="p">()</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainVelocities</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;x1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_global_variables</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_global_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">kt</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">getTemperature</span><span class="p">()</span>
+        <span class="n">friction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFrictionCoefficient</span><span class="p">()</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">()</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">friction</span> <span class="o">*</span> <span class="n">dt</span><span class="p">)</span>
+        <span class="n">b</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">a</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="n">kt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;b&quot;</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+
+<div class="viewcode-block" id="SymmetricLangevinIntegrator.setStepSize">
+<a class="viewcode-back" href="../../../api/SymmetricLangevinIntegrator.html#openxps.integrators.SymmetricLangevinIntegrator.setStepSize">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setStepSize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">size</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setStepSize</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_global_variables</span><span class="p">()</span></div>
+</div>
 
 </pre></div>
 

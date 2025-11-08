@@ -41,7 +41,7 @@
 <h1>ExtendedSpaceSystem<a class="headerlink" href="#extendedspacesystem" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceSystem">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/system.html#ExtendedSpaceSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSystem" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">coupling</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">tether_period</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/system.html#ExtendedSpaceSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSystem" title="Link to this definition">¶</a></dt>
 <dd><p>An <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.System.html">openmm.System</a> object that includes extra dynamical variables (DVs) and
 allows for extended phase-space (XPS) simulations.</p>
 <dl class="field-list simple">
@@ -51,6 +51,11 @@ allows for extended phase-space (XPS) simulations.</p>
 <li><p><strong>coupling</strong> (<em>Coupling</em>) – A <code class="xref py py-class docutils literal notranslate"><span class="pre">Coupling</span></code> object, required to couple the physical and extended
 phase-space systems. The dynamical variables are obtained from this coupling.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>tether_period</strong> – The period of oscillation of a harmonic potential that tethers the y and z
+coordinates of the extension system particles to the origin in the yz-plane.
+This is not necessary in typical XPS simulations.</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
@@ -114,6 +119,21 @@ phase-space systems. The dynamical variables are obtained from this coupling.</p
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>mm.System</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceSystem.getTetheringForce">
+<span class="sig-name descname"><span class="pre">getTetheringForce</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/system.html#ExtendedSpaceSystem.getTetheringForce"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSystem.getTetheringForce" title="Link to this definition">¶</a></dt>
+<dd><p>Get the tethering force included in the extended phase-space system.</p>
+<p>If no tethering force has been added, returns None.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The tethering force.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>t.Optional[mm.CustomExternalForce]</p>
 </dd>
 </dl>
 </dd></dl>

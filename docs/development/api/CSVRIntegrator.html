@@ -41,15 +41,20 @@
 <h1>CSVRIntegrator<a class="headerlink" href="#csvrintegrator" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">CSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">CSVRIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">oneDimensional</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>The Canonical Sampling through Velocity Rescaling integrator <span id="id1">[<a class="reference internal" href="../references.html#id8" title="Giovanni Bussi, Davide Donadio, and Michele Parrinello. Canonical sampling through velocity rescaling. The Journal of Chemical Physics, January 2007. doi:10.1063/1.2408420.">1</a>]</span>.</p>
 <p>The Canonical Sampling through Velocity Rescaling (CSVR) thermostat scales all
 velocities by a single factor stochastically determined in order to preserve the
 canonical distribution at the specified temperature.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In an extended phase-space simulation, the integrator must be used in
+one-dimensional mode for the extension system.</p>
+</div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>If this integrator is used outside the context of OpenXPS, the method
-<a class="reference internal" href="#openxps.integrators.CSVRIntegrator.registerWithSystem" title="openxps.integrators.CSVRIntegrator.registerWithSystem"><code class="xref py py-meth docutils literal notranslate"><span class="pre">registerWithSystem()</span></code></a> must be called before starting a simulation.</p>
+<p>When used outside the context of OpenXPS, the <a class="reference internal" href="#openxps.integrators.CSVRIntegrator.registerWithSystem" title="openxps.integrators.CSVRIntegrator.registerWithSystem"><code class="xref py py-meth docutils literal notranslate"><span class="pre">registerWithSystem()</span></code></a> method
+must be called before starting a simulation.</p>
 </div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -57,6 +62,8 @@ canonical distribution at the specified temperature.</p>
 <li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature.</p></li>
 <li><p><strong>frictionCoeff</strong> (<em>Quantity</em>) – The friction coefficient.</p></li>
 <li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
+<li><p><strong>oneDimensional</strong> (<em>bool</em>) – If True, the integrator will be used in one-dimensional mode, with only the
+x-coordinate of the velocity vectors being rescaled.</p></li>
 <li><p><strong>forceFirst</strong> (<em>bool</em>) – If True, the integrator will apply a force-first scheme rather than a
 symmetric operator splitting scheme.</p></li>
 </ul>
@@ -93,7 +100,7 @@ symmetric operator splitting scheme.</p></li>
 <span class="go">   6: v &lt;- v + (x - x1)/(0.5*dt)</span>
 <span class="go">   7: constrain velocities</span>
 <span class="go">   8: mvv &lt;- sum(m*v*v)</span>
-<span class="go">   9: v &lt;- v*sqrt(A + BC*(R1 ^ 2 + sumRsq) + 2*sqrt(A*BC)*R1); ...</span>
+<span class="go">   9: v &lt;- v*sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1); ...</span>
 <span class="go">  10: x &lt;- x + 0.5*dt*v</span>
 <span class="go">  11: x1 &lt;- x</span>
 <span class="go">  12: constrain positions</span>
@@ -110,8 +117,11 @@ symmetric operator splitting scheme.</p></li>
 <span class="gp">... </span>    <span class="n">stepSize</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">forceFirst</span><span class="o">=</span><span class="kc">True</span>
 <span class="gp">... </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator_ff</span><span class="o">.</span><span class="n">getNumDegreesOfFreedom</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span>
-<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">integrator_ff</span><span class="o">.</span><span class="n">getNumDegreesOfFreedom</span><span class="p">()</span>
+<span class="gp">... </span><span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+<span class="go">The number of degrees of freedom has not been determined...</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">testsystems</span><span class="o">.</span><span class="n">AlanineDipeptideVacuum</span><span class="p">()</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator_ff</span><span class="o">.</span><span class="n">registerWithSystem</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator_ff</span><span class="o">.</span><span class="n">getNumDegreesOfFreedom</span><span class="p">()</span>
@@ -126,12 +136,54 @@ symmetric operator splitting scheme.</p></li>
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.getFrictionCoefficient">
+<span class="sig-name descname"><span class="pre">getFrictionCoefficient</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.getFrictionCoefficient" title="Link to this definition">¶</a></dt>
+<dd><p>Get the friction coefficient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The friction coefficient.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>openmm.unit.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.getNumDegreesOfFreedom">
 <span class="sig-name descname"><span class="pre">getNumDegreesOfFreedom</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator.getNumDegreesOfFreedom"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.getNumDegreesOfFreedom" title="Link to this definition">¶</a></dt>
 <dd><p>Get the number of degrees of freedom in the system.</p>
 <dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If registerWithSystem has not been called first.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.getTemperature">
+<span class="sig-name descname"><span class="pre">getTemperature</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.getTemperature" title="Link to this definition">¶</a></dt>
+<dd><p>Get the temperature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The temperature.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>openmm.unit.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.isOneDimensional">
+<span class="sig-name descname"><span class="pre">isOneDimensional</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator.isOneDimensional"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.isOneDimensional" title="Link to this definition">¶</a></dt>
+<dd><p>Check if the integrator is one-dimensional.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>int</p>
+<dd class="field-odd"><p>bool</p>
 </dd>
 </dl>
 </dd></dl>
@@ -145,6 +197,17 @@ symmetric operator splitting scheme.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.setFrictionCoefficient">
+<span class="sig-name descname"><span class="pre">setFrictionCoefficient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.setFrictionCoefficient" title="Link to this definition">¶</a></dt>
+<dd><p>Set the friction coefficient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Quantity</em>) – The friction coefficient.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.setRandomNumberSeed">
 <span class="sig-name descname"><span class="pre">setRandomNumberSeed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator.setRandomNumberSeed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.setRandomNumberSeed" title="Link to this definition">¶</a></dt>
 <dd><p>This method overrides the <code class="xref py py-class docutils literal notranslate"><span class="pre">openmm.CustomIntegrator</span></code> method to also set
@@ -152,6 +215,17 @@ the seed of the random number generator used to pick numbers from the gamma
 distribution.
 :param seed: The seed to use for the random number generator.</p>
 <dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.setTemperature">
+<span class="sig-name descname"><span class="pre">setTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.setTemperature" title="Link to this definition">¶</a></dt>
+<dd><p>Set the temperature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Quantity</em>) – The temperature.</p>
+</dd>
 </dl>
 </dd></dl>
 
@@ -199,6 +273,7 @@ numbers.
 <li class="toctree-l2 current"><a class="reference internal" href="integrators.html">Integrators</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">CSVRIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MassiveGGMTIntegrator.html">MassiveGGMTIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RegulatedNHLIntegrator.html">RegulatedNHLIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="SymmetricLangevinIntegrator.html">SymmetricLangevinIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="SymmetricVerletIntegrator.html">SymmetricVerletIntegrator</a></li>
 </ul>

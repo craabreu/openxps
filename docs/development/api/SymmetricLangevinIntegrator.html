@@ -19,7 +19,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="SymmetricVerletIntegrator" href="SymmetricVerletIntegrator.html" />
-    <link rel="prev" title="MassiveGGMTIntegrator" href="MassiveGGMTIntegrator.html" />
+    <link rel="prev" title="RegulatedNHLIntegrator" href="RegulatedNHLIntegrator.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -42,7 +42,7 @@
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.integrators.SymmetricLangevinIntegrator">
 <em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">SymmetricLangevinIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">frictionCoeff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/symmetric_langevin.html#SymmetricLangevinIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.SymmetricLangevinIntegrator" title="Link to this definition">¶</a></dt>
-<dd><p>A symmetric Langevin integrator using the BAOAB algorithm <span id="id1">[<a class="reference internal" href="../references.html#id12" title="Benedict Leimkuhler and Charles Matthews. Robust and efficient configurational molecular sampling via langevin dynamics. The Journal of Chemical Physics, May 2013. doi:10.1063/1.4802990.">4</a>]</span>.</p>
+<dd><p>A symmetric Langevin integrator using the BAOAB algorithm <span id="id1">[<a class="reference internal" href="../references.html#id12" title="Benedict Leimkuhler and Charles Matthews. Robust and efficient configurational molecular sampling via langevin dynamics. The Journal of Chemical Physics, May 2013. doi:10.1063/1.4802990.">5</a>]</span>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -62,9 +62,9 @@
 <span class="go">Per-dof variables:</span>
 <span class="go">  x1</span>
 <span class="go">Global variables:</span>
+<span class="go">  kT = 2.49433...</span>
 <span class="go">  a = 0.999000...</span>
 <span class="go">  b = 0.044699...</span>
-<span class="go">  kT = 2.49433...</span>
 <span class="go">Computation steps:</span>
 <span class="go">   0: allow forces to update the context state</span>
 <span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
@@ -78,6 +78,68 @@
 <span class="go">   9: constrain velocities</span>
 </pre></div>
 </div>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.SymmetricLangevinIntegrator.getFrictionCoefficient">
+<span class="sig-name descname"><span class="pre">getFrictionCoefficient</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.SymmetricLangevinIntegrator.getFrictionCoefficient" title="Link to this definition">¶</a></dt>
+<dd><p>Get the friction coefficient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The friction coefficient.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>openmm.unit.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.SymmetricLangevinIntegrator.getTemperature">
+<span class="sig-name descname"><span class="pre">getTemperature</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.SymmetricLangevinIntegrator.getTemperature" title="Link to this definition">¶</a></dt>
+<dd><p>Get the temperature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The temperature.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>openmm.unit.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.SymmetricLangevinIntegrator.setFrictionCoefficient">
+<span class="sig-name descname"><span class="pre">setFrictionCoefficient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.SymmetricLangevinIntegrator.setFrictionCoefficient" title="Link to this definition">¶</a></dt>
+<dd><p>Set the friction coefficient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Quantity</em>) – The friction coefficient.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.SymmetricLangevinIntegrator.setStepSize">
+<span class="sig-name descname"><span class="pre">setStepSize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">self</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">size</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/symmetric_langevin.html#SymmetricLangevinIntegrator.setStepSize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.SymmetricLangevinIntegrator.setStepSize" title="Link to this definition">¶</a></dt>
+<dd><p>Set the size of each time step, in picoseconds. If this integrator uses variable time steps, the effect of calling this method is undefined, and it may simply be ignored.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>size</strong> (<em>double</em>) – the step size, measured in ps</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.SymmetricLangevinIntegrator.setTemperature">
+<span class="sig-name descname"><span class="pre">setTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.SymmetricLangevinIntegrator.setTemperature" title="Link to this definition">¶</a></dt>
+<dd><p>Set the temperature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Quantity</em>) – The temperature.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
@@ -111,6 +173,7 @@
 <li class="toctree-l2 current"><a class="reference internal" href="integrators.html">Integrators</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="CSVRIntegrator.html">CSVRIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="MassiveGGMTIntegrator.html">MassiveGGMTIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="RegulatedNHLIntegrator.html">RegulatedNHLIntegrator</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">SymmetricLangevinIntegrator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="SymmetricVerletIntegrator.html">SymmetricVerletIntegrator</a></li>
 </ul>

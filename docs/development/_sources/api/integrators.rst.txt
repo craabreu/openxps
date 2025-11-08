@@ -6,6 +6,7 @@ Integrators
 
     CSVRIntegrator
     MassiveGGMTIntegrator
+    RegulatedNHLIntegrator
     SymmetricLangevinIntegrator
     SymmetricVerletIntegrator
 

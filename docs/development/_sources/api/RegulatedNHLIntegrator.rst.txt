@@ -1,14 +1,16 @@
-MassiveGGMTIntegrator
-=====================
+RegulatedNHLIntegrator
+======================
 
 .. currentmodule:: openxps.integrators
-.. autoclass:: MassiveGGMTIntegrator
+.. autoclass:: RegulatedNHLIntegrator
     :member-order: alphabetical
 
     .. rubric:: Methods
 
+    .. automethod:: getFrictionCoefficient
     .. automethod:: getTemperature
     .. automethod:: getTimeConstant
     .. automethod:: registerWithSystem
+    .. automethod:: setFrictionCoefficient
     .. automethod:: setTemperature
     .. automethod:: setTimeConstant
