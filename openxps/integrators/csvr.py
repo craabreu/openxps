@@ -11,9 +11,13 @@ import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
 
-from .mixin import IntegratorMixin
+from openxps.utils import preprocess_args
+
+from .utils import IntegratorMixin, add_property
 
 
+@add_property("temperature")
+@add_property("friction coefficient")
 class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """The Canonical Sampling through Velocity Rescaling integrator :cite:`Bussi2007`.
 
@@ -21,9 +25,13 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     velocities by a single factor stochastically determined in order to preserve the
     canonical distribution at the specified temperature.
 
+    .. note::
+        In an extended phase-space simulation, the integrator must be used in
+        one-dimensional mode for the extension system.
+
     .. warning::
-        If this integrator is used outside the context of OpenXPS, the method
-        :meth:`registerWithSystem` must be called before starting a simulation.
+        When used outside the context of OpenXPS, the :meth:`registerWithSystem` method
+        must be called before starting a simulation.
 
     Parameters
     ----------
@@ -33,6 +41,9 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         The friction coefficient.
     stepSize
         The integration step size.
+    oneDimensional
+        If True, the integrator will be used in one-dimensional mode, with only the
+        x-coordinate of the velocity vectors being rescaled.
     forceFirst
         If True, the integrator will apply a force-first scheme rather than a
         symmetric operator splitting scheme.
@@ -69,7 +80,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
        6: v <- v + (x - x1)/(0.5*dt)
        7: constrain velocities
        8: mvv <- sum(m*v*v)
-       9: v <- v*sqrt(A + BC*(R1 ^ 2 + sumRsq) + 2*sqrt(A*BC)*R1); ...
+       9: v <- v*sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1); ...
       10: x <- x + 0.5*dt*v
       11: x1 <- x
       12: constrain positions
@@ -86,8 +97,11 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ...     stepSize=2 * unit.femtoseconds,
     ...     forceFirst=True
     ... )
-    >>> integrator_ff.getNumDegreesOfFreedom() is None
-    True
+    >>> try:
+    ...     integrator_ff.getNumDegreesOfFreedom()
+    ... except ValueError as e:
+    ...     print(e)
+    The number of degrees of freedom has not been determined...
     >>> model = testsystems.AlanineDipeptideVacuum()
     >>> integrator_ff.registerWithSystem(model.system)
     >>> integrator_ff.getNumDegreesOfFreedom()
@@ -100,58 +114,64 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     >>> integrator_ff.step(10)
     """
 
+    @preprocess_args
     def __init__(
         self,
         temperature: mmunit.Quantity,
         frictionCoeff: mmunit.Quantity,
         stepSize: mmunit.Quantity,
+        oneDimensional: bool = False,
         forceFirst: bool = False,
     ) -> None:
         super().__init__(stepSize)
+        self._temperature = temperature
+        self._friction_coefficient = frictionCoeff
         self._forceFirst = forceFirst
+        self._oneDimensional = oneDimensional
         self._num_dof = None
         self._rng = np.random.default_rng(None)
-        self._add_global_variables(temperature, frictionCoeff)
+        self._add_variables()
         self.addUpdateContextState()
-        splitting = "VROR" if forceFirst else "VRORV"
-        for letter in splitting:
-            n = splitting.count(letter)
-            timestep = "dt" if n == 1 else f"{1 / n}*dt"
-            if letter == "V":
-                self._add_boost(timestep)
-            elif letter == "R":
-                self._add_translation(timestep)
-            elif letter == "O":
-                self._add_rescaling(timestep)
+        self._add_boost(1 if forceFirst else 0.5)
+        self._add_translation(0.5)
+        self._add_rescaling(1)
+        self._add_translation(0.5)
+        if not forceFirst:
+            self._add_boost(0.5)
 
-    def _add_global_variables(
-        self, temperature: mmunit.Quantity, frictionCoeff: mmunit.Quantity
-    ) -> None:
+    def _add_variables(self) -> None:
         self.addPerDofVariable("x1", 0)
         self.addGlobalVariable("sumRsq", 0)
         self.addGlobalVariable("mvv", 0)
-        self.addGlobalVariable("kT", mmunit.MOLAR_GAS_CONSTANT_R * temperature)
-        self.addGlobalVariable("friction", frictionCoeff)
+        self.addGlobalVariable("kT", 0)
+        self.addGlobalVariable("friction", 0)
+        self._update_global_variables()
 
-    def _add_translation(self, timestep: str) -> None:
-        self.addComputePerDof("x", f"x + {timestep}*v")
+    def _update_global_variables(self) -> None:
+        kt = mmunit.MOLAR_GAS_CONSTANT_R * self.getTemperature()
+        friction = self.getFrictionCoefficient()
+        self.setGlobalVariableByName("kT", kt)
+        self.setGlobalVariableByName("friction", friction)
+
+    def _add_translation(self, fraction: float) -> None:
+        self.addComputePerDof("x", f"x + {fraction}*dt*v")
         self.addComputePerDof("x1", "x")
         self.addConstrainPositions()
-        self.addComputePerDof("v", f"v + (x - x1)/({timestep})")
+        self.addComputePerDof("v", f"v + (x - x1)/({fraction}*dt)")
         self.addConstrainVelocities()
 
-    def _add_boost(self, timestep: str) -> None:
-        self.addComputePerDof("v", f"v + {timestep}*f/m")
+    def _add_boost(self, fraction: float) -> None:
+        self.addComputePerDof("v", f"v + {fraction}*dt*f/m")
         self.addConstrainVelocities()
 
-    def _add_rescaling(self, timestep: str) -> None:
-        self.addComputeSum("mvv", "m*v*v")
+    def _add_rescaling(self, fraction: float) -> None:
+        self.addComputeSum("mvv", "m*_x(v)^2/3" if self._oneDimensional else "m*v*v")
         self.addComputePerDof(
             "v",
-            "v*sqrt(A + BC*(R1 ^ 2 + sumRsq) + 2*sqrt(A*BC)*R1)"
+            "v*sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1)"
             "; R1 = gaussian"
             "; BC = (1 - A)*kT/mvv"
-            f"; A = exp(-friction*{timestep})",
+            f"; A = exp(-{fraction}*dt*friction)",
         )
 
     def _sums_of_squared_gaussians(self, num_steps: int) -> np.ndarray:
@@ -160,12 +180,34 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
             sumRsq += self._rng.standard_normal(num_steps) ** 2
         return sumRsq
 
+    def isOneDimensional(self) -> bool:
+        """Check if the integrator is one-dimensional."""
+        return self._oneDimensional
+
     def getNumDegreesOfFreedom(self) -> int:
-        """Get the number of degrees of freedom in the system."""
+        """Get the number of degrees of freedom in the system.
+
+        Raises
+        ------
+        ValueError
+            If registerWithSystem has not been called first.
+        """
+        if self._num_dof is None:
+            raise ValueError(
+                "The number of degrees of freedom has not been determined. "
+                "Call the `registerWithSystem` method first to determine it."
+            )
         return self._num_dof
 
     def registerWithSystem(self, system: mm.System) -> None:
-        self._num_dof = IntegratorMixin._countDegreesOfFreedom(system)
+        if self._oneDimensional:
+            if system.getNumConstraints() > 0:
+                raise ValueError(
+                    "One-dimensional CSVR integrator cannot be used with constraints."
+                )
+            self._num_dof = system.getNumParticles()
+        else:
+            self._num_dof = IntegratorMixin._countDegreesOfFreedom(system)
 
     def setRandomNumberSeed(self, seed: int) -> None:
         """
