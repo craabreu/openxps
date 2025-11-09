@@ -124,12 +124,12 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         coupling
             The potential that couples the physical and dynamical variables.
         """
-        for integrator, context in (
-            (self._physical_integrator, physical_context),
-            (self._extension_integrator, extension_context),
+        for integrator, context, isExtension in (
+            (self._physical_integrator, physical_context, False),
+            (self._extension_integrator, extension_context, True),
         ):
             if isinstance(integrator, IntegratorMixin):
-                integrator.registerWithSystem(context.getSystem())
+                integrator.registerWithSystem(context.getSystem(), isExtension)
         self._physical_context = physical_context
         self._extension_context = extension_context
         self._coupling = coupling

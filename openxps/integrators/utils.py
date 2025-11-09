@@ -69,7 +69,7 @@ class IntegratorMixin:
             readable_lines.append(line)
         return "\n".join(readable_lines)
 
-    def registerWithSystem(self, system: mm.System) -> None:
+    def registerWithSystem(self, system: mm.System, isExtension: bool) -> None:
         """Register the integrator with the system."""
         pass
 
