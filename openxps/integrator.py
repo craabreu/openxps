@@ -124,12 +124,12 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         coupling
             The potential that couples the physical and dynamical variables.
         """
-        for integrator, context in (
-            (self._physical_integrator, physical_context),
-            (self._extension_integrator, extension_context),
+        for integrator, context, isExtension in (
+            (self._physical_integrator, physical_context, False),
+            (self._extension_integrator, extension_context, True),
         ):
             if isinstance(integrator, IntegratorMixin):
-                integrator.registerWithSystem(context.getSystem())
+                integrator.registerWithSystem(context.getSystem(), isExtension)
         self._physical_context = physical_context
         self._extension_context = extension_context
         self._coupling = coupling
@@ -268,9 +268,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
             mmswig.Integrator_getStepSize(physical_integrator),
             mmswig.Integrator_getStepSize(extension_integrator),
         ):
-            raise ValueError(
-                "The physical and extension integrators must have the same step size."
-            )
+            raise ValueError("The step sizes must be equal.")
         if not (
             assume_force_first
             or (
@@ -279,9 +277,8 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
             )
         ):
             raise ValueError(
-                "The physical and extension integrators must follow a force-first "
-                "scheme. If you are certain your integrators do follow such a scheme, "
-                "set assume_force_first=True."
+                "The integrators must follow a force-first scheme.\n"
+                "If you are certain they do, set assume_force_first=True."
             )
         super().__init__(physical_integrator, extension_integrator)
 
@@ -419,17 +416,13 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             )
         ):
             raise ValueError(
-                "The physical and extension integrators must be symmetric in terms of "
-                "operator splitting. If you are certain your integrators are "
-                "symmetric, set assume_symmetric=True."
+                "The integrators must be symmetric in terms of operator splitting.\n"
+                "If you are certain they are, set assume_symmetric=True."
             )
         step_size = max(physical_step_size, extension_step_size)
         substep_size = min(physical_step_size, extension_step_size)
         if not self._is_even_division(step_size, substep_size):
-            raise ValueError(
-                "The physical and extension integrator step sizes must be related by "
-                "an even integer ratio."
-            )
+            raise ValueError("The step sizes must be related by an even integer ratio.")
         super().__init__(physical_integrator, extension_integrator)
 
     @staticmethod

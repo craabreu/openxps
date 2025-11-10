@@ -69,7 +69,7 @@ class IntegratorMixin:
             readable_lines.append(line)
         return "\n".join(readable_lines)
 
-    def registerWithSystem(self, system: mm.System) -> None:
+    def registerWithSystem(self, system: mm.System, isExtension: bool) -> None:
         """Register the integrator with the system."""
         pass
 
@@ -115,17 +115,40 @@ class IntegratorMixin:
         return self._forceFirst
 
 
-def add_property(property: str) -> t.Callable[[type[T]], type[T]]:
-    camel_case_name = "".join(s.capitalize() for s in property.split())
+def add_property(property: str, unit: mmunit.Unit) -> t.Callable[[type[T]], type[T]]:
+    """A decorator to add a property to the integrator.
+
+    The property is added to the integrator as a class attribute with the name
+    `_{snake_case_name}`. Three methods are added to the class:
+
+    * `_init_{snake_case_name}(value)`: Initializes the property.
+    * `set{PascalCaseName}(value)`: Sets the property and updates the global variables
+        if the integrator has a `_update_global_variables` method.
+    * `get{PascalCaseName}()`: Gets the property.
+
+    Parameters
+    ----------
+    property
+        The name of the property.
+    unit
+        The unit of the property.
+    """
+    if unit.in_unit_system(mmunit.md_unit_system) != unit:
+        raise ValueError(f"The unit of {property} must be in the MD unit system.")
+    PascalCaseName = "".join(s.capitalize() for s in property.split())
     snake_case_name = "_".join(s.lower() for s in property.split())
 
+    def set_value(self, value: t.Union[mmunit.Quantity, float]) -> None:
+        args = [value] if mmunit.is_quantity(value) else [value, unit]
+        setattr(self, f"_{snake_case_name}", Quantity(*args))
+
     @preprocess_args
-    def setter(self, value: mmunit.Quantity) -> None:
-        setattr(self, f"_{snake_case_name}", Quantity(value))
+    def set_and_update(self, value: t.Union[mmunit.Quantity, float]) -> None:
+        set_value(value)
         if hasattr(self, "_update_global_variables"):
             self._update_global_variables()
 
-    setter.__doc__ = textwrap.dedent(
+    set_and_update.__doc__ = textwrap.dedent(
         f"""\
         Set the {property}.
 
@@ -136,10 +159,10 @@ def add_property(property: str) -> t.Callable[[type[T]], type[T]]:
         """
     )
 
-    def getter(self) -> mmunit.Quantity:
+    def get_value(self) -> mmunit.Quantity:
         return getattr(self, f"_{snake_case_name}")
 
-    getter.__doc__ = textwrap.dedent(
+    get_value.__doc__ = textwrap.dedent(
         f"""\
         Get the {property}.
 
@@ -152,8 +175,9 @@ def add_property(property: str) -> t.Callable[[type[T]], type[T]]:
 
     def decorator(cls: type[T]) -> type[T]:
         setattr(cls, f"_{snake_case_name}", None)
-        setattr(cls, f"set{camel_case_name}", setter)
-        setattr(cls, f"get{camel_case_name}", getter)
+        setattr(cls, f"_init_{snake_case_name}", set_value)
+        setattr(cls, f"set{PascalCaseName}", set_and_update)
+        setattr(cls, f"get{PascalCaseName}", get_value)
         return cls
 
     return decorator
