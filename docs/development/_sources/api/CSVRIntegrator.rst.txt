@@ -10,7 +10,6 @@ CSVRIntegrator
     .. automethod:: getFrictionCoefficient
     .. automethod:: getNumDegreesOfFreedom
     .. automethod:: getTemperature
-    .. automethod:: isOneDimensional
     .. automethod:: registerWithSystem
     .. automethod:: setFrictionCoefficient
     .. automethod:: setRandomNumberSeed

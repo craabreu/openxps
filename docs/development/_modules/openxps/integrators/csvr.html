@@ -55,8 +55,8 @@
 
 <div class="viewcode-block" id="CSVRIntegrator">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator">[docs]</a>
-<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">)</span>
-<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;friction coefficient&quot;</span><span class="p">)</span>
+<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
+<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;friction coefficient&quot;</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">CSVRIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;The Canonical Sampling through Velocity Rescaling integrator :cite:`Bussi2007`.</span>
 
@@ -64,13 +64,9 @@
 <span class="sd">    velocities by a single factor stochastically determined in order to preserve the</span>
 <span class="sd">    canonical distribution at the specified temperature.</span>
 
-<span class="sd">    .. note::</span>
-<span class="sd">        In an extended phase-space simulation, the integrator must be used in</span>
-<span class="sd">        one-dimensional mode for the extension system.</span>
-
 <span class="sd">    .. warning::</span>
-<span class="sd">        When used outside the context of OpenXPS, the :meth:`registerWithSystem` method</span>
-<span class="sd">        must be called before starting a simulation.</span>
+<span class="sd">        When used outside OpenXPS, the :meth:`registerWithSystem` method must be called</span>
+<span class="sd">        with `isExtension=False` before starting a simulation.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -80,9 +76,6 @@
 <span class="sd">        The friction coefficient.</span>
 <span class="sd">    stepSize</span>
 <span class="sd">        The integration step size.</span>
-<span class="sd">    oneDimensional</span>
-<span class="sd">        If True, the integrator will be used in one-dimensional mode, with only the</span>
-<span class="sd">        x-coordinate of the velocity vectors being rescaled.</span>
 <span class="sd">    forceFirst</span>
 <span class="sd">        If True, the integrator will apply a force-first scheme rather than a</span>
 <span class="sd">        symmetric operator splitting scheme.</span>
@@ -109,6 +102,7 @@
 <span class="sd">      mvv = 0.0</span>
 <span class="sd">      kT = 2.49433...</span>
 <span class="sd">      friction = 10.0</span>
+<span class="sd">      scaling_factor = 1.0</span>
 <span class="sd">    Computation steps:</span>
 <span class="sd">       0: allow forces to update the context state</span>
 <span class="sd">       1: v &lt;- v + 0.5*dt*f/m</span>
@@ -119,14 +113,15 @@
 <span class="sd">       6: v &lt;- v + (x - x1)/(0.5*dt)</span>
 <span class="sd">       7: constrain velocities</span>
 <span class="sd">       8: mvv &lt;- sum(m*v*v)</span>
-<span class="sd">       9: v &lt;- v*sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1); ...</span>
-<span class="sd">      10: x &lt;- x + 0.5*dt*v</span>
-<span class="sd">      11: x1 &lt;- x</span>
-<span class="sd">      12: constrain positions</span>
-<span class="sd">      13: v &lt;- v + (x - x1)/(0.5*dt)</span>
-<span class="sd">      14: constrain velocities</span>
-<span class="sd">      15: v &lt;- v + 0.5*dt*f/m</span>
-<span class="sd">      16: constrain velocities</span>
+<span class="sd">       9: scaling_factor &lt;- sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1); R1 = ...</span>
+<span class="sd">      10: v &lt;- v*scaling_factor</span>
+<span class="sd">      11: x &lt;- x + 0.5*dt*v</span>
+<span class="sd">      12: x1 &lt;- x</span>
+<span class="sd">      13: constrain positions</span>
+<span class="sd">      14: v &lt;- v + (x - x1)/(0.5*dt)</span>
+<span class="sd">      15: constrain velocities</span>
+<span class="sd">      16: v &lt;- v + 0.5*dt*f/m</span>
+<span class="sd">      17: constrain velocities</span>
 
 <span class="sd">    Force-first scheme</span>
 
@@ -142,7 +137,7 @@
 <span class="sd">    ...     print(e)</span>
 <span class="sd">    The number of degrees of freedom has not been determined...</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
-<span class="sd">    &gt;&gt;&gt; integrator_ff.registerWithSystem(model.system)</span>
+<span class="sd">    &gt;&gt;&gt; integrator_ff.registerWithSystem(model.system, False)</span>
 <span class="sd">    &gt;&gt;&gt; integrator_ff.getNumDegreesOfFreedom()</span>
 <span class="sd">    51</span>
 <span class="sd">    &gt;&gt;&gt; integrator_ff.setRandomNumberSeed(1234)</span>
@@ -159,14 +154,12 @@
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">frictionCoeff</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">oneDimensional</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">forceFirst</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span> <span class="o">=</span> <span class="n">temperature</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_friction_coefficient</span> <span class="o">=</span> <span class="n">frictionCoeff</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_temperature</span><span class="p">(</span><span class="n">temperature</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_friction_coefficient</span><span class="p">(</span><span class="n">frictionCoeff</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_forceFirst</span> <span class="o">=</span> <span class="n">forceFirst</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_oneDimensional</span> <span class="o">=</span> <span class="n">oneDimensional</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_variables</span><span class="p">()</span>
@@ -184,6 +177,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;mvv&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;friction&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;scaling_factor&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_global_variables</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_global_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -204,27 +198,21 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainVelocities</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_rescaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeSum</span><span class="p">(</span><span class="s2">&quot;mvv&quot;</span><span class="p">,</span> <span class="s2">&quot;m*_x(v)^2/3&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_oneDimensional</span> <span class="k">else</span> <span class="s2">&quot;m*v*v&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
-            <span class="s2">&quot;v&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;v*sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1)&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeSum</span><span class="p">(</span><span class="s2">&quot;mvv&quot;</span><span class="p">,</span> <span class="s2">&quot;m*v*v&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeGlobal</span><span class="p">(</span>
+            <span class="s2">&quot;scaling_factor&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1)&quot;</span>
             <span class="s2">&quot;; R1 = gaussian&quot;</span>
             <span class="s2">&quot;; BC = (1 - A)*kT/mvv&quot;</span>
             <span class="sa">f</span><span class="s2">&quot;; A = exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*friction)&quot;</span><span class="p">,</span>
         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;v*scaling_factor&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_sums_of_squared_gaussians</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="n">sumRsq</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">standard_gamma</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">num_steps</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">sumRsq</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">standard_normal</span><span class="p">(</span><span class="n">num_steps</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="k">return</span> <span class="n">sumRsq</span>
-
-<div class="viewcode-block" id="CSVRIntegrator.isOneDimensional">
-<a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.isOneDimensional">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">isOneDimensional</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check if the integrator is one-dimensional.&quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_oneDimensional</span></div>
-
 
 <div class="viewcode-block" id="CSVRIntegrator.getNumDegreesOfFreedom">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.getNumDegreesOfFreedom">[docs]</a>
@@ -238,20 +226,16 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;The number of degrees of freedom has not been determined. &quot;</span>
-                <span class="s2">&quot;Call the `registerWithSystem` method first to determine it.&quot;</span>
+                <span class="s2">&quot;The number of degrees of freedom has not been determined.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="s2">&quot;Call the `registerWithSystem` method first.&quot;</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span></div>
 
 
 <div class="viewcode-block" id="CSVRIntegrator.registerWithSystem">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.registerWithSystem">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">registerWithSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_oneDimensional</span><span class="p">:</span>
-            <span class="k">if</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;One-dimensional CSVR integrator cannot be used with constraints.&quot;</span>
-                <span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">registerWithSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">,</span> <span class="n">isExtension</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">isExtension</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumParticles</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">=</span> <span class="n">IntegratorMixin</span><span class="o">.</span><span class="n">_countDegreesOfFreedom</span><span class="p">(</span><span class="n">system</span><span class="p">)</span></div>

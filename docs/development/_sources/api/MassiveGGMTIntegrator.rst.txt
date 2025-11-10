@@ -7,8 +7,10 @@ MassiveGGMTIntegrator
 
     .. rubric:: Methods
 
+    .. automethod:: getFrictionCoefficient
     .. automethod:: getTemperature
     .. automethod:: getTimeConstant
     .. automethod:: registerWithSystem
+    .. automethod:: setFrictionCoefficient
     .. automethod:: setTemperature
     .. automethod:: setTimeConstant
