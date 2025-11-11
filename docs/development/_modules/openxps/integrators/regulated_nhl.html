@@ -85,9 +85,6 @@
 <span class="sd">    -----------------</span>
 <span class="sd">    regulationParameter</span>
 <span class="sd">        The regulation parameter (see :cite:`Abreu2021` for details).</span>
-<span class="sd">    bathLoops</span>
-<span class="sd">        The number of internal loops in the thermostat. A larger number increases</span>
-<span class="sd">        accuracy and stability at the expense of computational cost.</span>
 <span class="sd">    forceFirst</span>
 <span class="sd">        If True, the integrator will apply a force-first scheme. Otherwise, it will</span>
 <span class="sd">        apply a symmetric operator splitting scheme.</span>
@@ -149,30 +146,23 @@
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">regulationParameter</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
-        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="n">forceFirst</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">bathLoops</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of bath loops must be at least 1.&quot;</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_forceFirst</span> <span class="o">=</span> <span class="n">forceFirst</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_regulation_parameter</span> <span class="o">=</span> <span class="n">regulationParameter</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_init_temperature</span><span class="p">(</span><span class="n">temperature</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_init_time_constant</span><span class="p">(</span><span class="n">timeConstant</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_init_friction_coefficient</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">timeConstant</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_bath_loops</span> <span class="o">=</span> <span class="n">bathLoops</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_variables</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addUpdateContextState</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setKineticEnergyExpression</span><span class="p">(</span>
             <span class="sa">f</span><span class="s2">&quot;0.5*m*v*c*tanh(v/c); c=sqrt(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_regulation_parameter</span><span class="si">}</span><span class="s2">*kT/m)&quot;</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">forceFirst</span> <span class="k">else</span> <span class="mf">0.5</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bath_loops</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bath_loops</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_add_thermostat</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bath_loops</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bath_loops</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_thermostat</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bath_loops</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bath_loops</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_thermostat</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">forceFirst</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
 
@@ -186,7 +176,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_global_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">tau</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getTimeConstant</span><span class="p">()</span>
-        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">()</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bath_loops</span>
+        <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">()</span>
         <span class="n">friction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFrictionCoefficient</span><span class="p">()</span>
         <span class="n">kt</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">getTemperature</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="n">kt</span><span class="p">)</span>
