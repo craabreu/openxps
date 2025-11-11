@@ -46,9 +46,6 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
     -----------------
     regulationParameter
         The regulation parameter (see :cite:`Abreu2021` for details).
-    bathLoops
-        The number of internal loops in the thermostat. A larger number increases
-        accuracy and stability at the expense of computational cost.
     forceFirst
         If True, the integrator will apply a force-first scheme. Otherwise, it will
         apply a symmetric operator splitting scheme.
@@ -110,30 +107,23 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
         stepSize: mmunit.Quantity,
         *,
         regulationParameter: float = 1,
-        bathLoops: int = 1,
         forceFirst: bool = False,
     ) -> None:
-        if bathLoops < 1:
-            raise ValueError("The number of bath loops must be at least 1.")
         super().__init__(stepSize)
         self._forceFirst = forceFirst
         self._regulation_parameter = regulationParameter
         self._init_temperature(temperature)
         self._init_time_constant(timeConstant)
         self._init_friction_coefficient(1 / timeConstant)
-        self._bath_loops = bathLoops
         self._add_variables()
         self.addUpdateContextState()
         self.setKineticEnergyExpression(
             f"0.5*m*v*c*tanh(v/c); c=sqrt({self._regulation_parameter}*kT/m)"
         )
         self._add_boost(1 if forceFirst else 0.5)
-        self._add_translation(0.5 / self._bath_loops)
-        for _ in range(self._bath_loops - 1):
-            self._add_thermostat(1 / self._bath_loops)
-            self._add_translation(1 / self._bath_loops)
-        self._add_thermostat(1 / self._bath_loops)
-        self._add_translation(0.5 / self._bath_loops)
+        self._add_translation(0.5)
+        self._add_thermostat(1)
+        self._add_translation(0.5)
         if not forceFirst:
             self._add_boost(0.5)
 
@@ -147,7 +137,7 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
 
     def _update_global_variables(self) -> None:
         tau = self.getTimeConstant()
-        dt = self.getStepSize() / self._bath_loops
+        dt = self.getStepSize()
         friction = self.getFrictionCoefficient()
         kt = mmunit.MOLAR_GAS_CONSTANT_R * self.getTemperature()
         self.setGlobalVariableByName("kT", kt)

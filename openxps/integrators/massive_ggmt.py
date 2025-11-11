@@ -51,9 +51,6 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     stochastic
         If True, the integrator will apply stochasticity to the variables controlling
         the second- and fourth-moment of the velocity distribution.
-    bathLoops
-        The number of internal loops in the thermostat. A larger number increases
-        accuracy and stability at the expense of computational cost.
     forceFirst
         If True, the integrator will apply a force-first scheme. Otherwise, it will
         apply a symmetric operator splitting scheme.
@@ -87,7 +84,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
        5: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
        6: v <- v/sqrt(1 + 0.33...*dt*m*v^2*v2)
        7: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
-       8: v <- v*exp(-1.0*dt*(v1 + kT*v2))
+       8: v <- v*exp(-1*dt*(v1 + kT*v2))
        9: v2lb <- -sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT
       10: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
       11: v <- v/sqrt(1 + 0.33...*dt*m*v^2*v2)
@@ -102,7 +99,6 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ...     temperature=300 * unit.kelvin,
     ...     timeConstant=40 * unit.femtoseconds,
     ...     stepSize=2 * unit.femtoseconds,
-    ...     bathLoops=2,
     ...     forceFirst=True
     ... )
     >>> model = testsystems.AlanineDipeptideVacuum()
@@ -121,27 +117,20 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         stepSize: mmunit.Quantity,
         *,
         stochastic: bool = False,
-        bathLoops: int = 1,
         forceFirst: bool = False,
     ) -> None:
-        if bathLoops < 1:
-            raise ValueError("The number of bath loops must be at least 1.")
         super().__init__(stepSize)
         self._forceFirst = forceFirst
         self._init_temperature(temperature)
         self._init_time_constant(timeConstant)
         self._init_friction_coefficient(1 / timeConstant if stochastic else 0.0)
-        self._bath_loops = bathLoops
         self._stochastic = stochastic
         self._add_variables()
         self.addUpdateContextState()
         self._add_boost(1 if forceFirst else 0.5)
-        self._add_translation(0.5 / self._bath_loops)
-        for _ in range(self._bath_loops - 1):
-            self._add_thermostat(1 / self._bath_loops)
-            self._add_translation(1 / self._bath_loops)
-        self._add_thermostat(1 / self._bath_loops)
-        self._add_translation(0.5 / self._bath_loops)
+        self._add_translation(0.5)
+        self._add_thermostat(1)
+        self._add_translation(0.5)
         if not forceFirst:
             self._add_boost(0.5)
 
@@ -166,7 +155,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.setGlobalVariableByName("invQ2", 3 / (8 * kt**3 * tau**2))
         if self._stochastic:
             friction = self.getFrictionCoefficient()
-            dt = self.getStepSize() / self._bath_loops
+            dt = self.getStepSize()
             a = np.exp(-friction * dt)
             b1 = np.sqrt(1 - a**2) / tau
             b2 = b1 * np.sqrt(3 / 8) / kt
