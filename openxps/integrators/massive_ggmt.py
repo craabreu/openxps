@@ -45,18 +45,18 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         The time constant (a.k.a. coupling/damping/relaxation time) of the thermostat.
     stepSize
         The integration step size.
-    bathLoops
-        The number of internal loops in the thermostat. A larger number increases
-        accuracy and stability at the expense of computational cost.
 
     Keyword Arguments
     -----------------
-    forceFirst
-        If True, the integrator will apply a force-first scheme. Otherwise, it will
-        apply a symmetric operator splitting scheme.
     stochastic
         If True, the integrator will apply stochasticity to the variables controlling
         the second- and fourth-moment of the velocity distribution.
+    bathLoops
+        The number of internal loops in the thermostat. A larger number increases
+        accuracy and stability at the expense of computational cost.
+    forceFirst
+        If True, the integrator will apply a force-first scheme. Otherwise, it will
+        apply a symmetric operator splitting scheme.
 
     Example
     -------
@@ -70,11 +70,10 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ...     temperature=300 * unit.kelvin,
     ...     timeConstant=100 * unit.femtoseconds,
     ...     stepSize=2 * unit.femtoseconds,
-    ...     bathLoops=2
     ... )
     >>> integrator
     Per-dof variables:
-      v1, v2
+      v1, v2, v2lb
     Global variables:
       kT = 2.494338...
       invQ = 40.090...
@@ -82,19 +81,19 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     Computation steps:
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m
-       2: x <- x + 0.25*dt*v
-       3: v1 <- v1 + 0.25*dt*(m*v^2 - kT)*invQ
-       4: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2
-       5: v <- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 0.333...*dt*m*v^2*v2)
-       6: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2
-       7: v1 <- v1 + 0.25*dt*(m*v^2 - kT)*invQ
-       8: x <- x + 0.5*dt*v
-       9: v1 <- v1 + 0.25*dt*(m*v^2 - kT)*invQ
-      10: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2
-      11: v <- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 0.333...*dt*m*v^2*v2)
-      12: v2 <- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2
-      13: v1 <- v1 + 0.25*dt*(m*v^2 - kT)*invQ
-      14: x <- x + 0.25*dt*v
+       2: x <- x + 0.5*dt*v
+       3: v1 <- v1 + 0.5*dt*(m*v^2 - kT)*invQ
+       4: v2lb <- -sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT
+       5: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
+       6: v <- v/sqrt(1 + 0.33...*dt*m*v^2*v2)
+       7: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
+       8: v <- v*exp(-1.0*dt*(v1 + kT*v2))
+       9: v2lb <- -sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT
+      10: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
+      11: v <- v/sqrt(1 + 0.33...*dt*m*v^2*v2)
+      12: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
+      13: v1 <- v1 + 0.5*dt*(m*v^2 - kT)*invQ
+      14: x <- x + 0.5*dt*v
       15: v <- v + 0.5*dt*f/m
 
     Force-first scheme
@@ -120,10 +119,10 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         temperature: mmunit.Quantity,
         timeConstant: mmunit.Quantity,
         stepSize: mmunit.Quantity,
-        bathLoops: int = 1,
         *,
-        forceFirst: bool = False,
         stochastic: bool = False,
+        bathLoops: int = 1,
+        forceFirst: bool = False,
     ) -> None:
         if bathLoops < 1:
             raise ValueError("The number of bath loops must be at least 1.")
@@ -152,6 +151,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addGlobalVariable("invQ2", 0)
         self.addPerDofVariable("v1", 0)
         self.addPerDofVariable("v2", 0)
+        self.addPerDofVariable("v2lb", 0)
         if self._stochastic:
             self.addGlobalVariable("a", 0)
             self.addGlobalVariable("b1", 0)
@@ -184,15 +184,20 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addComputePerDof("v1", f"v1 + {fraction}*dt*(m*v^2 - kT)*invQ")
 
     def _add_v2_boost(self, fraction: float) -> None:
-        self.addComputePerDof("v2", f"v2 + {fraction}*dt*((m*v^2)^2/3 - kT^2)*invQ2")
+        self.addComputePerDof(
+            "v2lb",
+            "-sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT",
+        )
+        expression = (
+            "select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2)"
+            f"; new_v2 = v2 + {fraction / 2}*dt*((m*v^2)^2/3 - kT^2)*invQ2"
+        )
+        self.addComputePerDof("v2", expression)
+        self.addComputePerDof("v", f"v/sqrt(1 + {(2 * fraction) / 3}*dt*m*v^2*v2)")
+        self.addComputePerDof("v2", expression)
 
     def _add_v_scaling(self, fraction: float) -> None:
-        self.addComputePerDof(
-            "v",
-            f"v*exp(-{fraction}*dt*(v1 + kT*v2))"
-            "/"
-            f"sqrt(1 + {(2 * fraction) / 3}*dt*m*v^2*v2)",
-        )
+        self.addComputePerDof("v", f"v*exp(-{fraction}*dt*(v1 + kT*v2))")
 
     def _add_thermostat(self, fraction: float) -> None:
         self._add_v1_boost(0.5 * fraction)
