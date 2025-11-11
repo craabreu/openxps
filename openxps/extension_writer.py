@@ -120,7 +120,6 @@ class ExtensionWriter(CustomWriter):
         self._coupling_functions = coupling_functions
 
         self._needs_energy = kinetic or temperature
-        self._needs_velocities = kinetic or temperature
         self._needs_positions = dynamical_variables
         self._needs_forces = forces
 
@@ -182,20 +181,12 @@ class ExtensionWriter(CustomWriter):
         context = simulation.extended_space_context
         extension_context = context.getExtensionContext()
         state = extension_context.getState(
-            getEnergy=self._needs_energy,
-            getPositions=self._needs_positions,
-            getVelocities=self._needs_velocities,
-            getForces=self._needs_forces,
+            energy=self._needs_energy,
+            positions=self._needs_positions,
+            forces=self._needs_forces,
         )
         if self._needs_energy:
             kinetic_energy = mmswig.State_getKineticEnergy(state)
-        if self._needs_velocities:
-            velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
-            for dv, velocity in zip(
-                context.getSystem().getDynamicalVariables(), velocities
-            ):
-                mass = dv.mass._value
-                kinetic_energy -= 0.5 * mass * (velocity.y**2 + velocity.z**2)
         if self._needs_positions:
             positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         if self._forces:
