@@ -41,7 +41,7 @@
 <h1>MassiveGGMTIntegrator<a class="headerlink" href="#massiveggmtintegrator" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">MassiveGGMTIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeConstant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bathLoops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stochastic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">MassiveGGMTIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeConstant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">stochastic</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bathLoops</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator" title="Link to this definition">¶</a></dt>
 <dd><p>A massive, second- and fourth-moment GGMT integrator <span id="id1">[<a class="reference internal" href="../references.html#id5" title="Yi Liu and Mark E. Tuckerman. Generalized gaussian moment thermostatting: a new continuous dynamical approach to the canonical ensemble. The Journal of Chemical Physics, 112(4):1685–1700, January 2000. doi:10.1063/1.480769.">2</a>]</span>.</p>
 <p>The massive GGMT integrator is effective at maintaining temperature control under
 steady-state conditions, such as in d-AFED/TAMD <span id="id2">[<a class="reference internal" href="../references.html#id7" title="Luca Maragliano and Eric Vanden-Eijnden. A temperature accelerated method for sampling free energy and determining reaction pathways in rare events simulations. Chemical Physics Letters, 426(1–3):168–175, July 2006. doi:10.1016/j.cplett.2006.05.062.">3</a>, <a class="reference internal" href="../references.html#id10" title="Jerry B. Abrams and Mark E. Tuckerman. Efficient and direct generation of multidimensional free energy surfaces via adiabatic dynamics without coordinate transformations. The Journal of Physical Chemistry B, 112(49):15742–15757, November 2008. doi:10.1021/jp805039u.">4</a>]</span>
@@ -65,16 +65,16 @@ inverse of the time constant, but this value can be customized via
 <li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature of the heat bath.</p></li>
 <li><p><strong>timeConstant</strong> (<em>Quantity</em>) – The time constant (a.k.a. coupling/damping/relaxation time) of the thermostat.</p></li>
 <li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
-<li><p><strong>bathLoops</strong> (<em>int</em>) – The number of internal loops in the thermostat. A larger number increases
-accuracy and stability at the expense of computational cost.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
 <dd class="field-even"><ul class="simple">
-<li><p><strong>forceFirst</strong> – If True, the integrator will apply a force-first scheme. Otherwise, it will
-apply a symmetric operator splitting scheme.</p></li>
 <li><p><strong>stochastic</strong> – If True, the integrator will apply stochasticity to the variables controlling
 the second- and fourth-moment of the velocity distribution.</p></li>
+<li><p><strong>bathLoops</strong> – The number of internal loops in the thermostat. A larger number increases
+accuracy and stability at the expense of computational cost.</p></li>
+<li><p><strong>forceFirst</strong> – If True, the integrator will apply a force-first scheme. Otherwise, it will
+apply a symmetric operator splitting scheme.</p></li>
 </ul>
 </dd>
 </dl>
@@ -89,11 +89,10 @@ the second- and fourth-moment of the velocity distribution.</p></li>
 <span class="gp">... </span>    <span class="n">temperature</span><span class="o">=</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">timeConstant</span><span class="o">=</span><span class="mi">100</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">stepSize</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="n">bathLoops</span><span class="o">=</span><span class="mi">2</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span>
 <span class="go">Per-dof variables:</span>
-<span class="go">  v1, v2</span>
+<span class="go">  v1, v2, v2lb</span>
 <span class="go">Global variables:</span>
 <span class="go">  kT = 2.494338...</span>
 <span class="go">  invQ = 40.090...</span>
@@ -101,19 +100,19 @@ the second- and fourth-moment of the velocity distribution.</p></li>
 <span class="go">Computation steps:</span>
 <span class="go">   0: allow forces to update the context state</span>
 <span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
-<span class="go">   2: x &lt;- x + 0.25*dt*v</span>
-<span class="go">   3: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="go">   4: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="go">   5: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 0.333...*dt*m*v^2*v2)</span>
-<span class="go">   6: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="go">   7: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="go">   8: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   9: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="go">  10: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="go">  11: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 0.333...*dt*m*v^2*v2)</span>
-<span class="go">  12: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="go">  13: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="go">  14: x &lt;- x + 0.25*dt*v</span>
+<span class="go">   2: x &lt;- x + 0.5*dt*v</span>
+<span class="go">   3: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)*invQ</span>
+<span class="go">   4: v2lb &lt;- -sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT</span>
+<span class="go">   5: v2 &lt;- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...</span>
+<span class="go">   6: v &lt;- v/sqrt(1 + 0.33...*dt*m*v^2*v2)</span>
+<span class="go">   7: v2 &lt;- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...</span>
+<span class="go">   8: v &lt;- v*exp(-1.0*dt*(v1 + kT*v2))</span>
+<span class="go">   9: v2lb &lt;- -sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT</span>
+<span class="go">  10: v2 &lt;- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...</span>
+<span class="go">  11: v &lt;- v/sqrt(1 + 0.33...*dt*m*v^2*v2)</span>
+<span class="go">  12: v2 &lt;- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...</span>
+<span class="go">  13: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)*invQ</span>
+<span class="go">  14: x &lt;- x + 0.5*dt*v</span>
 <span class="go">  15: v &lt;- v + 0.5*dt*f/m</span>
 </pre></div>
 </div>

@@ -84,18 +84,18 @@
 <span class="sd">        The time constant (a.k.a. coupling/damping/relaxation time) of the thermostat.</span>
 <span class="sd">    stepSize</span>
 <span class="sd">        The integration step size.</span>
-<span class="sd">    bathLoops</span>
-<span class="sd">        The number of internal loops in the thermostat. A larger number increases</span>
-<span class="sd">        accuracy and stability at the expense of computational cost.</span>
 
 <span class="sd">    Keyword Arguments</span>
 <span class="sd">    -----------------</span>
-<span class="sd">    forceFirst</span>
-<span class="sd">        If True, the integrator will apply a force-first scheme. Otherwise, it will</span>
-<span class="sd">        apply a symmetric operator splitting scheme.</span>
 <span class="sd">    stochastic</span>
 <span class="sd">        If True, the integrator will apply stochasticity to the variables controlling</span>
 <span class="sd">        the second- and fourth-moment of the velocity distribution.</span>
+<span class="sd">    bathLoops</span>
+<span class="sd">        The number of internal loops in the thermostat. A larger number increases</span>
+<span class="sd">        accuracy and stability at the expense of computational cost.</span>
+<span class="sd">    forceFirst</span>
+<span class="sd">        If True, the integrator will apply a force-first scheme. Otherwise, it will</span>
+<span class="sd">        apply a symmetric operator splitting scheme.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -109,11 +109,10 @@
 <span class="sd">    ...     temperature=300 * unit.kelvin,</span>
 <span class="sd">    ...     timeConstant=100 * unit.femtoseconds,</span>
 <span class="sd">    ...     stepSize=2 * unit.femtoseconds,</span>
-<span class="sd">    ...     bathLoops=2</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator</span>
 <span class="sd">    Per-dof variables:</span>
-<span class="sd">      v1, v2</span>
+<span class="sd">      v1, v2, v2lb</span>
 <span class="sd">    Global variables:</span>
 <span class="sd">      kT = 2.494338...</span>
 <span class="sd">      invQ = 40.090...</span>
@@ -121,19 +120,19 @@
 <span class="sd">    Computation steps:</span>
 <span class="sd">       0: allow forces to update the context state</span>
 <span class="sd">       1: v &lt;- v + 0.5*dt*f/m</span>
-<span class="sd">       2: x &lt;- x + 0.25*dt*v</span>
-<span class="sd">       3: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="sd">       4: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="sd">       5: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 0.333...*dt*m*v^2*v2)</span>
-<span class="sd">       6: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="sd">       7: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="sd">       8: x &lt;- x + 0.5*dt*v</span>
-<span class="sd">       9: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="sd">      10: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="sd">      11: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))/sqrt(1 + 0.333...*dt*m*v^2*v2)</span>
-<span class="sd">      12: v2 &lt;- v2 + 0.25*dt*((m*v^2)^2/3 - kT^2)*invQ2</span>
-<span class="sd">      13: v1 &lt;- v1 + 0.25*dt*(m*v^2 - kT)*invQ</span>
-<span class="sd">      14: x &lt;- x + 0.25*dt*v</span>
+<span class="sd">       2: x &lt;- x + 0.5*dt*v</span>
+<span class="sd">       3: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)*invQ</span>
+<span class="sd">       4: v2lb &lt;- -sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT</span>
+<span class="sd">       5: v2 &lt;- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...</span>
+<span class="sd">       6: v &lt;- v/sqrt(1 + 0.33...*dt*m*v^2*v2)</span>
+<span class="sd">       7: v2 &lt;- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...</span>
+<span class="sd">       8: v &lt;- v*exp(-1.0*dt*(v1 + kT*v2))</span>
+<span class="sd">       9: v2lb &lt;- -sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT</span>
+<span class="sd">      10: v2 &lt;- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...</span>
+<span class="sd">      11: v &lt;- v/sqrt(1 + 0.33...*dt*m*v^2*v2)</span>
+<span class="sd">      12: v2 &lt;- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...</span>
+<span class="sd">      13: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)*invQ</span>
+<span class="sd">      14: x &lt;- x + 0.5*dt*v</span>
 <span class="sd">      15: v &lt;- v + 0.5*dt*f/m</span>
 
 <span class="sd">    Force-first scheme</span>
@@ -159,10 +158,10 @@
         <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">timeConstant</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">stepSize</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
-        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
-        <span class="n">forceFirst</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">stochastic</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">bathLoops</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">forceFirst</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">bathLoops</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The number of bath loops must be at least 1.&quot;</span><span class="p">)</span>
@@ -191,6 +190,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;invQ2&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;v1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;v2&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;v2lb&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stochastic</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;b1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
@@ -223,15 +223,20 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v1&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(m*v^2 - kT)*invQ&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_v2_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v2&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v2 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*((m*v^2)^2/3 - kT^2)*invQ2&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
+            <span class="s2">&quot;v2lb&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;-sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">expression</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">&quot;select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2)&quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;; new_v2 = v2 + </span><span class="si">{</span><span class="n">fraction</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s2">*dt*((m*v^2)^2/3 - kT^2)*invQ2&quot;</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v2&quot;</span><span class="p">,</span> <span class="n">expression</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v/sqrt(1 + </span><span class="si">{</span><span class="p">(</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">fraction</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">3</span><span class="si">}</span><span class="s2">*dt*m*v^2*v2)&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v2&quot;</span><span class="p">,</span> <span class="n">expression</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_v_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
-            <span class="s2">&quot;v&quot;</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">&quot;v*exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(v1 + kT*v2))&quot;</span>
-            <span class="s2">&quot;/&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;sqrt(1 + </span><span class="si">{</span><span class="p">(</span><span class="mi">2</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="n">fraction</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">3</span><span class="si">}</span><span class="s2">*dt*m*v^2*v2)&quot;</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v*exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(v1 + kT*v2))&quot;</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_thermostat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_v1_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
