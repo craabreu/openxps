@@ -24,19 +24,20 @@ class RBFPotential(nn.Module):
 
     .. math::
         U({\bf s}) = \sum_{m=1}^n w_m * \exp\left(
-            -\frac{1}{2 \sigma_m^2} * r^2({\bf s}, {\bf c}_m)
+            -\frac{1}{2} \sum_{k=1}^d \frac{\delta_k^2(s_k - c_{m,k})}{\sigma_{m,k}^2}
         \right)
 
     where :math:`{\bf s}` is the extended phase-space position, :math:`{\bf c}_m` are
-    the centers of the radial basis functions, :math:`\sigma_m` are the standard
-    deviations, and :math:`w_m` are the weights.
+    the centers of the radial basis functions, :math:`\sigma_{m,k}` are the standard
+    deviations per dimension, and :math:`w_m` are the weights.
 
     The gradient of the potential is given by:
 
     .. math::
-        \nabla_{\bf s} U = -\frac{1}{2} \sum_{m=1}^n \frac{w_m}{\sigma_m^2} \exp\left(
-            -\frac{1}{2 \sigma_m^2} * r^2({\bf s}, {\bf c}_m)
-        \right) \nabla_{\bf s} r^2({\bf s}, {\bf c}_m)
+        \nabla_{\bf s} U = -\frac{1}{2} \sum_{m=1}^n w_m \exp\left(
+            -\frac{1}{2} \sum_{k=1}^d \frac{\delta_k^2(s_k - c_{m,k})}{\sigma_{m,k}^2}
+        \right) \sum_{k=1}^d \frac{1}{\sigma_{m,k}^2}
+        \nabla_{s_k} \delta_k^2(s_k - c_{m,k})
 
     Parameters
     ----------
@@ -45,7 +46,8 @@ class RBFPotential(nn.Module):
     M
         The number of radial basis functions.
     init_sigma
-        The initial standard deviation of the radial basis functions.
+        The initial standard deviation of the radial basis functions
+        (same for all dimensions).
     learn_centers
         Whether to learn the centers of the radial basis functions.
     """
@@ -56,20 +58,22 @@ class RBFPotential(nn.Module):
         self.c = nn.Parameter(
             (2 * torch.rand(M, in_dim) - 1) * np.pi, requires_grad=learn_centers
         )
-        self.logsig = nn.Parameter(torch.full((M,), float(np.log(init_sigma))))
+        self.logsig = nn.Parameter(torch.full((M, in_dim), float(np.log(init_sigma))))
         self.w = nn.Parameter(torch.zeros(M))
 
     @staticmethod
-    def _r2_fn(d):  # d: (B,M,d) -> (B,M),   r2 = 4 Σ sin^2((d_i)/2)
-        return 4 * (torch.sin(d / 2) ** 2).sum(-1)
+    def _delta2_fn(d):  # d: (B,M,d) -> (B,M,d),   δ² = 4 sin²(d/2) per dimension
+        return 4 * torch.sin(d / 2) ** 2
 
     @staticmethod
-    def _r2_grad(d):  # ∇_x r2 = 2 sin(d)
+    def _delta2_grad(d):  # ∇_x δ² = 2 sin(d) per dimension
         return 2 * torch.sin(d)
 
     def _phi(self, d):  # (B,M,d) -> (B,M)
-        sigma2 = torch.exp(2 * self.logsig)  # (M,)
-        return torch.exp(-0.5 * self._r2_fn(d) / sigma2)
+        delta2 = self._delta2_fn(d)  # (B,M,d)
+        sigma2 = torch.exp(2 * self.logsig)  # (M,d)
+        # Sum over dimensions: sum_k (δ²_k / σ²_{m,k})
+        return torch.exp(-0.5 * (delta2 / sigma2[None, :, :]).sum(-1))
 
     def forward(self, x):  # (B,d) -> (B,)
         d = x[:, None, :] - self.c[None, :, :]
@@ -78,10 +82,11 @@ class RBFPotential(nn.Module):
     def grad(self, x):  # (B,d)
         d = x[:, None, :] - self.c[None, :, :]
         Phi = self._phi(d)  # (B,M)
-        sigma2 = torch.exp(2 * self.logsig)  # (M,)
-        fac = (self.w / sigma2)[None, :, None]  # (1,M,1)
-        # generic: -0.5 * (w/σ^2) * φ * ∇r2
-        return -0.5 * (fac * Phi[:, :, None] * self._r2_grad(d)).sum(1)
+        delta2_grad = self._delta2_grad(d)  # (B,M,d)
+        sigma2 = torch.exp(2 * self.logsig)  # (M,d)
+        # For each kernel m: w_m * φ_m * sum_k (1/σ²_{m,k} * ∇δ²_k)
+        fac = (self.w[:, None] / sigma2)[None, :, :]  # (1,M,d)
+        return -0.5 * (fac * Phi[:, :, None] * delta2_grad).sum(1)
 
 
 class GradMatch(pl.LightningModule):
@@ -118,7 +123,7 @@ class GradMatch(pl.LightningModule):
 
 
 class ForceMatchingRegressor:
-    r"""Potential regressor from sampled positions and forces.
+    r"""Potential regressor from sampled position/force pairs.
 
     A potential function in a :math:`d`-dimensional variable space is approximated as:
 
@@ -265,11 +270,12 @@ class ForceMatchingRegressor:
         Returns
         -------
         centers: np.ndarray
-            The centers of the radial basis functions.
+            The centers of the radial basis functions, shape (M, d).
         sigmas: np.ndarray
-            The bandwidths of the radial basis functions.
+            The bandwidths of the radial basis functions per dimension,
+            shape (M, d).
         weights: np.ndarray
-            The weights of the radial basis functions.
+            The weights of the radial basis functions, shape (M,).
         """
         return (
             self._model.f.c.detach().cpu().numpy(),
