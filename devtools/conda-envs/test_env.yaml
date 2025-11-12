@@ -16,3 +16,7 @@ dependencies:
   - openmmtools
   - pytest
   - pytest-cov
+
+    # Machine learning dependencies
+  - pytorch
+  - lightning
