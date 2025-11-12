@@ -16,33 +16,19 @@ from numpy import typing as npt
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
+from .bounds import NoBounds
 from .dynamical_variable import DynamicalVariable
 
 
 class RBFPotential(nn.Module):
-    r"""Radial basis function potential.
-
-    .. math::
-        U({\bf s}) = \sum_{m=1}^n w_m * \exp\left(
-            -\frac{1}{2} \sum_{k=1}^d \frac{\delta_k^2(s_k - c_{m,k})}{\sigma_{m,k}^2}
-        \right)
-
-    where :math:`{\bf s}` is the extended phase-space position, :math:`{\bf c}_m` are
-    the centers of the radial basis functions, :math:`\sigma_{m,k}` are the standard
-    deviations per dimension, and :math:`w_m` are the weights.
-
-    The gradient of the potential is given by:
-
-    .. math::
-        \nabla_{\bf s} U = -\frac{1}{2} \sum_{m=1}^n w_m \exp\left(
-            -\frac{1}{2} \sum_{k=1}^d \frac{\delta_k^2(s_k - c_{m,k})}{\sigma_{m,k}^2}
-        \right) \sum_{k=1}^d \frac{1}{\sigma_{m,k}^2}
-        \nabla_{s_k} \delta_k^2(s_k - c_{m,k})
+    """Radial basis function potential.
 
     Parameters
     ----------
-    in_dim
-        The dimension of the extended phase-space position.
+    dynamical_variables
+        A sequence of dynamical variables defining the dimensions and bounds
+        for the potential. The length of this sequence determines the input
+        dimension.
     M
         The number of radial basis functions.
     init_sigma
@@ -52,37 +38,60 @@ class RBFPotential(nn.Module):
         Whether to learn the centers of the radial basis functions.
     """
 
-    def __init__(self, in_dim, M=256, init_sigma=0.5, learn_centers=True):
+    def __init__(
+        self,
+        dynamical_variables: t.Sequence[DynamicalVariable],
+        M: int = 256,
+        init_sigma: float = 0.5,
+        learn_centers: bool = True,
+    ) -> None:
+        in_dim = len(dynamical_variables)
+        bounds = [
+            (-1, 1)
+            if isinstance(dv.bounds, NoBounds)
+            else (dv.bounds.lower, dv.bounds.upper)
+            for dv in dynamical_variables
+        ]
         super().__init__()
-        # default centers on [-π, π] for periodic kernels; change if you use Euclidean
         self.c = nn.Parameter(
-            (2 * torch.rand(M, in_dim) - 1) * np.pi, requires_grad=learn_centers
+            torch.stack([torch.randn(M) * (ub - lb) + lb for lb, ub in bounds], dim=-1),
+            requires_grad=learn_centers,
         )
         self.logsig = nn.Parameter(torch.full((M, in_dim), float(np.log(init_sigma))))
         self.w = nn.Parameter(torch.zeros(M))
+        self._length = nn.Parameter(
+            torch.tensor([ub - lb for lb, ub in bounds], dtype=torch.float32),
+            requires_grad=False,
+        )
 
-    @staticmethod
-    def _delta2_fn(d):  # d: (B,M,d) -> (B,M,d),   δ² = 4 sin²(d/2) per dimension
-        return 4 * torch.sin(d / 2) ** 2
+    def _delta2_fn(
+        self, disp: torch.Tensor
+    ) -> (
+        torch.Tensor
+    ):  # disp: (B,M,d) -> (B,M,d),   δ² = (L/π) sin²(π d/L) per dimension
+        length = self._length[None, None, :]  # (1, 1, d) for broadcasting
+        return ((length / np.pi) * torch.sin(np.pi * disp / length)) ** 2
 
-    @staticmethod
-    def _delta2_grad(d):  # ∇_x δ² = 2 sin(d) per dimension
-        return 2 * torch.sin(d)
+    def _delta2_grad(
+        self, disp: torch.Tensor
+    ) -> torch.Tensor:  # ∇_x δ² = (L/π) sin(2πd/L) per dimension
+        length = self._length[None, None, :]  # (1, 1, d) for broadcasting
+        return (length / np.pi) * torch.sin(2 * np.pi * disp / length)
 
-    def _phi(self, d):  # (B,M,d) -> (B,M)
-        delta2 = self._delta2_fn(d)  # (B,M,d)
+    def _phi(self, disp: torch.Tensor) -> torch.Tensor:  # (B,M,d) -> (B,M)
+        delta2 = self._delta2_fn(disp)  # (B,M,d)
         sigma2 = torch.exp(2 * self.logsig)  # (M,d)
         # Sum over dimensions: sum_k (δ²_k / σ²_{m,k})
         return torch.exp(-0.5 * (delta2 / sigma2[None, :, :]).sum(-1))
 
-    def forward(self, x):  # (B,d) -> (B,)
-        d = x[:, None, :] - self.c[None, :, :]
-        return self._phi(d) @ self.w
+    def forward(self, x: torch.Tensor) -> torch.Tensor:  # (B,d) -> (B,)
+        disp = x[:, None, :] - self.c[None, :, :]
+        return self._phi(disp) @ self.w
 
-    def grad(self, x):  # (B,d)
-        d = x[:, None, :] - self.c[None, :, :]
-        Phi = self._phi(d)  # (B,M)
-        delta2_grad = self._delta2_grad(d)  # (B,M,d)
+    def grad(self, x: torch.Tensor) -> torch.Tensor:  # (B,d)
+        disp = x[:, None, :] - self.c[None, :, :]
+        Phi = self._phi(disp)  # (B,M)
+        delta2_grad = self._delta2_grad(disp)  # (B,M,d)
         sigma2 = torch.exp(2 * self.logsig)  # (M,d)
         # For each kernel m: w_m * φ_m * sum_k (1/σ²_{m,k} * ∇δ²_k)
         fac = (self.w[:, None] / sigma2)[None, :, :]  # (1,M,d)
@@ -92,31 +101,35 @@ class RBFPotential(nn.Module):
 class GradMatch(pl.LightningModule):
     def __init__(
         self,
-        in_dim,
-        M=256,
-        lr=2e-3,
-        wd=1e-4,
-        init_sigma=1.0,
-    ):
+        dynamical_variables: t.Sequence[DynamicalVariable],
+        M: int = 256,
+        lr: float = 2e-3,
+        wd: float = 1e-4,
+        init_sigma: float = 1.0,
+    ) -> None:
         super().__init__()
         self.save_hyperparameters()
-        self.f = RBFPotential(in_dim, M, init_sigma)
+        self.f = RBFPotential(dynamical_variables, M, init_sigma)
 
-    def configure_optimizers(self):
+    def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.AdamW(
             self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.wd
         )
 
-    def _loss(self, batch):
+    def _loss(self, batch: tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
         x, F = batch
         return ((self.f.grad(x) + F) ** 2).mean()
 
-    def training_step(self, batch, _):
+    def training_step(
+        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
         loss = self._loss(batch)
         self.log("train_loss", loss, prog_bar=True)
         return loss
 
-    def validation_step(self, batch, _):
+    def validation_step(
+        self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
+    ) -> torch.Tensor:
         loss = self._loss(batch)
         self.log("val_loss", loss, prog_bar=True)
         return loss
@@ -153,31 +166,31 @@ class ForceMatchingRegressor:
 
     Parameters
     ----------
-    dynamical_variables: t.Sequence[DynamicalVariable]
+    dynamical_variables
         The dynamical variables to be used in the potential.
-    num_kernels: int
+    num_kernels
         The number of kernels to be used in the potential.
 
     Keyword Arguments
     -----------------
-    initial_bandwidth: float
+    initial_bandwidth
         The initial bandwidth of the kernels.
-    validation_fraction: float
+    validation_fraction
         The fraction of the data to be used for validation.
-    batch_size: int
+    batch_size
         The batch size to be used for training.
-    num_epochs: int
+    num_epochs
         The number of epochs to be used for training.
-    learning_rate: float
+    learning_rate
         The learning rate to be used for training.
-    weight_decay: float
+    weight_decay
         The weight decay to be used for training.
-    seed: int
+    seed
         The seed to be used for training.
-    accelerator: str
+    accelerator
         The accelerator to be used for training. Valid options can be found
         `here <https://lightning.ai/docs/pytorch/LTS/common/trainer.html#accelerator>`_.
-    num_workers: int
+    num_workers
         The number of data loading workers to be used for training.
     """
 
@@ -196,6 +209,9 @@ class ForceMatchingRegressor:
         accelerator: str = "auto",
         num_workers: int = 0,
     ):
+        self._dynamical_variables = tuple(
+            dv.in_md_units() for dv in dynamical_variables
+        )
         self._init_sigma = initial_bandwidth
         self._val_frac = validation_fraction
         self._batch_size = batch_size
@@ -231,7 +247,7 @@ class ForceMatchingRegressor:
         else:
             dlv = None
         self._model = GradMatch(
-            in_dim=n,
+            dynamical_variables=self._dynamical_variables,
             M=self._M,
             lr=self._lr,
             wd=self._wd,
@@ -246,35 +262,35 @@ class ForceMatchingRegressor:
         )
         trainer.fit(self._model, dl, dlv)
 
-    def predict(self, positions: npt.ArrayLike) -> npt.ArrayLike:
+    def predict(self, positions: npt.ArrayLike) -> np.ndarray:
         """Predict the potential at the given positions.
 
         Parameters
         ----------
-        positions: npt.ArrayLike
+        positions
             An array of shape (M, d) containing the positions at which to predict the
             potential.
 
         Returns
         -------
-        potential: np.ndarray
+        potential
             An array of shape (M,) containing the potential at the given positions.
         """
         X = torch.as_tensor(positions, dtype=torch.float32)
         with torch.no_grad():
             return self._model.f(X).detach().cpu().numpy()
 
-    def get_parameters(self) -> dict[str, np.ndarray]:
+    def get_parameters(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Get the parameters of the potential regressor.
 
         Returns
         -------
-        centers: np.ndarray
+        centers
             The centers of the radial basis functions, shape (M, d).
-        sigmas: np.ndarray
+        sigmas
             The bandwidths of the radial basis functions per dimension,
             shape (M, d).
-        weights: np.ndarray
+        weights
             The weights of the radial basis functions, shape (M,).
         """
         return (
