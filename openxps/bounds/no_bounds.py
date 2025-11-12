@@ -9,7 +9,6 @@ No boundary condition.
 
 """
 
-import numpy as np
 from openmm import unit as mmunit
 
 from .base import Bounds
@@ -36,7 +35,7 @@ class NoBounds(Bounds):
     """
 
     def __init__(self, *_) -> None:
-        super().__init__(-np.inf, np.inf, mmunit.dimensionless)
+        super().__init__(0, 1, mmunit.dimensionless)
 
     def in_md_units(self) -> "NoBounds":
         return NoBounds()

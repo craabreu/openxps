@@ -16,7 +16,7 @@ from numpy import typing as npt
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from .bounds import NoBounds
+from .bounds import PeriodicBounds
 from .dynamical_variable import DynamicalVariable
 
 
@@ -45,57 +45,56 @@ class RBFPotential(nn.Module):
         init_sigma: float = 0.5,
         learn_centers: bool = True,
     ) -> None:
-        in_dim = len(dynamical_variables)
-        bounds = [
-            (-1, 1)
-            if isinstance(dv.bounds, NoBounds)
-            else (dv.bounds.lower, dv.bounds.upper)
-            for dv in dynamical_variables
-        ]
         super().__init__()
+        in_dim = len(dynamical_variables)
+        length_over_pi, periodic, random_points = [], [], []
+        for dv in dynamical_variables:
+            length_over_pi.append(dv.bounds.length / np.pi)
+            periodic.append(isinstance(dv.bounds, PeriodicBounds))
+            random_points.append(torch.randn(M) * dv.bounds.length + dv.bounds.lower)
+
         self.c = nn.Parameter(
-            torch.stack([torch.randn(M) * (ub - lb) + lb for lb, ub in bounds], dim=-1),
-            requires_grad=learn_centers,
+            torch.stack(random_points, dim=-1), requires_grad=learn_centers
         )
         self.logsig = nn.Parameter(torch.full((M, in_dim), float(np.log(init_sigma))))
         self.w = nn.Parameter(torch.zeros(M))
-        self._length = nn.Parameter(
-            torch.tensor([ub - lb for lb, ub in bounds], dtype=torch.float32),
+        self._length_over_pi = nn.Parameter(
+            torch.tensor(np.array(length_over_pi), dtype=torch.float32)[None, None, :],
             requires_grad=False,
         )
+        self._periodic = nn.Parameter(
+            torch.tensor(periodic, dtype=torch.bool)[None, None, :], requires_grad=False
+        )
 
-    def _delta2_fn(
-        self, disp: torch.Tensor
-    ) -> (
-        torch.Tensor
-    ):  # disp: (B,M,d) -> (B,M,d),   δ² = (L/π) sin²(π d/L) per dimension
-        length = self._length[None, None, :]  # (1, 1, d) for broadcasting
-        return ((length / np.pi) * torch.sin(np.pi * disp / length)) ** 2
+    def _delta2_fn(self, disp: torch.Tensor) -> torch.Tensor:
+        return torch.where(
+            self._periodic,
+            self._length_over_pi * torch.sin(disp / self._length_over_pi),
+            disp,
+        ).square()
 
-    def _delta2_grad(
-        self, disp: torch.Tensor
-    ) -> torch.Tensor:  # ∇_x δ² = (L/π) sin(2πd/L) per dimension
-        length = self._length[None, None, :]  # (1, 1, d) for broadcasting
-        return (length / np.pi) * torch.sin(2 * np.pi * disp / length)
+    def _delta2_grad(self, disp: torch.Tensor) -> torch.Tensor:
+        return torch.where(
+            self._periodic,
+            self._length_over_pi * torch.sin(2 * disp / self._length_over_pi),
+            2 * disp,
+        )
 
-    def _phi(self, disp: torch.Tensor) -> torch.Tensor:  # (B,M,d) -> (B,M)
-        delta2 = self._delta2_fn(disp)  # (B,M,d)
-        sigma2 = torch.exp(2 * self.logsig)  # (M,d)
-        # Sum over dimensions: sum_k (δ²_k / σ²_{m,k})
+    def _phi(self, disp: torch.Tensor) -> torch.Tensor:
+        delta2 = self._delta2_fn(disp)
+        sigma2 = torch.exp(2 * self.logsig)
         return torch.exp(-0.5 * (delta2 / sigma2[None, :, :]).sum(-1))
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:  # (B,d) -> (B,)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         disp = x[:, None, :] - self.c[None, :, :]
         return self._phi(disp) @ self.w
 
-    def grad(self, x: torch.Tensor) -> torch.Tensor:  # (B,d)
+    def grad(self, x: torch.Tensor) -> torch.Tensor:
         disp = x[:, None, :] - self.c[None, :, :]
-        Phi = self._phi(disp)  # (B,M)
-        delta2_grad = self._delta2_grad(disp)  # (B,M,d)
-        sigma2 = torch.exp(2 * self.logsig)  # (M,d)
-        # For each kernel m: w_m * φ_m * sum_k (1/σ²_{m,k} * ∇δ²_k)
-        fac = (self.w[:, None] / sigma2)[None, :, :]  # (1,M,d)
-        return -0.5 * (fac * Phi[:, :, None] * delta2_grad).sum(1)
+        Phi = self._phi(disp)
+        sigma2 = torch.exp(2 * self.logsig)
+        fac = (-0.5 * self.w[:, None] / sigma2)[None, :, :]
+        return (fac * Phi[:, :, None] * self._delta2_grad(disp)).sum(1)
 
 
 class GradMatch(pl.LightningModule):
@@ -117,8 +116,8 @@ class GradMatch(pl.LightningModule):
         )
 
     def _loss(self, batch: tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
-        x, F = batch
-        return ((self.f.grad(x) + F) ** 2).mean()
+        x, G = batch
+        return ((self.f.grad(x) - G) ** 2).mean()
 
     def training_step(
         self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
@@ -223,24 +222,27 @@ class ForceMatchingRegressor:
         self._num_workers = num_workers
         self._M = num_kernels
 
+    @staticmethod
+    def _split_indices(N: int, val_frac: float) -> tuple[torch.Tensor, torch.Tensor]:
+        idx = torch.randperm(N)
+        nval = int(round(val_frac * N))
+        return idx[:nval], idx[nval:]
+
     def fit(self, positions: npt.ArrayLike, forces: npt.ArrayLike) -> None:
         torch.manual_seed(self._seed)
         np.random.seed(self._seed)
         X = torch.as_tensor(positions, dtype=torch.float32)
-        F = torch.as_tensor(forces, dtype=torch.float32)
-        N, n = X.shape
-        idx = torch.randperm(N)
-        nval = int(round(self._val_frac * N))
-        val_idx, tr_idx = idx[:nval], idx[nval:]
+        G = -torch.as_tensor(forces, dtype=torch.float32)
+        val_idx, tr_idx = self._split_indices(len(X), self._val_frac)
         dl = DataLoader(
-            TensorDataset(X[tr_idx], F[tr_idx]),
+            TensorDataset(X[tr_idx], G[tr_idx]),
             batch_size=self._batch_size,
             shuffle=True,
             num_workers=self._num_workers,
         )
-        if nval > 0:
+        if len(val_idx) > 0:
             dlv = DataLoader(
-                TensorDataset(X[val_idx], F[val_idx]),
+                TensorDataset(X[val_idx], G[val_idx]),
                 batch_size=self._batch_size,
                 num_workers=self._num_workers,
             )

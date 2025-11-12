@@ -49,6 +49,7 @@ class Bounds(Serializable):
         if not mmunit.is_unit(self.unit):
             raise TypeError("The unit must be a valid OpenMM unit.")
         object.__setattr__(self, "unit", cvpack.units.Unit(self.unit))
+        object.__setattr__(self, "length", self.upper - self.lower)
 
     def __getstate__(self) -> dict[str, t.Any]:
         return {"lower": self.lower, "upper": self.upper, "unit": self.unit}
