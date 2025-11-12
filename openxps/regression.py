@@ -7,11 +7,13 @@
 
 """
 
+import tempfile
 import typing as t
 
 import numpy as np
 import torch
 from lightning import pytorch as pl
+from lightning.pytorch import callbacks
 from numpy import typing as npt
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -180,6 +182,8 @@ class ForceMatchingRegressor:
         The batch size to be used for training.
     num_epochs
         The number of epochs to be used for training.
+    patience
+        The patience for early stopping.
     learning_rate
         The learning rate to be used for training.
     weight_decay
@@ -202,6 +206,7 @@ class ForceMatchingRegressor:
         validation_fraction: float = 0.1,
         batch_size: int = 256,
         num_epochs: int = 50,
+        patience: int = 10,
         learning_rate: float = 2e-3,
         weight_decay: float = 1e-4,
         seed: int = 0,
@@ -215,6 +220,7 @@ class ForceMatchingRegressor:
         self._val_frac = validation_fraction
         self._batch_size = batch_size
         self._num_epochs = num_epochs
+        self._patience = patience
         self._lr = learning_rate
         self._wd = weight_decay
         self._seed = seed
@@ -227,6 +233,10 @@ class ForceMatchingRegressor:
         idx = torch.randperm(N)
         nval = int(round(val_frac * N))
         return idx[:nval], idx[nval:]
+
+    @staticmethod
+    def _as_numpy(x: torch.Tensor) -> np.ndarray:
+        return x.detach().cpu().numpy()
 
     def fit(self, positions: npt.ArrayLike, forces: npt.ArrayLike) -> None:
         torch.manual_seed(self._seed)
@@ -255,14 +265,28 @@ class ForceMatchingRegressor:
             wd=self._wd,
             init_sigma=self._init_sigma,
         )
-        trainer = pl.Trainer(
-            max_epochs=self._num_epochs,
-            accelerator=self._accelerator,
-            devices="auto",
-            logger=False,
-            enable_progress_bar=True,
-        )
-        trainer.fit(self._model, dl, dlv)
+        with tempfile.TemporaryDirectory(prefix="xps_chkpts_") as checkpoint_dir:
+            if dlv is not None:
+                checkpoint = callbacks.ModelCheckpoint(
+                    monitor="val_loss",
+                    save_last=False,
+                    filename="best-{epoch:02d}-{val_loss:.6f}",
+                    dirpath=checkpoint_dir,
+                )
+                early_stopping = callbacks.EarlyStopping(
+                    monitor="val_loss", patience=self._patience
+                )
+            trainer = pl.Trainer(
+                max_epochs=self._num_epochs,
+                accelerator=self._accelerator,
+                devices="auto",
+                logger=False,
+                enable_progress_bar=True,
+                callbacks=[checkpoint, early_stopping] if dlv is not None else None,
+            )
+            trainer.fit(self._model, dl, dlv)
+            if dlv is not None and checkpoint.best_model_path:
+                self._model = GradMatch.load_from_checkpoint(checkpoint.best_model_path)
 
     def predict(self, positions: npt.ArrayLike) -> np.ndarray:
         """Predict the potential at the given positions.
@@ -278,9 +302,10 @@ class ForceMatchingRegressor:
         potential
             An array of shape (M,) containing the potential at the given positions.
         """
-        X = torch.as_tensor(positions, dtype=torch.float32)
+        device = next(self._model.parameters()).device
+        X = torch.as_tensor(positions, dtype=torch.float32).to(device)
         with torch.no_grad():
-            return self._model.f(X).detach().cpu().numpy()
+            return self._as_numpy(self._model.f(X))
 
     def get_parameters(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Get the parameters of the potential regressor.
@@ -295,8 +320,11 @@ class ForceMatchingRegressor:
         weights
             The weights of the radial basis functions, shape (M,).
         """
+        centers = self._as_numpy(self._model.f.c)
+        for dv, column in zip(self._dynamical_variables, centers.T):
+            column[:], _ = np.vectorize(dv.bounds.wrap)(column, 0)
         return (
-            self._model.f.c.detach().cpu().numpy(),
-            self._model.f.logsig.exp().detach().cpu().numpy(),
-            self._model.f.w.detach().cpu().numpy(),
+            centers,
+            self._as_numpy(self._model.f.logsig.exp()),
+            self._as_numpy(self._model.f.w),
         )
