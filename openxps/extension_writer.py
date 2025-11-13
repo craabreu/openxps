@@ -125,7 +125,8 @@ class ExtensionWriter(CustomWriter):
 
         self._temp_factor = 0.0
         self._dv_objects = []
-        self._cv_units = {}
+        self._meta_cvs = []
+        self._function_names = []
 
     def initialize(self, simulation: ExtendedSpaceSimulation) -> None:
         context = simulation.extended_space_context
@@ -152,6 +153,58 @@ class ExtensionWriter(CustomWriter):
                 if parameter not in dv_names:
                     self._function_names.append(parameter)
 
+    def getDynamicalVariableHeaders(self) -> list[str]:
+        """Get the headers for all dynamical variables.
+
+        Returns
+        -------
+        list[str]
+            The headers for all dynamical variables.
+        """
+        return [f"{dv.name} ({dv.unit.get_symbol()})" for dv in self._dv_objects]
+
+    def getForceHeaders(self) -> list[str]:
+        """Get the header for the force on a dynamical variable.
+
+        Returns
+        -------
+        list[str]
+            The headers for all forces.
+        """
+        return [
+            f"Force on {dv.name} (kJ/(mol*{dv.unit.get_symbol()}))"
+            for dv in self._dv_objects
+        ]
+
+    def getCollectiveVariableHeaders(self) -> list[str]:
+        """Get the headers for all collective variables.
+
+        Returns
+        -------
+        list[str]
+            The headers for all collective variables.
+        """
+        headers = []
+        for meta_cv in self._meta_cvs:
+            for cv in meta_cv.getInnerVariables():
+                headers.append(f"{cv.getName()} ({cv.getUnit().get_symbol()})")
+        return headers
+
+    def getEffectiveMassHeaders(self) -> list[str]:
+        """Get the headers for all effective masses.
+
+        Returns
+        -------
+        list[str]
+            The headers for all effective masses.
+        """
+        headers = []
+        for meta_cv in self._meta_cvs:
+            for cv in meta_cv.getInnerVariables():
+                mass_unit = mmunit.dalton * (mmunit.nanometer / cv.getUnit()) ** 2
+                headers.append(f"emass[{cv.getName()}] ({mass_unit.get_symbol()})")
+        return headers
+
     def getHeaders(self) -> list[str]:  # noqa: PLR0912
         headers = []
         if self._kinetic:
@@ -159,20 +212,13 @@ class ExtensionWriter(CustomWriter):
         if self._temperature:
             headers.append("Extension Temperature (K)")
         if self._dynamical_variables:
-            for dv in self._dv_objects:
-                headers.append(f"{dv.name} ({dv.unit.get_symbol()})")
+            headers.extend(self.getDynamicalVariableHeaders())
         if self._forces:
-            for dv in self._dv_objects:
-                headers.append(f"Force on {dv.name} (kJ/(mol*{dv.unit.get_symbol()}))")
+            headers.extend(self.getForceHeaders())
         if self._collective_variables:
-            for meta_cv in self._meta_cvs:
-                for cv in meta_cv.getInnerVariables():
-                    headers.append(f"{cv.getName()} ({cv.getUnit().get_symbol()})")
+            headers.extend(self.getCollectiveVariableHeaders())
         if self._effective_masses:
-            for meta_cv in self._meta_cvs:
-                for cv in meta_cv.getInnerVariables():
-                    mass_unit = mmunit.dalton * (mmunit.nanometer / cv.getUnit()) ** 2
-                    headers.append(f"emass[{cv.getName()}] ({mass_unit.get_symbol()})")
+            headers.extend(self.getEffectiveMassHeaders())
         if self._coupling_functions:
             headers.extend(self._function_names)
         return headers

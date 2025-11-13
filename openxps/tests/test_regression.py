@@ -31,7 +31,9 @@ def create_test_dynamical_variables_mixed():
     dv1 = xps.DynamicalVariable(
         "phi", mmunit.radian, mass_rad, PeriodicBounds(-np.pi, np.pi, mmunit.radian)
     )
-    dv2 = xps.DynamicalVariable("r", mmunit.nanometer, mass_nm, NoBounds())
+    dv2 = xps.DynamicalVariable(
+        "r", mmunit.nanometer, mass_nm, NoBounds(0, 1, mmunit.dimensionless)
+    )
     return [dv1, dv2]
 
 
@@ -41,7 +43,7 @@ class TestRBFPotential:
     def test_initialization(self):
         """Test RBFPotential initialization."""
         dvs = create_test_dynamical_variables()
-        potential = RBFPotential(dvs, M=10, init_sigma=1.0)
+        potential = RBFPotential(dvs, M=10)
 
         assert potential.c.shape == (10, 2)
         assert potential.logsig.shape == (10, 2)
@@ -52,7 +54,7 @@ class TestRBFPotential:
     def test_forward(self):
         """Test forward pass of RBFPotential."""
         dvs = create_test_dynamical_variables()
-        potential = RBFPotential(dvs, M=5, init_sigma=1.0)
+        potential = RBFPotential(dvs, M=5)
         x = torch.randn(3, 2)
         output = potential(x)
 
@@ -62,7 +64,7 @@ class TestRBFPotential:
     def test_grad(self):
         """Test gradient computation of RBFPotential."""
         dvs = create_test_dynamical_variables()
-        potential = RBFPotential(dvs, M=5, init_sigma=1.0)
+        potential = RBFPotential(dvs, M=5)
         x = torch.randn(3, 2, requires_grad=True)
         grad_output = potential.grad(x)
 
@@ -72,7 +74,7 @@ class TestRBFPotential:
     def test_periodic_distance(self):
         """Test periodic distance function."""
         dvs = create_test_dynamical_variables()
-        potential = RBFPotential(dvs, M=5, init_sigma=1.0)
+        potential = RBFPotential(dvs, M=5)
         disp = torch.tensor([[[1.0, 2.0]]])  # (1, 1, 2)
         delta2 = potential._delta2_fn(disp)
 
@@ -82,7 +84,7 @@ class TestRBFPotential:
     def test_non_periodic_distance(self):
         """Test non-periodic distance function."""
         dvs = create_test_dynamical_variables_mixed()
-        potential = RBFPotential(dvs, M=5, init_sigma=1.0)
+        potential = RBFPotential(dvs, M=5)
         disp = torch.tensor([[[1.0, 2.0]]])  # (1, 1, 2)
         delta2 = potential._delta2_fn(disp)
 
@@ -92,7 +94,7 @@ class TestRBFPotential:
     def test_mixed_periodic_non_periodic(self):
         """Test potential with mixed periodic and non-periodic variables."""
         dvs = create_test_dynamical_variables_mixed()
-        potential = RBFPotential(dvs, M=5, init_sigma=1.0)
+        potential = RBFPotential(dvs, M=5)
         x = torch.randn(3, 2)
         output = potential(x)
         grad_output = potential.grad(x)
@@ -105,7 +107,7 @@ class TestRBFPotential:
     def test_learn_centers_false(self):
         """Test that centers are not learnable when learn_centers=False."""
         dvs = create_test_dynamical_variables()
-        potential = RBFPotential(dvs, M=5, init_sigma=1.0, learn_centers=False)
+        potential = RBFPotential(dvs, M=5, learn_centers=False)
 
         assert not potential.c.requires_grad
 
@@ -116,7 +118,7 @@ class TestGradMatch:
     def test_initialization(self):
         """Test GradMatch initialization."""
         dvs = create_test_dynamical_variables()
-        model = GradMatch(dvs, M=10, lr=1e-3, wd=1e-4, init_sigma=1.0)
+        model = GradMatch(dvs, M=10, lr=1e-3, wd=1e-4)
 
         assert model.f is not None
         assert isinstance(model.f, RBFPotential)
@@ -309,7 +311,6 @@ class TestForceMatchingRegressor:
         regressor = ForceMatchingRegressor(
             dvs,
             num_kernels=10,
-            initial_bandwidth=0.5,
             validation_fraction=0.15,
             batch_size=32,
             num_epochs=3,
@@ -319,7 +320,6 @@ class TestForceMatchingRegressor:
         )
 
         assert regressor._M == 10
-        assert regressor._init_sigma == 0.5
         assert regressor._val_frac == 0.15
         assert regressor._batch_size == 32
         assert regressor._num_epochs == 3

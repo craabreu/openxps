@@ -352,7 +352,9 @@ def test_harmonic_coupling_incompatible_periodicity_nonperiodic_dv():
     phi = create_test_cv()
     # Create non-periodic DV
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    phi_s = DynamicalVariable("phi_s", mmunit.radian, mass, NoBounds())
+    phi_s = DynamicalVariable(
+        "phi_s", mmunit.radian, mass, NoBounds(0, 1, mmunit.dimensionless)
+    )
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
     with pytest.raises(ValueError, match="Incompatible periodicity"):

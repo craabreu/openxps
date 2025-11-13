@@ -7,10 +7,12 @@
 
 """
 
+import os
 import tempfile
 import typing as t
 
 import numpy as np
+import pandas as pd
 import torch
 from lightning import pytorch as pl
 from torch import nn
@@ -26,6 +28,9 @@ else:
     class ArrayLike(t.Protocol): ...
 
 
+INIT_NUM_SIGMAS = 4.0
+
+
 class RBFPotential(nn.Module):
     """Radial basis function potential.
 
@@ -37,9 +42,6 @@ class RBFPotential(nn.Module):
         dimension.
     M
         The number of radial basis functions.
-    init_sigma
-        The initial standard deviation of the radial basis functions
-        (same for all dimensions).
     learn_centers
         Whether to learn the centers of the radial basis functions.
     """
@@ -48,24 +50,25 @@ class RBFPotential(nn.Module):
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
         M: int = 256,
-        init_sigma: float = 0.5,
         learn_centers: bool = True,
     ) -> None:
         super().__init__()
-        in_dim = len(dynamical_variables)
-        length_over_pi, periodic, random_points = [], [], []
+        lengths, periodic, random_points = [], [], []
         for dv in dynamical_variables:
-            length_over_pi.append(dv.bounds.length / np.pi)
+            lengths.append(dv.bounds.length)
             periodic.append(isinstance(dv.bounds, PeriodicBounds))
             random_points.append(torch.randn(M) * dv.bounds.length + dv.bounds.lower)
 
         self.c = nn.Parameter(
             torch.stack(random_points, dim=-1), requires_grad=learn_centers
         )
-        self.logsig = nn.Parameter(torch.full((M, in_dim), float(np.log(init_sigma))))
+        log_sigmas = np.log(lengths) - np.log(INIT_NUM_SIGMAS)
+        self.logsig = nn.Parameter(
+            torch.tensor(np.repeat(log_sigmas[None, :], M, axis=0), dtype=torch.float32)
+        )
         self.w = nn.Parameter(torch.zeros(M))
         self._length_over_pi = nn.Parameter(
-            torch.tensor(np.array(length_over_pi), dtype=torch.float32)[None, None, :],
+            torch.tensor(np.array(lengths) / np.pi, dtype=torch.float32)[None, None, :],
             requires_grad=False,
         )
         self._periodic = nn.Parameter(
@@ -104,17 +107,35 @@ class RBFPotential(nn.Module):
 
 
 class GradMatch(pl.LightningModule):
+    """Gradient matching regressor.
+
+    Parameters
+    ----------
+    dynamical_variables
+        A sequence of dynamical variables defining the dimensions and bounds
+        for the potential. The length of this sequence determines the input
+        dimension.
+
+    Keyword Arguments
+    -----------------
+    M
+        The number of radial basis functions.
+    lr
+        The learning rate.
+    wd
+        The weight decay.
+    """
+
     def __init__(
         self,
         dynamical_variables: t.Sequence[DynamicalVariable],
         M: int = 256,
         lr: float = 2e-3,
         wd: float = 1e-4,
-        init_sigma: float = 1.0,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
-        self.f = RBFPotential(dynamical_variables, M, init_sigma)
+        self.f = RBFPotential(dynamical_variables, M)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.AdamW(
@@ -129,14 +150,14 @@ class GradMatch(pl.LightningModule):
         self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         loss = self._loss(batch)
-        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(
         self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         loss = self._loss(batch)
-        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
 
@@ -178,8 +199,6 @@ class ForceMatchingRegressor:
 
     Keyword Arguments
     -----------------
-    initial_bandwidth
-        The initial bandwidth of the kernels.
     validation_fraction
         The fraction of the data to be used for validation.
     batch_size
@@ -204,7 +223,6 @@ class ForceMatchingRegressor:
         dynamical_variables: t.Sequence[DynamicalVariable],
         num_kernels: int,
         *,
-        initial_bandwidth: float = 1.0,
         validation_fraction: float = 0.1,
         batch_size: int = 256,
         num_epochs: int = 50,
@@ -217,7 +235,6 @@ class ForceMatchingRegressor:
         self._dynamical_variables = tuple(
             dv.in_md_units() for dv in dynamical_variables
         )
-        self._init_sigma = initial_bandwidth
         self._val_frac = validation_fraction
         self._batch_size = batch_size
         self._num_epochs = num_epochs
@@ -228,6 +245,7 @@ class ForceMatchingRegressor:
         self._num_workers = num_workers
         self._M = num_kernels
         self._model = None
+        self._metrics = None
 
     @staticmethod
     def _as_numpy(x: torch.Tensor) -> np.ndarray:
@@ -240,29 +258,31 @@ class ForceMatchingRegressor:
         idx = torch.randperm(N)
         nval = int(round(self._val_frac * N))
         val_idx, tr_idx = idx[:nval], idx[nval:]
-        dl = DataLoader(
+        train_dl = DataLoader(
             TensorDataset(X[tr_idx], G[tr_idx]),
             batch_size=self._batch_size,
             shuffle=True,
             num_workers=self._num_workers,
+            persistent_workers=self._num_workers > 0,
         )
         if len(val_idx) == 0:
-            return dl, None
-        dlv = DataLoader(
+            return train_dl, None
+        val_dl = DataLoader(
             TensorDataset(X[val_idx], G[val_idx]),
             batch_size=self._batch_size,
             num_workers=self._num_workers,
+            persistent_workers=self._num_workers > 0,
         )
-        return dl, dlv
+        return train_dl, val_dl
 
     def _create_callbacks(
-        self, checkpoint_dir: str
+        self, directory: str
     ) -> tuple[pl.callbacks.ModelCheckpoint, pl.callbacks.EarlyStopping]:
         checkpoint = pl.callbacks.ModelCheckpoint(
             monitor="val_loss",
             save_last=False,
             filename="best-{epoch:02d}-{val_loss:.6f}",
-            dirpath=checkpoint_dir,
+            dirpath=directory,
         )
         early_stopping = pl.callbacks.EarlyStopping(
             monitor="val_loss", patience=self._patience
@@ -291,37 +311,42 @@ class ForceMatchingRegressor:
 
         X = torch.as_tensor(positions, dtype=torch.float32)
         G = -torch.as_tensor(forces, dtype=torch.float32)
-        dl, dlv = self._create_dataloaders(X, G)
+        train_dl, val_dl = self._create_dataloaders(X, G)
 
-        self._model = GradMatch(
-            dynamical_variables=self._dynamical_variables,
-            M=self._M,
-            lr=self._lr,
-            wd=self._wd,
-            init_sigma=self._init_sigma,
-        )
+        self._model = GradMatch(self._dynamical_variables, self._M, self._lr, self._wd)
 
-        trainer_kwargs = {
-            "max_epochs": self._num_epochs,
-            "accelerator": self._accelerator,
-            "devices": "auto",
-            "logger": False,
-            "enable_progress_bar": True,
-        }
-        if dlv is None:
-            trainer_kwargs["enable_checkpointing"] = False
-            trainer = pl.Trainer(**trainer_kwargs)
-            trainer.fit(self._model, dl)
-        else:
-            with tempfile.TemporaryDirectory() as checkpoint_dir:
-                checkpoint, early_stopping = self._create_callbacks(checkpoint_dir)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            logger = pl.loggers.CSVLogger(save_dir=tmp_dir, version=0)
+
+            trainer_kwargs = {
+                "max_epochs": self._num_epochs,
+                "accelerator": self._accelerator,
+                "devices": "auto",
+                "logger": logger,
+                "enable_progress_bar": True,
+                "enable_model_summary": True,
+            }
+
+            if val_dl is None:
+                trainer_kwargs["enable_checkpointing"] = False
+                trainer = pl.Trainer(**trainer_kwargs)
+                trainer.fit(self._model, train_dl)
+            else:
+                checkpoint, early_stopping = self._create_callbacks(tmp_dir)
                 trainer_kwargs["callbacks"] = [checkpoint, early_stopping]
                 trainer = pl.Trainer(**trainer_kwargs)
-                trainer.fit(self._model, dl, dlv)
+                trainer.fit(self._model, train_dl, val_dl)
                 if checkpoint.best_model_path:
                     self._model = GradMatch.load_from_checkpoint(
                         checkpoint.best_model_path
                     )
+
+            path = os.path.join(logger.log_dir, "metrics.csv")
+            if os.path.exists(path):
+                df = pd.read_csv(path)
+                self._metrics = df[df.train_loss.notna()].copy()
+                if val_dl is not None:
+                    self._metrics["val_loss"] = df.val_loss[df.val_loss.notna()].values
 
     def predict(self, positions: ArrayLike) -> np.ndarray:
         """Predict the potential at the given positions.
@@ -365,3 +390,13 @@ class ForceMatchingRegressor:
             self._as_numpy(self._model.f.logsig.exp()),
             self._as_numpy(self._model.f.w),
         )
+
+    def get_learning_curve(self) -> pd.DataFrame:
+        """Get the learning curve of the potential regressor.
+
+        Returns
+        -------
+        pd.DataFrame
+            The learning curve of the potential regressor.
+        """
+        return self._metrics

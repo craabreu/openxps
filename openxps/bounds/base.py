@@ -22,8 +22,7 @@ from ..utils import preprocess_args
 
 @dataclass(frozen=True, eq=False)
 class Bounds(Serializable):
-    """
-    A boundary condition for a dynamical variable.
+    """Boundary condition for a dynamical variable.
 
     Parameters
     ----------
