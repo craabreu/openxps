@@ -7,10 +7,12 @@
 
 """
 
+import os
 import tempfile
 import typing as t
 
 import numpy as np
+import pandas as pd
 import torch
 from lightning import pytorch as pl
 from torch import nn
@@ -148,14 +150,14 @@ class GradMatch(pl.LightningModule):
         self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         loss = self._loss(batch)
-        self.log("train_loss", loss, prog_bar=True)
+        self.log("train_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(
         self, batch: tuple[torch.Tensor, torch.Tensor], batch_idx: int
     ) -> torch.Tensor:
         loss = self._loss(batch)
-        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         return loss
 
 
@@ -243,6 +245,7 @@ class ForceMatchingRegressor:
         self._num_workers = num_workers
         self._M = num_kernels
         self._model = None
+        self._metrics = None
 
     @staticmethod
     def _as_numpy(x: torch.Tensor) -> np.ndarray:
@@ -273,13 +276,13 @@ class ForceMatchingRegressor:
         return train_dl, val_dl
 
     def _create_callbacks(
-        self, checkpoint_dir: str
+        self, directory: str
     ) -> tuple[pl.callbacks.ModelCheckpoint, pl.callbacks.EarlyStopping]:
         checkpoint = pl.callbacks.ModelCheckpoint(
             monitor="val_loss",
             save_last=False,
             filename="best-{epoch:02d}-{val_loss:.6f}",
-            dirpath=checkpoint_dir,
+            dirpath=directory,
         )
         early_stopping = pl.callbacks.EarlyStopping(
             monitor="val_loss", patience=self._patience
@@ -312,22 +315,24 @@ class ForceMatchingRegressor:
 
         self._model = GradMatch(self._dynamical_variables, self._M, self._lr, self._wd)
 
-        trainer_kwargs = {
-            "max_epochs": self._num_epochs,
-            "accelerator": self._accelerator,
-            "devices": "auto",
-            "logger": True,
-            "enable_progress_bar": True,
-            "enable_model_summary": True,
-        }
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            logger = pl.loggers.CSVLogger(save_dir=tmp_dir, version=0)
 
-        if val_dl is None:
-            trainer_kwargs["enable_checkpointing"] = False
-            trainer = pl.Trainer(**trainer_kwargs)
-            trainer.fit(self._model, train_dl)
-        else:
-            with tempfile.TemporaryDirectory() as checkpoint_dir:
-                checkpoint, early_stopping = self._create_callbacks(checkpoint_dir)
+            trainer_kwargs = {
+                "max_epochs": self._num_epochs,
+                "accelerator": self._accelerator,
+                "devices": "auto",
+                "logger": logger,
+                "enable_progress_bar": True,
+                "enable_model_summary": True,
+            }
+
+            if val_dl is None:
+                trainer_kwargs["enable_checkpointing"] = False
+                trainer = pl.Trainer(**trainer_kwargs)
+                trainer.fit(self._model, train_dl)
+            else:
+                checkpoint, early_stopping = self._create_callbacks(tmp_dir)
                 trainer_kwargs["callbacks"] = [checkpoint, early_stopping]
                 trainer = pl.Trainer(**trainer_kwargs)
                 trainer.fit(self._model, train_dl, val_dl)
@@ -335,6 +340,13 @@ class ForceMatchingRegressor:
                     self._model = GradMatch.load_from_checkpoint(
                         checkpoint.best_model_path
                     )
+
+            path = os.path.join(logger.log_dir, "metrics.csv")
+            if os.path.exists(path):
+                df = pd.read_csv(path)
+                self._metrics = df[df.train_loss.notna()].copy()
+                if val_dl is not None:
+                    self._metrics["val_loss"] = df.val_loss[df.val_loss.notna()].values
 
     def predict(self, positions: ArrayLike) -> np.ndarray:
         """Predict the potential at the given positions.
@@ -378,3 +390,13 @@ class ForceMatchingRegressor:
             self._as_numpy(self._model.f.logsig.exp()),
             self._as_numpy(self._model.f.w),
         )
+
+    def get_learning_curve(self) -> pd.DataFrame:
+        """Get the learning curve of the potential regressor.
+
+        Returns
+        -------
+        pd.DataFrame
+            The learning curve of the potential regressor.
+        """
+        return self._metrics
