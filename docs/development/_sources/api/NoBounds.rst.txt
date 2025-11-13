@@ -7,6 +7,5 @@ NoBounds
 
     .. rubric:: Methods
 
-    .. automethod:: in_md_units
     .. automethod:: leptonExpression
     .. automethod:: wrap

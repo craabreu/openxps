@@ -7,6 +7,10 @@ ExtensionWriter
 
     .. rubric:: Methods
 
+    .. automethod:: getCollectiveVariableHeaders
+    .. automethod:: getDynamicalVariableHeaders
+    .. automethod:: getEffectiveMassHeaders
+    .. automethod:: getForceHeaders
     .. automethod:: getHeaders
     .. automethod:: getValues
     .. automethod:: initialize

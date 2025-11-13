@@ -8,5 +8,6 @@ ForceMatchingRegressor
     .. rubric:: Methods
 
     .. automethod:: fit
+    .. automethod:: get_learning_curve
     .. automethod:: get_parameters
     .. automethod:: predict

@@ -44,10 +44,12 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">lightning</span><span class="w"> </span><span class="kn">import</span> <span class="n">pytorch</span> <span class="k">as</span> <span class="n">pl</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">torch</span><span class="w"> </span><span class="kn">import</span> <span class="n">nn</span>
@@ -63,6 +65,9 @@
     <span class="k">class</span><span class="w"> </span><span class="nc">ArrayLike</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">Protocol</span><span class="p">):</span> <span class="o">...</span>
 
 
+<span class="n">INIT_NUM_SIGMAS</span> <span class="o">=</span> <span class="mf">4.0</span>
+
+
 <span class="k">class</span><span class="w"> </span><span class="nc">RBFPotential</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Radial basis function potential.</span>
 
@@ -74,9 +79,6 @@
 <span class="sd">        dimension.</span>
 <span class="sd">    M</span>
 <span class="sd">        The number of radial basis functions.</span>
-<span class="sd">    init_sigma</span>
-<span class="sd">        The initial standard deviation of the radial basis functions</span>
-<span class="sd">        (same for all dimensions).</span>
 <span class="sd">    learn_centers</span>
 <span class="sd">        Whether to learn the centers of the radial basis functions.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -85,24 +87,25 @@
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
         <span class="n">M</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
-        <span class="n">init_sigma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.5</span><span class="p">,</span>
         <span class="n">learn_centers</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="n">in_dim</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">)</span>
-        <span class="n">length_over_pi</span><span class="p">,</span> <span class="n">periodic</span><span class="p">,</span> <span class="n">random_points</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
+        <span class="n">lengths</span><span class="p">,</span> <span class="n">periodic</span><span class="p">,</span> <span class="n">random_points</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[],</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">:</span>
-            <span class="n">length_over_pi</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">length</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span>
+            <span class="n">lengths</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">length</span><span class="p">)</span>
             <span class="n">periodic</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">PeriodicBounds</span><span class="p">))</span>
             <span class="n">random_points</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">(</span><span class="n">M</span><span class="p">)</span> <span class="o">*</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">length</span> <span class="o">+</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">lower</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">c</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span>
             <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span><span class="n">random_points</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span> <span class="n">requires_grad</span><span class="o">=</span><span class="n">learn_centers</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logsig</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">M</span><span class="p">,</span> <span class="n">in_dim</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">init_sigma</span><span class="p">))))</span>
+        <span class="n">log_sigmas</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">lengths</span><span class="p">)</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">INIT_NUM_SIGMAS</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logsig</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">repeat</span><span class="p">(</span><span class="n">log_sigmas</span><span class="p">[</span><span class="kc">None</span><span class="p">,</span> <span class="p">:],</span> <span class="n">M</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">w</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">M</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_length_over_pi</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span>
-            <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">length_over_pi</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">lengths</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)[</span><span class="kc">None</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="p">:],</span>
             <span class="n">requires_grad</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_periodic</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span>
@@ -141,17 +144,35 @@
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">GradMatch</span><span class="p">(</span><span class="n">pl</span><span class="o">.</span><span class="n">LightningModule</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Gradient matching regressor.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dynamical_variables</span>
+<span class="sd">        A sequence of dynamical variables defining the dimensions and bounds</span>
+<span class="sd">        for the potential. The length of this sequence determines the input</span>
+<span class="sd">        dimension.</span>
+
+<span class="sd">    Keyword Arguments</span>
+<span class="sd">    -----------------</span>
+<span class="sd">    M</span>
+<span class="sd">        The number of radial basis functions.</span>
+<span class="sd">    lr</span>
+<span class="sd">        The learning rate.</span>
+<span class="sd">    wd</span>
+<span class="sd">        The weight decay.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
         <span class="n">M</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
         <span class="n">lr</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">2e-3</span><span class="p">,</span>
         <span class="n">wd</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1e-4</span><span class="p">,</span>
-        <span class="n">init_sigma</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">save_hyperparameters</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">RBFPotential</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">M</span><span class="p">,</span> <span class="n">init_sigma</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">f</span> <span class="o">=</span> <span class="n">RBFPotential</span><span class="p">(</span><span class="n">dynamical_variables</span><span class="p">,</span> <span class="n">M</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">configure_optimizers</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Optimizer</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">AdamW</span><span class="p">(</span>
@@ -166,14 +187,14 @@
         <span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">batch_idx</span><span class="p">:</span> <span class="nb">int</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
         <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loss</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s2">&quot;train_loss&quot;</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">prog_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s2">&quot;train_loss&quot;</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">prog_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">on_step</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">on_epoch</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">loss</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">validation_step</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">batch</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">],</span> <span class="n">batch_idx</span><span class="p">:</span> <span class="nb">int</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">:</span>
         <span class="n">loss</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_loss</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s2">&quot;val_loss&quot;</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">prog_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="s2">&quot;val_loss&quot;</span><span class="p">,</span> <span class="n">loss</span><span class="p">,</span> <span class="n">prog_bar</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">on_step</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">on_epoch</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">loss</span>
 
 
@@ -217,8 +238,6 @@
 
 <span class="sd">    Keyword Arguments</span>
 <span class="sd">    -----------------</span>
-<span class="sd">    initial_bandwidth</span>
-<span class="sd">        The initial bandwidth of the kernels.</span>
 <span class="sd">    validation_fraction</span>
 <span class="sd">        The fraction of the data to be used for validation.</span>
 <span class="sd">    batch_size</span>
@@ -243,7 +262,6 @@
         <span class="n">dynamical_variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">],</span>
         <span class="n">num_kernels</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
-        <span class="n">initial_bandwidth</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">,</span>
         <span class="n">validation_fraction</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">,</span>
         <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">256</span><span class="p">,</span>
         <span class="n">num_epochs</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">50</span><span class="p">,</span>
@@ -256,7 +274,6 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span>
             <span class="n">dv</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_init_sigma</span> <span class="o">=</span> <span class="n">initial_bandwidth</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_val_frac</span> <span class="o">=</span> <span class="n">validation_fraction</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span> <span class="o">=</span> <span class="n">batch_size</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_epochs</span> <span class="o">=</span> <span class="n">num_epochs</span>
@@ -267,6 +284,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_workers</span> <span class="o">=</span> <span class="n">num_workers</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_M</span> <span class="o">=</span> <span class="n">num_kernels</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_metrics</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_as_numpy</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -279,29 +297,31 @@
         <span class="n">idx</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">randperm</span><span class="p">(</span><span class="n">N</span><span class="p">)</span>
         <span class="n">nval</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_val_frac</span> <span class="o">*</span> <span class="n">N</span><span class="p">))</span>
         <span class="n">val_idx</span><span class="p">,</span> <span class="n">tr_idx</span> <span class="o">=</span> <span class="n">idx</span><span class="p">[:</span><span class="n">nval</span><span class="p">],</span> <span class="n">idx</span><span class="p">[</span><span class="n">nval</span><span class="p">:]</span>
-        <span class="n">dl</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
+        <span class="n">train_dl</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
             <span class="n">TensorDataset</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">tr_idx</span><span class="p">],</span> <span class="n">G</span><span class="p">[</span><span class="n">tr_idx</span><span class="p">]),</span>
             <span class="n">batch_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span><span class="p">,</span>
             <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
             <span class="n">num_workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_workers</span><span class="p">,</span>
+            <span class="n">persistent_workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_workers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">val_idx</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">dl</span><span class="p">,</span> <span class="kc">None</span>
-        <span class="n">dlv</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
+            <span class="k">return</span> <span class="n">train_dl</span><span class="p">,</span> <span class="kc">None</span>
+        <span class="n">val_dl</span> <span class="o">=</span> <span class="n">DataLoader</span><span class="p">(</span>
             <span class="n">TensorDataset</span><span class="p">(</span><span class="n">X</span><span class="p">[</span><span class="n">val_idx</span><span class="p">],</span> <span class="n">G</span><span class="p">[</span><span class="n">val_idx</span><span class="p">]),</span>
             <span class="n">batch_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_batch_size</span><span class="p">,</span>
             <span class="n">num_workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_workers</span><span class="p">,</span>
+            <span class="n">persistent_workers</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_workers</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">return</span> <span class="n">dl</span><span class="p">,</span> <span class="n">dlv</span>
+        <span class="k">return</span> <span class="n">train_dl</span><span class="p">,</span> <span class="n">val_dl</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_callbacks</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">checkpoint_dir</span><span class="p">:</span> <span class="nb">str</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">directory</span><span class="p">:</span> <span class="nb">str</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pl</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">ModelCheckpoint</span><span class="p">,</span> <span class="n">pl</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">EarlyStopping</span><span class="p">]:</span>
         <span class="n">checkpoint</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">ModelCheckpoint</span><span class="p">(</span>
             <span class="n">monitor</span><span class="o">=</span><span class="s2">&quot;val_loss&quot;</span><span class="p">,</span>
             <span class="n">save_last</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
             <span class="n">filename</span><span class="o">=</span><span class="s2">&quot;best-</span><span class="si">{epoch:02d}</span><span class="s2">-</span><span class="si">{val_loss:.6f}</span><span class="s2">&quot;</span><span class="p">,</span>
-            <span class="n">dirpath</span><span class="o">=</span><span class="n">checkpoint_dir</span><span class="p">,</span>
+            <span class="n">dirpath</span><span class="o">=</span><span class="n">directory</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">early_stopping</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">EarlyStopping</span><span class="p">(</span>
             <span class="n">monitor</span><span class="o">=</span><span class="s2">&quot;val_loss&quot;</span><span class="p">,</span> <span class="n">patience</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_patience</span>
@@ -332,37 +352,42 @@
 
         <span class="n">X</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">positions</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
         <span class="n">G</span> <span class="o">=</span> <span class="o">-</span><span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
-        <span class="n">dl</span><span class="p">,</span> <span class="n">dlv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_dataloaders</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">G</span><span class="p">)</span>
+        <span class="n">train_dl</span><span class="p">,</span> <span class="n">val_dl</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_dataloaders</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">G</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">GradMatch</span><span class="p">(</span>
-            <span class="n">dynamical_variables</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">,</span>
-            <span class="n">M</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span>
-            <span class="n">lr</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_lr</span><span class="p">,</span>
-            <span class="n">wd</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_wd</span><span class="p">,</span>
-            <span class="n">init_sigma</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_init_sigma</span><span class="p">,</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">GradMatch</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_M</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_lr</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_wd</span><span class="p">)</span>
 
-        <span class="n">trainer_kwargs</span> <span class="o">=</span> <span class="p">{</span>
-            <span class="s2">&quot;max_epochs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_epochs</span><span class="p">,</span>
-            <span class="s2">&quot;accelerator&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_accelerator</span><span class="p">,</span>
-            <span class="s2">&quot;devices&quot;</span><span class="p">:</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;logger&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-            <span class="s2">&quot;enable_progress_bar&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="p">}</span>
-        <span class="k">if</span> <span class="n">dlv</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">trainer_kwargs</span><span class="p">[</span><span class="s2">&quot;enable_checkpointing&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="n">trainer</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Trainer</span><span class="p">(</span><span class="o">**</span><span class="n">trainer_kwargs</span><span class="p">)</span>
-            <span class="n">trainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="n">dl</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">checkpoint_dir</span><span class="p">:</span>
-                <span class="n">checkpoint</span><span class="p">,</span> <span class="n">early_stopping</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_callbacks</span><span class="p">(</span><span class="n">checkpoint_dir</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp_dir</span><span class="p">:</span>
+            <span class="n">logger</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">loggers</span><span class="o">.</span><span class="n">CSVLogger</span><span class="p">(</span><span class="n">save_dir</span><span class="o">=</span><span class="n">tmp_dir</span><span class="p">,</span> <span class="n">version</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+
+            <span class="n">trainer_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;max_epochs&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_epochs</span><span class="p">,</span>
+                <span class="s2">&quot;accelerator&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_accelerator</span><span class="p">,</span>
+                <span class="s2">&quot;devices&quot;</span><span class="p">:</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;logger&quot;</span><span class="p">:</span> <span class="n">logger</span><span class="p">,</span>
+                <span class="s2">&quot;enable_progress_bar&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+                <span class="s2">&quot;enable_model_summary&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+            <span class="p">}</span>
+
+            <span class="k">if</span> <span class="n">val_dl</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">trainer_kwargs</span><span class="p">[</span><span class="s2">&quot;enable_checkpointing&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="n">trainer</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Trainer</span><span class="p">(</span><span class="o">**</span><span class="n">trainer_kwargs</span><span class="p">)</span>
+                <span class="n">trainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="n">train_dl</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">checkpoint</span><span class="p">,</span> <span class="n">early_stopping</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_create_callbacks</span><span class="p">(</span><span class="n">tmp_dir</span><span class="p">)</span>
                 <span class="n">trainer_kwargs</span><span class="p">[</span><span class="s2">&quot;callbacks&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">checkpoint</span><span class="p">,</span> <span class="n">early_stopping</span><span class="p">]</span>
                 <span class="n">trainer</span> <span class="o">=</span> <span class="n">pl</span><span class="o">.</span><span class="n">Trainer</span><span class="p">(</span><span class="o">**</span><span class="n">trainer_kwargs</span><span class="p">)</span>
-                <span class="n">trainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="n">dl</span><span class="p">,</span> <span class="n">dlv</span><span class="p">)</span>
+                <span class="n">trainer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="p">,</span> <span class="n">train_dl</span><span class="p">,</span> <span class="n">val_dl</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">checkpoint</span><span class="o">.</span><span class="n">best_model_path</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">_model</span> <span class="o">=</span> <span class="n">GradMatch</span><span class="o">.</span><span class="n">load_from_checkpoint</span><span class="p">(</span>
                         <span class="n">checkpoint</span><span class="o">.</span><span class="n">best_model_path</span>
-                    <span class="p">)</span></div>
+                    <span class="p">)</span>
+
+            <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">logger</span><span class="o">.</span><span class="n">log_dir</span><span class="p">,</span> <span class="s2">&quot;metrics.csv&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_metrics</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">train_loss</span><span class="o">.</span><span class="n">notna</span><span class="p">()]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">val_dl</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_metrics</span><span class="p">[</span><span class="s2">&quot;val_loss&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">val_loss</span><span class="p">[</span><span class="n">df</span><span class="o">.</span><span class="n">val_loss</span><span class="o">.</span><span class="n">notna</span><span class="p">()]</span><span class="o">.</span><span class="n">values</span></div>
 
 
 <div class="viewcode-block" id="ForceMatchingRegressor.predict">
@@ -412,6 +437,19 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_as_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">logsig</span><span class="o">.</span><span class="n">exp</span><span class="p">()),</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_as_numpy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_model</span><span class="o">.</span><span class="n">f</span><span class="o">.</span><span class="n">w</span><span class="p">),</span>
         <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="ForceMatchingRegressor.get_learning_curve">
+<a class="viewcode-back" href="../../api/ForceMatchingRegressor.html#openxps.ForceMatchingRegressor.get_learning_curve">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_learning_curve</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the learning curve of the potential regressor.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pd.DataFrame</span>
+<span class="sd">            The learning curve of the potential regressor.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_metrics</span></div>
 </div>
 
 </pre></div>

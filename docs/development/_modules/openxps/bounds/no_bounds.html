@@ -46,41 +46,34 @@
 
 <span class="sd">&quot;&quot;&quot;</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
-
 <span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span>
 
 
 <div class="viewcode-block" id="NoBounds">
 <a class="viewcode-back" href="../../../api/NoBounds.html#openxps.bounds.NoBounds">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">NoBounds</span><span class="p">(</span><span class="n">Bounds</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    No boundary condition. The dynamical variable is allowed to take any value.</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Boundary condition indicating no confinement for a dynamical variable.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
+<span class="sd">    lower</span>
+<span class="sd">        A typical low value for the dynamical variable, not an actual bound.</span>
+<span class="sd">    upper</span>
+<span class="sd">        A typical high value for the dynamical variable, not an actual bound.</span>
+<span class="sd">    unit</span>
+<span class="sd">        The unity of measurement of the bounds. If the bounds do not have a unit, use</span>
+<span class="sd">        ``dimensionless``.</span>
 
-<span class="sd">    If it is not ``None``, its unit of measurement must be compatible with the dynamical</span>
-<span class="sd">    variable&#39;s own unit.</span>
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
 <span class="sd">    &gt;&gt;&gt; import yaml</span>
 <span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
-<span class="sd">    &gt;&gt;&gt; bounds = xps.PeriodicBounds(-180, 180, unit.degree)</span>
+<span class="sd">    &gt;&gt;&gt; bounds = xps.NoBounds(0, 1, unit.dimensionless)</span>
 <span class="sd">    &gt;&gt;&gt; print(bounds)</span>
-<span class="sd">    PeriodicBounds(lower=-180, upper=180, unit=deg)</span>
+<span class="sd">    NoBounds(lower=0, upper=1, unit=dimensionless)</span>
 <span class="sd">    &gt;&gt;&gt; assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">dimensionless</span><span class="p">)</span>
-
-<div class="viewcode-block" id="NoBounds.in_md_units">
-<a class="viewcode-back" href="../../../api/NoBounds.html#openxps.bounds.NoBounds.in_md_units">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">in_md_units</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;NoBounds&quot;</span><span class="p">:</span>
-        <span class="k">return</span> <span class="n">NoBounds</span><span class="p">()</span></div>
-
 
 <div class="viewcode-block" id="NoBounds.leptonExpression">
 <a class="viewcode-back" href="../../../api/NoBounds.html#openxps.bounds.NoBounds.leptonExpression">[docs]</a>
@@ -94,6 +87,9 @@
         <span class="k">return</span> <span class="n">value</span><span class="p">,</span> <span class="n">rate</span></div>
 </div>
 
+
+
+<span class="n">NoBounds</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.bounds.NoBounds&quot;</span><span class="p">)</span>
 </pre></div>
 
           </div>
