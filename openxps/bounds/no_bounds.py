@@ -9,39 +9,38 @@ No boundary condition.
 
 """
 
-from openmm import unit as mmunit
-
 from .base import Bounds
 
 
 class NoBounds(Bounds):
-    """
-    No boundary condition. The dynamical variable is allowed to take any value.
+    """Boundary condition indicating no confinement for a dynamical variable.
 
     Parameters
     ----------
+    lower
+        A typical low value for the dynamical variable, not an actual bound.
+    upper
+        A typical high value for the dynamical variable, not an actual bound.
+    unit
+        The unity of measurement of the bounds. If the bounds do not have a unit, use
+        ``dimensionless``.
 
-    If it is not ``None``, its unit of measurement must be compatible with the dynamical
-    variable's own unit.
     Example
     -------
     >>> import openxps as xps
     >>> import yaml
     >>> from openmm import unit
-    >>> bounds = xps.PeriodicBounds(-180, 180, unit.degree)
+    >>> bounds = xps.NoBounds(0, 1, unit.dimensionless)
     >>> print(bounds)
-    PeriodicBounds(lower=-180, upper=180, unit=deg)
+    NoBounds(lower=0, upper=1, unit=dimensionless)
     >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
     """
-
-    def __init__(self, *_) -> None:
-        super().__init__(0, 1, mmunit.dimensionless)
-
-    def in_md_units(self) -> "NoBounds":
-        return NoBounds()
 
     def leptonExpression(self, variable: str) -> str:
         return f"{variable}"
 
     def wrap(self, value: float, rate: float) -> tuple[float, float]:
         return value, rate
+
+
+NoBounds.registerTag("!openxps.bounds.NoBounds")

@@ -31,7 +31,9 @@ def create_test_dynamical_variables_mixed():
     dv1 = xps.DynamicalVariable(
         "phi", mmunit.radian, mass_rad, PeriodicBounds(-np.pi, np.pi, mmunit.radian)
     )
-    dv2 = xps.DynamicalVariable("r", mmunit.nanometer, mass_nm, NoBounds())
+    dv2 = xps.DynamicalVariable(
+        "r", mmunit.nanometer, mass_nm, NoBounds(0, 1, mmunit.dimensionless)
+    )
     return [dv1, dv2]
 
 

@@ -30,7 +30,7 @@ def test_dv_invalid_unit():
             "phi",
             "not_a_unit",
             3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
-            None,
+            NoBounds(0, 1, mmunit.dimensionless),
         )
     assert "The unit must be a valid OpenMM unit." in str(excinfo.value)
 
@@ -38,14 +38,16 @@ def test_dv_invalid_unit():
 def test_dv_mass_without_unit():
     """Test DynamicalVariable initialization with mass missing a unit."""
     with pytest.raises(TypeError) as excinfo:
-        DynamicalVariable("phi", mmunit.radian, 3)
+        DynamicalVariable("phi", mmunit.radian, 3, NoBounds(0, 1, mmunit.dimensionless))
     assert "Mass must be have units of measurement." in str(excinfo.value)
 
 
 def test_dv_incompatible_mass_unit():
     """Test DynamicalVariable initialization with mass having incompatible units."""
     with pytest.raises(TypeError):
-        DynamicalVariable("phi", mmunit.radian, 3 * mmunit.meter)
+        DynamicalVariable(
+            "phi", mmunit.radian, 3 * mmunit.meter, NoBounds(0, 1, mmunit.dimensionless)
+        )
 
 
 def test_dv_bounds_incompatible_units():
@@ -75,9 +77,9 @@ def test_dv_serialization():
 def test_dv_without_bounds():
     """Test DynamicalVariable initialization without bounds."""
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
-    dv = DynamicalVariable("phi", mmunit.radian, mass)
-
-    assert isinstance(dv.bounds, NoBounds)
+    with pytest.raises(TypeError) as excinfo:
+        DynamicalVariable("phi", mmunit.radian, mass, None)
+    assert "The bounds must be an instance of Bounds." in str(excinfo.value)
 
 
 def test_dv_bounds_type_error():
@@ -126,7 +128,14 @@ def test_dv_distance_method():
     assert "Incompatible boundary conditions." in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
-        psi0.distanceTo(DynamicalVariable("x", mmunit.nanometer, 3 * mmunit.dalton))
+        psi0.distanceTo(
+            DynamicalVariable(
+                "x",
+                mmunit.nanometer,
+                3 * mmunit.dalton,
+                NoBounds(0, 1, mmunit.dimensionless),
+            )
+        )
     assert "Incompatible boundary conditions." in str(excinfo.value)
 
     distance0 = DynamicalVariable(
@@ -137,5 +146,10 @@ def test_dv_distance_method():
     )
     assert distance0.distanceTo(cvpack.Distance(0, 1)) == "(distance-distance0)"
 
-    distance1 = DynamicalVariable("distance1", mmunit.nanometer, 3 * mmunit.dalton)
+    distance1 = DynamicalVariable(
+        "distance1",
+        mmunit.nanometer,
+        3 * mmunit.dalton,
+        NoBounds(0, 1, mmunit.dimensionless),
+    )
     assert distance1.distanceTo(distance0) == "(distance0-distance1)"

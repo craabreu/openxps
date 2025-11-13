@@ -21,7 +21,9 @@ def create_dvs():
         DynamicalVariable(
             name="phi0", unit=mmunit.radian, mass=mass, bounds=CircularBounds()
         ),
-        DynamicalVariable(name="x0", bounds=NoBounds(), **kwargs),
+        DynamicalVariable(
+            name="x0", bounds=NoBounds(0, 1, mmunit.dimensionless), **kwargs
+        ),
         DynamicalVariable(
             name="y0", bounds=ReflectiveBounds(-1, 1, mmunit.nanometer), **kwargs
         ),
