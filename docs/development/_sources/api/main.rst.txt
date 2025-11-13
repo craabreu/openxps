@@ -11,6 +11,7 @@ Core
     ExtendedSpaceSimulation
     ExtendedSpaceSystem
     ExtensionWriter
+    ForceMatchingRegressor
     LockstepIntegrator
     SplitIntegrator
 

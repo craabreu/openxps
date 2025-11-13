@@ -1,0 +1,12 @@
+ForceMatchingRegressor
+======================
+
+.. currentmodule:: openxps
+.. autoclass:: ForceMatchingRegressor
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: fit
+    .. automethod:: get_parameters
+    .. automethod:: predict
