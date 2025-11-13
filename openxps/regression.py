@@ -227,6 +227,7 @@ class ForceMatchingRegressor:
         self._accelerator = accelerator
         self._num_workers = num_workers
         self._M = num_kernels
+        self._model = None
 
     @staticmethod
     def _as_numpy(x: torch.Tensor) -> np.ndarray:
@@ -268,7 +269,9 @@ class ForceMatchingRegressor:
         )
         return checkpoint, early_stopping
 
-    def fit(self, positions: ArrayLike, forces: ArrayLike, *, seed: int = 0) -> None:
+    def fit(
+        self, positions: ArrayLike, forces: ArrayLike, *, seed: t.Optional[int] = None
+    ) -> None:
         """Fit the potential regressor to the given positions and forces.
 
         Parameters
@@ -281,10 +284,10 @@ class ForceMatchingRegressor:
         Keyword Arguments
         -----------------
         seed
-            The seed to be used for training.
+            The seed to be used for training. If None, a random seed is generated.
         """
-        torch.manual_seed(seed)
         np.random.seed(seed)
+        torch.manual_seed(np.random.randint(0, 1000000))
 
         X = torch.as_tensor(positions, dtype=torch.float32)
         G = -torch.as_tensor(forces, dtype=torch.float32)
@@ -334,6 +337,8 @@ class ForceMatchingRegressor:
         np.ndarray
             An array of shape (M,) containing the potential at the given positions.
         """
+        if self._model is None:
+            raise RuntimeError("The model has not been fitted yet.")
         device = next(self._model.parameters()).device
         X = torch.as_tensor(positions, dtype=torch.float32).to(device)
         with torch.no_grad():
