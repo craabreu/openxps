@@ -22,6 +22,8 @@ requirements:
     - python
     - numpy
     - openmm
+    - pytorch
+    - lightning
 
 test:
   imports:

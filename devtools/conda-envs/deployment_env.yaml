@@ -16,6 +16,10 @@ dependencies:
   - conda-build
   - boa
 
+  # Machine learning dependencies
+  - pytorch
+  - lightning
+
   # PyPI build
   - pip:
     - build

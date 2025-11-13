@@ -11,6 +11,10 @@ dependencies:
   - cvpack
   - pyyaml
 
+    # Machine learning dependencies
+  - pytorch
+  - lightning
+
     # Testing
   - openmmtools
   - pytest
