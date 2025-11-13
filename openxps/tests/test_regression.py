@@ -315,7 +315,6 @@ class TestForceMatchingRegressor:
             num_epochs=3,
             learning_rate=1e-3,
             weight_decay=1e-5,
-            seed=123,
             patience=5,
         )
 
@@ -326,7 +325,6 @@ class TestForceMatchingRegressor:
         assert regressor._num_epochs == 3
         assert regressor._lr == 1e-3
         assert regressor._wd == 1e-5
-        assert regressor._seed == 123
         assert regressor._patience == 5
 
     def test_predict_before_fit(self):

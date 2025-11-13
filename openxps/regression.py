@@ -13,13 +13,17 @@ import typing as t
 import numpy as np
 import torch
 from lightning import pytorch as pl
-from lightning.pytorch import callbacks
-from numpy import typing as npt
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from .bounds import PeriodicBounds
 from .dynamical_variable import DynamicalVariable
+
+if t.TYPE_CHECKING:
+    from numpy.typing import ArrayLike
+else:
+
+    class ArrayLike(t.Protocol): ...
 
 
 class RBFPotential(nn.Module):
@@ -161,7 +165,7 @@ class ForceMatchingRegressor:
     are adjusted by minimizing the mean squared error loss:
 
     .. math::
-        L = \frac{1}{N} \sum_{i=1}^N \left\| {\bf f}({\bf s}_i) - {\bf F}_i \right\|_2,
+        L = \frac{1}{N} \sum_{i=1}^N \left\| {\bf f}({\bf s}_i) - {\bf F}_i \right\|^2,
 
     where :math:`{\bf f}({\bf s}) = -\nabla_{\bf s} U({\bf s})` is the predicted force.
 
@@ -188,8 +192,6 @@ class ForceMatchingRegressor:
         The learning rate to be used for training.
     weight_decay
         The weight decay to be used for training.
-    seed
-        The seed to be used for training.
     accelerator
         The accelerator to be used for training. Valid options can be found
         `here <https://lightning.ai/docs/pytorch/LTS/common/trainer.html#accelerator>`_.
@@ -209,7 +211,6 @@ class ForceMatchingRegressor:
         patience: int = 10,
         learning_rate: float = 2e-3,
         weight_decay: float = 1e-4,
-        seed: int = 0,
         accelerator: str = "auto",
         num_workers: int = 0,
     ):
@@ -223,41 +224,72 @@ class ForceMatchingRegressor:
         self._patience = patience
         self._lr = learning_rate
         self._wd = weight_decay
-        self._seed = seed
         self._accelerator = accelerator
         self._num_workers = num_workers
         self._M = num_kernels
 
     @staticmethod
-    def _split_indices(N: int, val_frac: float) -> tuple[torch.Tensor, torch.Tensor]:
-        idx = torch.randperm(N)
-        nval = int(round(val_frac * N))
-        return idx[:nval], idx[nval:]
-
-    @staticmethod
     def _as_numpy(x: torch.Tensor) -> np.ndarray:
         return x.detach().cpu().numpy()
 
-    def fit(self, positions: npt.ArrayLike, forces: npt.ArrayLike) -> None:
-        torch.manual_seed(self._seed)
-        np.random.seed(self._seed)
-        X = torch.as_tensor(positions, dtype=torch.float32)
-        G = -torch.as_tensor(forces, dtype=torch.float32)
-        val_idx, tr_idx = self._split_indices(len(X), self._val_frac)
+    def _create_dataloaders(
+        self, X: torch.Tensor, G: torch.Tensor
+    ) -> tuple[DataLoader, DataLoader | None]:
+        N = len(X)
+        idx = torch.randperm(N)
+        nval = int(round(self._val_frac * N))
+        val_idx, tr_idx = idx[:nval], idx[nval:]
         dl = DataLoader(
             TensorDataset(X[tr_idx], G[tr_idx]),
             batch_size=self._batch_size,
             shuffle=True,
             num_workers=self._num_workers,
         )
-        if len(val_idx) > 0:
-            dlv = DataLoader(
-                TensorDataset(X[val_idx], G[val_idx]),
-                batch_size=self._batch_size,
-                num_workers=self._num_workers,
-            )
-        else:
-            dlv = None
+        if len(val_idx) == 0:
+            return dl, None
+        dlv = DataLoader(
+            TensorDataset(X[val_idx], G[val_idx]),
+            batch_size=self._batch_size,
+            num_workers=self._num_workers,
+        )
+        return dl, dlv
+
+    def _create_callbacks(
+        self, checkpoint_dir: str
+    ) -> tuple[pl.callbacks.ModelCheckpoint, pl.callbacks.EarlyStopping]:
+        checkpoint = pl.callbacks.ModelCheckpoint(
+            monitor="val_loss",
+            save_last=False,
+            filename="best-{epoch:02d}-{val_loss:.6f}",
+            dirpath=checkpoint_dir,
+        )
+        early_stopping = pl.callbacks.EarlyStopping(
+            monitor="val_loss", patience=self._patience
+        )
+        return checkpoint, early_stopping
+
+    def fit(self, positions: ArrayLike, forces: ArrayLike, *, seed: int = 0) -> None:
+        """Fit the potential regressor to the given positions and forces.
+
+        Parameters
+        ----------
+        positions
+            The positions to be used for training.
+        forces
+            The forces to be used for training.
+
+        Keyword Arguments
+        -----------------
+        seed
+            The seed to be used for training.
+        """
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+
+        X = torch.as_tensor(positions, dtype=torch.float32)
+        G = -torch.as_tensor(forces, dtype=torch.float32)
+        dl, dlv = self._create_dataloaders(X, G)
+
         self._model = GradMatch(
             dynamical_variables=self._dynamical_variables,
             M=self._M,
@@ -265,30 +297,30 @@ class ForceMatchingRegressor:
             wd=self._wd,
             init_sigma=self._init_sigma,
         )
-        with tempfile.TemporaryDirectory(prefix="xps_chkpts_") as checkpoint_dir:
-            if dlv is not None:
-                checkpoint = callbacks.ModelCheckpoint(
-                    monitor="val_loss",
-                    save_last=False,
-                    filename="best-{epoch:02d}-{val_loss:.6f}",
-                    dirpath=checkpoint_dir,
-                )
-                early_stopping = callbacks.EarlyStopping(
-                    monitor="val_loss", patience=self._patience
-                )
-            trainer = pl.Trainer(
-                max_epochs=self._num_epochs,
-                accelerator=self._accelerator,
-                devices="auto",
-                logger=False,
-                enable_progress_bar=True,
-                callbacks=[checkpoint, early_stopping] if dlv is not None else None,
-            )
-            trainer.fit(self._model, dl, dlv)
-            if dlv is not None and checkpoint.best_model_path:
-                self._model = GradMatch.load_from_checkpoint(checkpoint.best_model_path)
 
-    def predict(self, positions: npt.ArrayLike) -> np.ndarray:
+        trainer_kwargs = {
+            "max_epochs": self._num_epochs,
+            "accelerator": self._accelerator,
+            "devices": "auto",
+            "logger": False,
+            "enable_progress_bar": True,
+        }
+        if dlv is None:
+            trainer_kwargs["enable_checkpointing"] = False
+            trainer = pl.Trainer(**trainer_kwargs)
+            trainer.fit(self._model, dl)
+        else:
+            with tempfile.TemporaryDirectory() as checkpoint_dir:
+                checkpoint, early_stopping = self._create_callbacks(checkpoint_dir)
+                trainer_kwargs["callbacks"] = [checkpoint, early_stopping]
+                trainer = pl.Trainer(**trainer_kwargs)
+                trainer.fit(self._model, dl, dlv)
+                if checkpoint.best_model_path:
+                    self._model = GradMatch.load_from_checkpoint(
+                        checkpoint.best_model_path
+                    )
+
+    def predict(self, positions: ArrayLike) -> np.ndarray:
         """Predict the potential at the given positions.
 
         Parameters
@@ -299,7 +331,7 @@ class ForceMatchingRegressor:
 
         Returns
         -------
-        potential
+        np.ndarray
             An array of shape (M,) containing the potential at the given positions.
         """
         device = next(self._model.parameters()).device
