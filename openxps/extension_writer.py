@@ -15,6 +15,7 @@ from openmm import unit as mmunit
 
 from .simulation import ExtendedSpaceSimulation
 
+import numpy as np
 
 class ExtensionWriter(CustomWriter):
     """
@@ -265,3 +266,79 @@ class ExtensionWriter(CustomWriter):
             for name in self._function_names:
                 values.append(context.getParameter(name))
         return values
+
+
+class DvRegulatedTemperaturesWriter(CustomWriter):
+    """
+    Reports the effective temperature per DV (1 DOF, x component) using the same kinetic energy as in the RegulatedNHL thermostat.
+        Kreg = 0.5*m*vx*c*tanh(vx/c)
+        c = sqrt(reg*kT/m), com kT = R*T_bath
+    """
+
+    def __init__(
+        self,
+        *,
+        bath_temperatures,
+        regulation_parameter: float = 1.0,
+        kinetic: bool = False,
+    ):
+        self._reg = float(regulation_parameter)
+        self._kinetic = bool(kinetic)
+
+        self._Tbath = []
+        for T in bath_temperatures:
+            if hasattr(T, "unit"):
+                self._Tbath.append(float(T.value_in_unit(mmunit.kelvin)))
+            else:
+                self._Tbath.append(float(T))
+
+        self._R_kJmolK = float(mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(mmunit.kilojoules_per_mole / mmunit.kelvin))
+
+        self._dv_objects = []
+
+    def initialize(self, simulation):
+        coupling = simulation.extended_space_context.getSystem().getCoupling()
+        self._dv_objects = coupling.getDynamicalVariables()
+        n = len(self._dv_objects)
+        if len(self._Tbath) != n:
+            raise ValueError(f"bath_temperatures must have length {n} (in the order of the DVs)")
+
+    def getHeaders(self):
+        headers = []
+        for dv in self._dv_objects:
+            if self._kinetic:
+                headers.append(f"Kreg[{dv.name}] (kJ/mole)")
+            headers.append(f"T[{dv.name}] (K)")
+        return headers
+
+    def getValues(self, simulation):
+        ext_context = simulation.extended_space_context.getExtensionContext()
+        ext_sys = ext_context.getSystem()
+
+        st = ext_context.getState(getVelocities=True)
+        vels = st.getVelocities() 
+
+        values = []
+        for i, dv in enumerate(self._dv_objects):
+        
+            m = float(ext_sys.getParticleMass(i).value_in_unit(mmunit.dalton))
+            vx = vels[i].x
+            
+            if hasattr(vx, "value_in_unit"):
+                vx = float(vx.value_in_unit(mmunit.nanometer/mmunit.picosecond))
+            else:
+                vx = float(vx)
+
+            kT = self._R_kJmolK * self._Tbath[i]
+            c = np.sqrt(self._reg * kT / m)
+            x = vx / c
+            Kreg = 0.5 * m * vx * c * np.tanh(x)
+            T_i = 2.0 * Kreg / self._R_kJmolK
+
+            if self._kinetic:
+                values.append(Kreg)
+            values.append(T_i)
+
+        return values
+
+

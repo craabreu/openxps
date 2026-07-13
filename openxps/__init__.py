@@ -12,7 +12,7 @@ from .couplings import (
     InnerProductCoupling,  # noqa: F401
 )
 from .dynamical_variable import DynamicalVariable  # noqa: F401
-from .extension_writer import ExtensionWriter  # noqa: F401
+from .extension_writer import ExtensionWriter, DvRegulatedTemperaturesWriter  # noqa: F401
 from .integrator import LockstepIntegrator, SplitIntegrator  # noqa: F401
 from .integrators import (
     CSVRIntegrator,
@@ -20,11 +20,14 @@ from .integrators import (
     RegulatedNHLIntegrator,
     SymmetricLangevinIntegrator,
     SymmetricVerletIntegrator,
+    MultiBathRegulatedNHLIntegrator,
 )
 from .metadynamics import (  # noqa: F401
     ExtendedSpaceBiasVariable,
     ExtendedSpaceMetadynamics,
 )
+from .opes import ExtendedSpaceOPES, MultiOPESSampler
+from .opes_folder import OPESBiasReporter  # noqa: F401
 from .regression import ForceMatchingRegressor  # noqa: F401
 from .simulation import ExtendedSpaceSimulation  # noqa: F401
 from .system import ExtendedSpaceSystem  # noqa: F401
@@ -41,10 +44,13 @@ __all__ = [
     "ExtendedSpaceContext",
     "ExtendedSpaceSystem",
     "ExtensionWriter",
+    "DvRegulatedTemperaturesWriter",
     "DynamicalVariable",
     "ExtendedSpaceMetadynamics",
+    "ExtendedSpaceOPES",
     "ExtendedSpaceBiasVariable",
     "ExtendedSpaceSimulation",
+    "MultiOPESSampler",
     "LockstepIntegrator",
     "SplitIntegrator",
     "SymmetricLangevinIntegrator",
@@ -52,5 +58,7 @@ __all__ = [
     "MassiveGGMTIntegrator",
     "RegulatedNHLIntegrator",
     "SymmetricVerletIntegrator",
+    "MultiBathRegulatedNHLIntegrator",
     "ForceMatchingRegressor",
+    "OPESBiasReporter",
 ]

@@ -7,6 +7,7 @@ from .massive_ggmt import MassiveGGMTIntegrator
 from .regulated_nhl import RegulatedNHLIntegrator
 from .symmetric_langevin import SymmetricLangevinIntegrator
 from .symmetric_verlet import SymmetricVerletIntegrator
+from .regulated_nhl_multibath import MultiBathRegulatedNHLIntegrator
 
 __all__ = [
     "SymmetricVerletIntegrator",
@@ -14,4 +15,5 @@ __all__ = [
     "CSVRIntegrator",
     "MassiveGGMTIntegrator",
     "RegulatedNHLIntegrator",
+    "MultiBathRegulatedNHLIntegrator"
 ]
