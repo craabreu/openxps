@@ -61,10 +61,24 @@ with the upper and lower bounds and is reflected back into the range.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">bounds</span> <span class="o">==</span> <span class="n">xps</span><span class="o">.</span><span class="n">ReflectiveBounds</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="p">)</span>
 <span class="go">True</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">bounds</span><span class="p">)</span>
-<span class="go">ReflectiveBounds(lower=1, upper=10, unit=A)</span>
+<span class="go">ReflectiveBounds(lower=1.0, upper=10.0, unit=A)</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.bounds.ReflectiveBounds.kind">
+<span class="sig-name descname"><span class="pre">kind</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.bounds.ReflectiveBounds.kind" title="Link to this definition">¶</a></dt>
+<dd><p>str(object=’’) -&gt; str
+str(bytes_or_buffer[, encoding[, errors]]) -&gt; str</p>
+<p>Create a new string object from the given object. If encoding or
+errors is specified, then the object must expose a data buffer
+that will be decoded using the given encoding and error handler.
+Otherwise, returns the result of object.__str__() (if defined)
+or repr(object).
+encoding defaults to ‘utf-8’.
+errors defaults to ‘strict’.</p>
+</dd></dl>
+
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.bounds.ReflectiveBounds.leptonExpression">
 <span class="sig-name descname"><span class="pre">leptonExpression</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">variable</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/bounds/reflective.html#ReflectiveBounds.leptonExpression"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.bounds.ReflectiveBounds.leptonExpression" title="Link to this definition">¶</a></dt>
@@ -86,13 +100,13 @@ variable to a wrapped value under the boundary conditions.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">periodic</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">PeriodicBounds</span><span class="p">(</span><span class="o">-</span><span class="mi">180</span><span class="p">,</span> <span class="mi">180</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">periodic</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">"x"</span><span class="p">))</span>
-<span class="go">(scaled_x-floor(scaled_x))*360-180;</span>
-<span class="go">scaled_x=(x+180)/360</span>
+<span class="go">(scaled_x-floor(scaled_x))*360.0-180.0;</span>
+<span class="go">scaled_x=(x+180.0)/360.0</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">reflective</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">ReflectiveBounds</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">angstrom</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">reflective</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">"y"</span><span class="p">))</span>
-<span class="go">min(wrapped_y,1-wrapped_y)*18+1;</span>
+<span class="go">min(wrapped_y,1-wrapped_y)*18.0+1.0;</span>
 <span class="go">wrapped_y=scaled_y-floor(scaled_y);</span>
-<span class="go">scaled_y=(y-1)/18</span>
+<span class="go">scaled_y=(y-1.0)/18.0</span>
 </pre></div>
 </div>
 </dd></dl>

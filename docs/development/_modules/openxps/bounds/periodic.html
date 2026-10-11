@@ -46,6 +46,8 @@
 
 <span class="sd">"""</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
+
 <span class="kn">from</span><span class="w"> </span><span class="nn">.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span>
 
 
@@ -73,9 +75,11 @@
 <span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
 <span class="sd">    &gt;&gt;&gt; bounds = xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">    &gt;&gt;&gt; print(bounds)</span>
-<span class="sd">    PeriodicBounds(lower=-180, upper=180, unit=deg)</span>
+<span class="sd">    PeriodicBounds(lower=-180.0, upper=180.0, unit=deg)</span>
 <span class="sd">    &gt;&gt;&gt; assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds</span>
 <span class="sd">    """</span>
+
+    <span class="n">kind</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">ClassVar</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="s2">"periodic"</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__post_init__</span><span class="p">()</span>

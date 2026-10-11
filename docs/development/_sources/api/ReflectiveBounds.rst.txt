@@ -7,5 +7,6 @@ ReflectiveBounds
 
     .. rubric:: Methods
 
+    .. automethod:: kind
     .. automethod:: leptonExpression
     .. automethod:: wrap

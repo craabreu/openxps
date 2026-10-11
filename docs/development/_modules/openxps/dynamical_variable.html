@@ -54,7 +54,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">cvpack.units</span><span class="w"> </span><span class="kn">import</span> <span class="n">Quantity</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">,</span> <span class="n">PeriodicBounds</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">Bounds</span><span class="p">,</span> <span class="n">PeriodicBounds</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
 
 
@@ -79,9 +79,9 @@
 <span class="sd">    bounds</span>
 <span class="sd">        The boundary condition to be applied to this dynamical variable. It must</span>
 <span class="sd">        be an instance of :class:`PeriodicBounds`, :class:`ReflectiveBounds`, or</span>
-<span class="sd">        :class:`NoBounds` (for unbounded variables). If it is not</span>
-<span class="sd">        :class:`~openxps.NoBounds`, its unit of measurement must be compatible with</span>
-<span class="sd">        the dynamical variable's own unit.</span>
+<span class="sd">        :class:`NoBounds` (for unbounded variables, whose bounds are then typical</span>
+<span class="sd">        values rather than actual limits). Its unit of measurement must be</span>
+<span class="sd">        compatible with the dynamical variable's own unit.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -116,9 +116,6 @@
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mass units must be compatible with </span><span class="si">{</span><span class="n">mass_unit</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
         <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"mass"</span><span class="p">,</span> <span class="n">Quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">in_units_of</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">)))</span>
 
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">):</span>
-            <span class="k">return</span>
-
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">Bounds</span><span class="p">):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Provided bounds have incompatible units."</span><span class="p">)</span>
@@ -136,6 +133,9 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keywords</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">keywords</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__hash__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">hash</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">))</span>
 
 <div class="viewcode-block" id="DynamicalVariable.in_md_units">
 <a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable.in_md_units">[docs]</a>
@@ -215,12 +215,8 @@
 <span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; cv = dv.createCollectiveVariable(0)</span>
 <span class="sd">        """</span>
-        <span class="n">bounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span>
-        <span class="k">if</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="s2">"x"</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="n">bounds</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">"x"</span><span class="p">))</span>
-            <span class="n">bounds</span> <span class="o">=</span> <span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">"x"</span><span class="p">))</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">[])</span>
         <span class="k">return</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">(</span>
             <span class="n">force</span><span class="p">,</span>
@@ -233,21 +229,25 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_distanceToCV</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="n">name</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span>
         <span class="n">diff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Incompatible units."</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">():</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)"</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">():</span>
-            <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">period</span>
+            <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span><span class="o">.</span><span class="n">period</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))"</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Incompatible boundary conditions."</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_distanceToDV</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">te</span><span class="o">.</span><span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="n">diff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Incompatible units."</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">or</span> <span class="n">other</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()):</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)"</span>
-        <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">():</span>
-            <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">period</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))"</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Incompatible boundary conditions."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">bounds</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Incompatible boundary conditions."</span><span class="p">)</span>
+        <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span><span class="o">.</span><span class="n">period</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))"</span>
 
 <div class="viewcode-block" id="DynamicalVariable.distanceTo">
 <a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable.distanceTo">[docs]</a>
