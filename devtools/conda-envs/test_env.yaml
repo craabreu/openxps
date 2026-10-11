@@ -15,6 +15,7 @@ dependencies:
 
     # Testing
   - openmmtools
+  - setuptools <80
   - pytest
   - pytest-cov
 
