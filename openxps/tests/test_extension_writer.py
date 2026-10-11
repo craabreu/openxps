@@ -559,3 +559,16 @@ def test_extension_writer_temperature_is_physical():
         v = rate.value_in_unit(unit.radian / unit.picosecond)
         assert kinetic == pytest.approx(0.5 * 3 * v * v, rel=1e-6)
     assert abs(np.mean(temperatures) - 300) < 60
+
+
+def test_extension_writer_headers_independent_of_flags():
+    """Getters work after initialize() regardless of which columns are enabled."""
+    simulation = create_test_simulation()
+    writer = xps.ExtensionWriter(dynamical_variables=True)
+    with pytest.raises(RuntimeError, match="initialize"):
+        writer.getCollectiveVariableHeaders()
+    writer.initialize(simulation)
+    assert writer.getDynamicalVariableHeaders() == ["phi0 (rad)"]
+    assert writer.getCollectiveVariableHeaders() == ["phi (rad)"]
+    assert writer.getEffectiveMassHeaders() == ["emass[phi] (nm**2 Da/(rad**2))"]
+    assert writer.getHeaders() == ["phi0 (rad)"]
