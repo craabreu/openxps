@@ -12,11 +12,11 @@
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
     <script src="../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="InnerProductCoupling" href="InnerProductCoupling.html" />
@@ -42,7 +42,7 @@
 <h1>HarmonicCoupling<a class="headerlink" href="#harmoniccoupling" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.couplings.HarmonicCoupling">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.couplings.</span></span><span class="sig-name descname"><span class="pre">HarmonicCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collective_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_constant</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/harmonic_coupling.html#HarmonicCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.HarmonicCoupling" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">openxps.couplings.</span></span><span class="sig-name descname"><span class="pre">HarmonicCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">collective_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variable</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_constant</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/harmonic_coupling.html#HarmonicCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.HarmonicCoupling" title="Link to this definition">¶</a></dt>
 <dd><p>A harmonic coupling between a dynamical variable and a collective variable.</p>
 <p>The coupling energy is given by:</p>
 <div class="math notranslate nohighlight">
@@ -64,13 +64,13 @@ physical collective variable, and <span class="math notranslate nohighlight">\(\
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dvmass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">phi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;phi&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"phi"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">phi_s</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="s2">&quot;phi_s&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">dvmass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">CircularBounds</span><span class="p">()</span>
+<span class="gp">... </span>    <span class="s2">"phi_s"</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">dvmass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">CircularBounds</span><span class="p">()</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">kappa</span> <span class="o">=</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCoupling</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">phi_s</span><span class="p">,</span> <span class="n">kappa</span><span class="p">)</span>
-<span class="go">HarmonicCoupling(&quot;0.5*kappa_phi_phi_s*((phi-phi_s-6.28...*floor(...))^2)&quot;)</span>
+<span class="go">HarmonicCoupling("0.5*kappa_phi_phi_s*((phi-phi_s-6.28...*floor(...))^2)")</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -132,7 +132,7 @@ physical collective variable, and <span class="math notranslate nohighlight">\(\
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |

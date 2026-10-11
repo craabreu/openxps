@@ -11,8 +11,8 @@
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=572d9513" />
     <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -35,14 +35,14 @@
           <div class="body" role="main">
             
   <h1>Source code for openxps.dynamical_variable</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">.. module:: openxps.dynamical_variable</span>
 <span class="sd">   :platform: Linux, Windows, macOS</span>
 <span class="sd">   :synopsis: Dynamical variables for XPS simulations</span>
 
 <span class="sd">.. moduleauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
 
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
@@ -62,7 +62,7 @@
 <a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">DynamicalVariable</span><span class="p">(</span><span class="n">Serializable</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Dynamical variable for extended phase-space simulations with OpenMM.</span>
 
 <span class="sd">    Parameters</span>
@@ -75,13 +75,13 @@
 <span class="sd">    mass</span>
 <span class="sd">        The mass assigned to this dynamical variable, whose unit of measurement</span>
 <span class="sd">        must be compatible with ``dalton*(nanometer/unit)**2``, where ``unit`` is the</span>
-<span class="sd">        dynamical variable&#39;s own unit (see ``unit`` above).</span>
+<span class="sd">        dynamical variable's own unit (see ``unit`` above).</span>
 <span class="sd">    bounds</span>
 <span class="sd">        The boundary condition to be applied to this dynamical variable. It must</span>
 <span class="sd">        be an instance of :class:`PeriodicBounds`, :class:`ReflectiveBounds`, or</span>
 <span class="sd">        :class:`NoBounds` (for unbounded variables). If it is not</span>
 <span class="sd">        :class:`~openxps.NoBounds`, its unit of measurement must be compatible with</span>
-<span class="sd">        the dynamical variable&#39;s own unit.</span>
+<span class="sd">        the dynamical variable's own unit.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -89,17 +89,17 @@
 <span class="sd">    &gt;&gt;&gt; import yaml</span>
 <span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
 <span class="sd">    &gt;&gt;&gt; dv = xps.DynamicalVariable(</span>
-<span class="sd">    ...     &quot;psi&quot;,</span>
+<span class="sd">    ...     "psi",</span>
 <span class="sd">    ...     unit.radian,</span>
 <span class="sd">    ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
 <span class="sd">    ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; dv</span>
-<span class="sd">    DynamicalVariable(name=&#39;psi&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
+<span class="sd">    DynamicalVariable(name='psi', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
 <span class="sd">    &gt;&gt;&gt; dv.bounds</span>
 <span class="sd">    PeriodicBounds(lower=-3.14159..., upper=3.14159..., unit=rad)</span>
 <span class="sd">    &gt;&gt;&gt; assert yaml.safe_load(yaml.safe_dump(dv)) == dv</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">unit</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Unit</span>
@@ -108,30 +108,30 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_unit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;The unit must be a valid OpenMM unit.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The unit must be a valid OpenMM unit."</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;Mass must be have units of measurement.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Mass must be have units of measurement."</span><span class="p">)</span>
         <span class="n">mass_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Mass units must be compatible with </span><span class="si">{</span><span class="n">mass_unit</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span>
-        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;mass&quot;</span><span class="p">,</span> <span class="n">Quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">in_units_of</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">)))</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mass units must be compatible with </span><span class="si">{</span><span class="n">mass_unit</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
+        <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"mass"</span><span class="p">,</span> <span class="n">Quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">in_units_of</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">)))</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">):</span>
             <span class="k">return</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">Bounds</span><span class="p">):</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Provided bounds have incompatible units.&quot;</span><span class="p">)</span>
-            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;bounds&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Provided bounds have incompatible units."</span><span class="p">)</span>
+            <span class="nb">object</span><span class="o">.</span><span class="fm">__setattr__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">"bounds"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;The bounds must be an instance of Bounds.&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"The bounds must be an instance of Bounds."</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__getstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">]:</span>
         <span class="k">return</span> <span class="p">{</span>
-            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
-            <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
-            <span class="s2">&quot;mass&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">,</span>
-            <span class="s2">&quot;bounds&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span>
+            <span class="s2">"name"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="s2">"unit"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
+            <span class="s2">"mass"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">,</span>
+            <span class="s2">"bounds"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span>
         <span class="p">}</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">keywords</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -139,10 +139,10 @@
 
 <div class="viewcode-block" id="DynamicalVariable.in_md_units">
 <a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable.in_md_units">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">in_md_units</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;DynamicalVariable&quot;</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">in_md_units</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"DynamicalVariable"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Return the dynamical variable in the MD unit system.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">unit</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">in_unit_system</span><span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">md_unit_system</span><span class="p">)</span>
         <span class="n">mass_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="k">return</span> <span class="n">DynamicalVariable</span><span class="p">(</span>
@@ -156,7 +156,7 @@
 <div class="viewcode-block" id="DynamicalVariable.isPeriodic">
 <a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable.isPeriodic">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">isPeriodic</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Returns whether this dynamical variable is periodic.</span>
 
 <span class="sd">        Returns</span>
@@ -169,14 +169,14 @@
 <span class="sd">        &gt;&gt;&gt; import openxps as xps</span>
 <span class="sd">        &gt;&gt;&gt; from openmm import unit</span>
 <span class="sd">        &gt;&gt;&gt; dv = xps.DynamicalVariable(</span>
-<span class="sd">        ...     &quot;psi&quot;,</span>
+<span class="sd">        ...     "psi",</span>
 <span class="sd">        ...     unit.radian,</span>
 <span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
 <span class="sd">        ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; dv.isPeriodic()</span>
 <span class="sd">        True</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">PeriodicBounds</span><span class="p">)</span></div>
 
 
@@ -185,7 +185,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">createCollectiveVariable</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Returns a :CVPack:`OpenMMForceWrapper` object associating this extra degree of</span>
 <span class="sd">        freedom with the x coordinate of a particle in an OpenMM system.</span>
 
@@ -208,18 +208,18 @@
 <span class="sd">        &gt;&gt;&gt; import openxps as xps</span>
 <span class="sd">        &gt;&gt;&gt; from openmm import unit</span>
 <span class="sd">        &gt;&gt;&gt; dv = xps.DynamicalVariable(</span>
-<span class="sd">        ...     &quot;psi&quot;,</span>
+<span class="sd">        ...     "psi",</span>
 <span class="sd">        ...     unit.radian,</span>
 <span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
 <span class="sd">        ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">        ... )</span>
 <span class="sd">        &gt;&gt;&gt; cv = dv.createCollectiveVariable(0)</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">bounds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span>
         <span class="k">if</span> <span class="n">bounds</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span>
+            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="s2">"x"</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="n">bounds</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">))</span>
+            <span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span><span class="n">bounds</span><span class="o">.</span><span class="n">leptonExpression</span><span class="p">(</span><span class="s2">"x"</span><span class="p">))</span>
             <span class="n">bounds</span> <span class="o">=</span> <span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="k">else</span> <span class="kc">None</span>
         <span class="n">force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">[])</span>
         <span class="k">return</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">(</span>
@@ -232,27 +232,27 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_distanceToCV</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="n">name</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span>
-        <span class="n">diff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
         <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">():</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)"</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">():</span>
             <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">period</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))&quot;</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Incompatible boundary conditions.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))"</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Incompatible boundary conditions."</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_distanceToDV</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">te</span><span class="o">.</span><span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="n">diff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="n">diff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">or</span> <span class="n">other</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()):</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)&quot;</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)"</span>
         <span class="k">if</span> <span class="n">other</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">():</span>
             <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">period</span>
-            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))&quot;</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Incompatible boundary conditions.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))"</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Incompatible boundary conditions."</span><span class="p">)</span>
 
 <div class="viewcode-block" id="DynamicalVariable.distanceTo">
 <a class="viewcode-back" href="../../api/DynamicalVariable.html#openxps.DynamicalVariable.distanceTo">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">distanceTo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span> <span class="o">|</span> <span class="n">te</span><span class="o">.</span><span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Returns a Lepton expression representing the distance between this extra degree</span>
 <span class="sd">        of freedom and another variable.</span>
 
@@ -272,29 +272,29 @@
 <span class="sd">        &gt;&gt;&gt; import pytest</span>
 <span class="sd">        &gt;&gt;&gt; from openmm import unit</span>
 <span class="sd">        &gt;&gt;&gt; dv = xps.DynamicalVariable(</span>
-<span class="sd">        ...     &quot;psi0&quot;,</span>
+<span class="sd">        ...     "psi0",</span>
 <span class="sd">        ...     unit.radian,</span>
 <span class="sd">        ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
 <span class="sd">        ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">        ... )</span>
-<span class="sd">        &gt;&gt;&gt; psi = cvpack.Torsion(6, 8, 14, 16, name=&quot;psi&quot;)</span>
+<span class="sd">        &gt;&gt;&gt; psi = cvpack.Torsion(6, 8, 14, 16, name="psi")</span>
 <span class="sd">        &gt;&gt;&gt; dv.distanceTo(psi)</span>
-<span class="sd">        &#39;(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))&#39;</span>
+<span class="sd">        '(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))'</span>
 <span class="sd">        &gt;&gt;&gt;</span>
 
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distanceToCV</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span> <span class="ow">is</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_distanceToDV</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
-        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Method distanceTo not implemented for type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="si">}</span><span class="s2">.&quot;</span><span class="p">)</span></div>
+        <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Method distanceTo not implemented for type </span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">)</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span></div>
 </div>
 
 
 
 <span class="n">DynamicalVariable</span><span class="o">.</span><span class="fm">__init__</span> <span class="o">=</span> <span class="n">preprocess_args</span><span class="p">(</span><span class="n">DynamicalVariable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">)</span>
 
-<span class="n">DynamicalVariable</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.DynamicalVariable&quot;</span><span class="p">)</span>
+<span class="n">DynamicalVariable</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">"!openxps.DynamicalVariable"</span><span class="p">)</span>
 </pre></div>
 
           </div>
@@ -340,7 +340,7 @@
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>

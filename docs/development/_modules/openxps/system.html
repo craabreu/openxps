@@ -11,8 +11,8 @@
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=572d9513" />
     <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -35,14 +35,14 @@
           <div class="body" role="main">
             
   <h1>Source code for openxps.system</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">.. module:: openxps.system</span>
 <span class="sd">   :platform: Linux, MacOS, Windows</span>
 <span class="sd">   :synopsis: System for extended phase-space simulations with OpenMM.</span>
 
 <span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
 
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
 
@@ -57,7 +57,7 @@
 <div class="viewcode-block" id="ExtendedSpaceSystem">
 <a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExtendedSpaceSystem</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;An :OpenMM:`System` object that includes extra dynamical variables (DVs) and</span>
+<span class="w">    </span><span class="sd">"""An :OpenMM:`System` object that includes extra dynamical variables (DVs) and</span>
 <span class="sd">    allows for extended phase-space (XPS) simulations.</span>
 
 <span class="sd">    Parameters</span>
@@ -85,18 +85,18 @@
 <span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
-<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.CircularBounds())</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())</span>
 <span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCoupling(</span>
-<span class="sd">    ...     cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;),</span>
+<span class="sd">    ...     cvpack.Torsion(6, 8, 14, 16, name="phi"),</span>
 <span class="sd">    ...     phi0,</span>
 <span class="sd">    ...     1000 * unit.kilojoules_per_mole / unit.radian**2,</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; system = xps.ExtendedSpaceSystem(model.system, harmonic_force)</span>
 <span class="sd">    &gt;&gt;&gt; system.getDynamicalVariables()</span>
-<span class="sd">    (DynamicalVariable(name=&#39;phi0&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...),)</span>
+<span class="sd">    (DynamicalVariable(name='phi0', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...),)</span>
 <span class="sd">    &gt;&gt;&gt; system.getExtensionSystem().getNumParticles()</span>
 <span class="sd">    1</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -121,13 +121,13 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_create_tethering_force</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">tether_period</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a force tethering all particles to the origin in the yz-plane.&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""Create a force tethering all particles to the origin in the yz-plane."""</span>
         <span class="n">tethering_force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">(</span>
-            <span class="s2">&quot;0.5*kappa*(y^2 + z^2); kappa=mass_4_pi_sq/tether_period^2&quot;</span>
+            <span class="s2">"0.5*kappa*(y^2 + z^2); kappa=mass_4_pi_sq/tether_period^2"</span>
         <span class="p">)</span>
-        <span class="n">tethering_force</span><span class="o">.</span><span class="n">setName</span><span class="p">(</span><span class="s2">&quot;Tethering&quot;</span><span class="p">)</span>
-        <span class="n">tethering_force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="s2">&quot;tether_period&quot;</span><span class="p">,</span> <span class="n">tether_period</span><span class="p">)</span>
-        <span class="n">tethering_force</span><span class="o">.</span><span class="n">addPerParticleParameter</span><span class="p">(</span><span class="s2">&quot;mass_4_pi_sq&quot;</span><span class="p">)</span>
+        <span class="n">tethering_force</span><span class="o">.</span><span class="n">setName</span><span class="p">(</span><span class="s2">"Tethering"</span><span class="p">)</span>
+        <span class="n">tethering_force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="s2">"tether_period"</span><span class="p">,</span> <span class="n">tether_period</span><span class="p">)</span>
+        <span class="n">tethering_force</span><span class="o">.</span><span class="n">addPerParticleParameter</span><span class="p">(</span><span class="s2">"mass_4_pi_sq"</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">dv</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()):</span>
             <span class="n">tethering_force</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="p">[</span><span class="mi">4</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">**</span><span class="mi">2</span> <span class="o">*</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="p">])</span>
         <span class="k">return</span> <span class="n">tethering_force</span>
@@ -135,49 +135,49 @@
 <div class="viewcode-block" id="ExtendedSpaceSystem.getDynamicalVariables">
 <a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getDynamicalVariables">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getDynamicalVariables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">DynamicalVariable</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the dynamical variables included in the extended phase-space system.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        t.Tuple[DynamicalVariable]</span>
 <span class="sd">            A tuple containing the dynamical variables.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">())</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceSystem.getCoupling">
 <a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getCoupling">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getCoupling</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Coupling</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the coupling included in the extended phase-space system.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        Coupling</span>
 <span class="sd">            The coupling.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceSystem.getExtensionSystem">
 <a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getExtensionSystem">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getExtensionSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the extension system included in the extended phase-space system.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        mm.System</span>
 <span class="sd">            The extension system.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceSystem.getTetheringForce">
 <a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getTetheringForce">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getTetheringForce</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">CustomExternalForce</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Get the tethering force included in the extended phase-space system.</span>
 
 <span class="sd">        If no tethering force has been added, returns None.</span>
@@ -186,7 +186,7 @@
 <span class="sd">        -------</span>
 <span class="sd">        t.Optional[mm.CustomExternalForce]</span>
 <span class="sd">            The tethering force.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_tethering_force</span></div>
 </div>
 
@@ -235,7 +235,7 @@
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>

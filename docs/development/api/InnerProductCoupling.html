@@ -12,11 +12,11 @@
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
     <script src="../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=ccdb6887"></script>
-    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Integrators" href="integrators.html" />
@@ -42,7 +42,7 @@
 <h1>InnerProductCoupling<a class="headerlink" href="#innerproductcoupling" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="openxps.couplings.InnerProductCoupling">
-<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">openxps.couplings.</span></span><span class="sig-name descname"><span class="pre">InnerProductCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">forces</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">functions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/inner_product_coupling.html#InnerProductCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.InnerProductCoupling" title="Link to this definition">¶</a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">openxps.couplings.</span></span><span class="sig-name descname"><span class="pre">InnerProductCoupling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">forces</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dynamical_variables</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">functions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">parameters</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/inner_product_coupling.html#InnerProductCoupling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.InnerProductCoupling" title="Link to this definition">¶</a></dt>
 <dd><p>Coupling defined by the inner product of two separable vector-valued functions.</p>
 <p>Use this class if the coupling energy is the inner product of a vector-valued
 function <span class="math notranslate nohighlight">\({\boldsymbol \lambda}\)</span> of the extended dynamical variables
@@ -79,8 +79,8 @@ functions (i.e., <code class="docutils literal notranslate"><span class="pre">ke
 </div>
 <p>A function to remove Coulomb interactions:</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">Parameters</span> <span class="o">=</span> <span class="n">namedtuple</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="s2">&quot;Parameters&quot;</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="p">[</span><span class="s2">&quot;index&quot;</span><span class="p">,</span> <span class="s2">&quot;charge&quot;</span><span class="p">,</span> <span class="s2">&quot;sigma&quot;</span><span class="p">,</span> <span class="s2">&quot;epsilon&quot;</span><span class="p">],</span>
+<span class="gp">... </span>    <span class="s2">"Parameters"</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="s2">"index"</span><span class="p">,</span> <span class="s2">"charge"</span><span class="p">,</span> <span class="s2">"sigma"</span><span class="p">,</span> <span class="s2">"epsilon"</span><span class="p">],</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">remove_coulomb_interaction</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">force</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">NonbondedForce</span><span class="p">,</span> <span class="n">p1</span><span class="p">:</span> <span class="n">Parameters</span><span class="p">,</span> <span class="n">p2</span><span class="p">:</span> <span class="n">Parameters</span>
@@ -108,17 +108,17 @@ functions (i.e., <code class="docutils literal notranslate"><span class="pre">ke
 </pre></div>
 </div>
 <p>Add scaled Coulomb interactions:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomBondForce</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;scaling*chargeProd/r&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="s2">&quot;scaling&quot;</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">addEnergyParameterDerivative</span><span class="p">(</span><span class="s2">&quot;scaling&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">addPerBondParameter</span><span class="p">(</span><span class="s2">&quot;chargeProd&quot;</span><span class="p">)</span>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomBondForce</span><span class="p">(</span><span class="sa">f</span><span class="s2">"scaling*chargeProd/r"</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="s2">"scaling"</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">addEnergyParameterDerivative</span><span class="p">(</span><span class="s2">"scaling"</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">addPerBondParameter</span><span class="p">(</span><span class="s2">"chargeProd"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">addBond</span><span class="p">(</span><span class="n">O1</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">H2</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">[</span><span class="n">O1</span><span class="o">.</span><span class="n">charge</span><span class="o">*</span><span class="n">H2</span><span class="o">.</span><span class="n">charge</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">_</span> <span class="o">=</span> <span class="n">force</span><span class="o">.</span><span class="n">addBond</span><span class="p">(</span><span class="n">O2</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">H1</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">[</span><span class="n">O2</span><span class="o">.</span><span class="n">charge</span><span class="o">*</span><span class="n">H1</span><span class="o">.</span><span class="n">charge</span><span class="p">])</span>
 </pre></div>
 </div>
 <p>Create a coupling between the dynamical variable and the nonbonded force:</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">lambda_dv</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span>
-<span class="gp">... </span>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;lambda&quot;</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">name</span><span class="o">=</span><span class="s2">"lambda"</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">unit</span><span class="o">=</span><span class="n">unit</span><span class="o">.</span><span class="n">dimensionless</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">mass</span><span class="o">=</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">**</span><span class="mi">2</span><span class="p">,</span>
 <span class="gp">... </span>    <span class="n">bounds</span><span class="o">=</span><span class="n">xps</span><span class="o">.</span><span class="n">ReflectiveBounds</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">dimensionless</span><span class="p">),</span>
@@ -126,13 +126,13 @@ functions (i.e., <code class="docutils literal notranslate"><span class="pre">ke
 <span class="gp">&gt;&gt;&gt; </span><span class="n">coupling</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">InnerProductCoupling</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="p">[</span><span class="n">force</span><span class="p">],</span>
 <span class="gp">... </span>    <span class="p">[</span><span class="n">lambda_dv</span><span class="p">],</span>
-<span class="gp">... </span>    <span class="n">functions</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;scaling&quot;</span><span class="p">:</span> <span class="s2">&quot;(1-cos(alpha*lambda))/2&quot;</span><span class="p">},</span>
+<span class="gp">... </span>    <span class="n">functions</span><span class="o">=</span><span class="p">{</span><span class="s2">"scaling"</span><span class="p">:</span> <span class="s2">"(1-cos(alpha*lambda))/2"</span><span class="p">},</span>
 <span class="gp">... </span>    <span class="n">alpha</span><span class="o">=</span><span class="n">pi</span><span class="o">*</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceContext</span><span class="p">(</span>
 <span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSystem</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">coupling</span><span class="p">),</span>
 <span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">LockstepIntegrator</span><span class="p">(</span><span class="n">mm</span><span class="o">.</span><span class="n">VerletIntegrator</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">femtosecond</span><span class="p">)),</span>
-<span class="gp">... </span>    <span class="n">mm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">&quot;Reference&quot;</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">mm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">"Reference"</span><span class="p">),</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setDynamicalVariableValues</span><span class="p">([</span><span class="mf">1.0</span><span class="p">])</span>
@@ -212,7 +212,7 @@ functions (i.e., <code class="docutils literal notranslate"><span class="pre">ke
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |

@@ -11,8 +11,8 @@
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=572d9513" />
     <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -35,14 +35,14 @@
           <div class="body" role="main">
             
   <h1>Source code for openxps.extension_writer</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">.. module:: openxps.extension_writer</span>
 <span class="sd">   :platform: Linux, MacOS, Windows</span>
 <span class="sd">   :synopsis: A custom writer for reporting state data from an extension context.</span>
 
 <span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
 
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
@@ -56,7 +56,7 @@
 <div class="viewcode-block" id="ExtensionWriter">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExtensionWriter</span><span class="p">(</span><span class="n">CustomWriter</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    A custom writer for reporting state data from an extension context.</span>
 
 <span class="sd">    This writer can be used with :class:`cvpack.reporting.StateDataReporter` to</span>
@@ -100,15 +100,15 @@
 <span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
-<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.CircularBounds())</span>
-<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name="phi")</span>
 <span class="sd">    &gt;&gt;&gt; kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2</span>
 <span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)</span>
 <span class="sd">    &gt;&gt;&gt; integrator = openmm.LangevinMiddleIntegrator(</span>
 <span class="sd">    ...     300 * unit.kelvin, 1 / unit.picosecond, 4 * unit.femtosecond</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator.setRandomNumberSeed(1234)</span>
-<span class="sd">    &gt;&gt;&gt; platform = openmm.Platform.getPlatformByName(&quot;Reference&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; platform = openmm.Platform.getPlatformByName("Reference")</span>
 <span class="sd">    &gt;&gt;&gt; simulation = xps.ExtendedSpaceSimulation(</span>
 <span class="sd">    ...     model.topology,</span>
 <span class="sd">    ...     xps.ExtendedSpaceSystem(model.system, harmonic_force),</span>
@@ -134,10 +134,10 @@
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; simulation.reporters.append(reporter)</span>
 <span class="sd">    &gt;&gt;&gt; simulation.step(100)  # doctest: +SKIP</span>
-<span class="sd">    #&quot;Step&quot;,&quot;Kinetic Energy (kJ/mole)&quot;,&quot;Extension Kinetic Energy (kJ/mole)&quot;,\</span>
-<span class="sd">    &quot;Extension Temperature (K)&quot;,&quot;phi0 (rad)&quot;</span>
+<span class="sd">    #"Step","Kinetic Energy (kJ/mole)","Extension Kinetic Energy (kJ/mole)",\</span>
+<span class="sd">    "Extension Temperature (K)","phi0 (rad)"</span>
 <span class="sd">    10,60.512...,1.7013...,123.456...,3.1415...</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913</span>
         <span class="bp">self</span><span class="p">,</span>
@@ -198,28 +198,28 @@
 <div class="viewcode-block" id="ExtensionWriter.getDynamicalVariableHeaders">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getDynamicalVariableHeaders">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getDynamicalVariableHeaders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the headers for all dynamical variables.</span>
+<span class="w">        </span><span class="sd">"""Get the headers for all dynamical variables.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        list[str]</span>
 <span class="sd">            The headers for all dynamical variables.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)&quot;</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">]</span></div>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)"</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="ExtensionWriter.getForceHeaders">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getForceHeaders">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getForceHeaders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the header for the force on a dynamical variable.</span>
+<span class="w">        </span><span class="sd">"""Get the header for the force on a dynamical variable.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        list[str]</span>
 <span class="sd">            The headers for all forces.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">return</span> <span class="p">[</span>
-            <span class="sa">f</span><span class="s2">&quot;Force on </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (kJ/(mol*</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">))&quot;</span>
+            <span class="sa">f</span><span class="s2">"Force on </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (kJ/(mol*</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">))"</span>
             <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span>
         <span class="p">]</span></div>
 
@@ -227,35 +227,35 @@
 <div class="viewcode-block" id="ExtensionWriter.getCollectiveVariableHeaders">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getCollectiveVariableHeaders">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getCollectiveVariableHeaders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the headers for all collective variables.</span>
+<span class="w">        </span><span class="sd">"""Get the headers for all collective variables.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        list[str]</span>
 <span class="sd">            The headers for all collective variables.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">meta_cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">():</span>
-                <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">headers</span></div>
 
 
 <div class="viewcode-block" id="ExtensionWriter.getEffectiveMassHeaders">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getEffectiveMassHeaders">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getEffectiveMassHeaders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the headers for all effective masses.</span>
+<span class="w">        </span><span class="sd">"""Get the headers for all effective masses.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        list[str]</span>
 <span class="sd">            The headers for all effective masses.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">meta_cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">():</span>
                 <span class="n">mass_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">())</span> <span class="o">**</span> <span class="mi">2</span>
-                <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;emass[</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2">] (</span><span class="si">{</span><span class="n">mass_unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+                <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"emass[</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2">] (</span><span class="si">{</span><span class="n">mass_unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">headers</span></div>
 
 
@@ -264,9 +264,9 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">getHeaders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>  <span class="c1"># noqa: PLR0912</span>
         <span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kinetic</span><span class="p">:</span>
-            <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Extension Kinetic Energy (kJ/mole)&quot;</span><span class="p">)</span>
+            <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"Extension Kinetic Energy (kJ/mole)"</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span><span class="p">:</span>
-            <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;Extension Temperature (K)&quot;</span><span class="p">)</span>
+            <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"Extension Temperature (K)"</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">:</span>
             <span class="n">headers</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">getDynamicalVariableHeaders</span><span class="p">())</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">:</span>
@@ -371,7 +371,7 @@
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>

@@ -11,8 +11,8 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=572d9513" />
     <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -35,7 +35,7 @@
           <div class="body" role="main">
             
   <h1>Source code for openxps.couplings.collective_variable_coupling</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">Collective variable coupling.</span>
 
 <span class="sd">.. module:: openxps.couplings.collective_variable_coupling</span>
@@ -44,7 +44,7 @@
 
 <span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
 
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
 
@@ -62,7 +62,7 @@
 <div class="viewcode-block" id="CollectiveVariableCoupling">
 <a class="viewcode-back" href="../../../api/CollectiveVariableCoupling.html#openxps.couplings.CollectiveVariableCoupling">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">CollectiveVariableCoupling</span><span class="p">(</span><span class="n">Coupling</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Coupling between dynamical variables and physical collective variables.</span>
+<span class="w">    </span><span class="sd">"""Coupling between dynamical variables and physical collective variables.</span>
 
 <span class="sd">    This class uses a :CVPack:`MetaCollectiveVariable` to create a coupling defined by</span>
 <span class="sd">    a mathematical expression involving physical collective variables and parameters.</span>
@@ -86,17 +86,17 @@
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
 <span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
 <span class="sd">    &gt;&gt;&gt; from math import pi</span>
-<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name="phi")</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton * (unit.nanometer / unit.radian)**2</span>
-<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.CircularBounds())</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())</span>
 <span class="sd">    &gt;&gt;&gt; xps.CollectiveVariableCoupling(</span>
-<span class="sd">    ...     f&quot;0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)&quot;,</span>
+<span class="sd">    ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",</span>
 <span class="sd">    ...     [phi],</span>
 <span class="sd">    ...     [phi0],</span>
 <span class="sd">    ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,</span>
 <span class="sd">    ... )</span>
-<span class="sd">    CollectiveVariableCoupling(&quot;0.5*kappa*min(delta,6.28...-delta)^2; ...&quot;)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    CollectiveVariableCoupling("0.5*kappa*min(delta,6.28...-delta)^2; ...")</span>
+<span class="sd">    """</span>
 
     <span class="nd">@preprocess_args</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -113,14 +113,14 @@
             <span class="n">function</span><span class="p">,</span>
             <span class="n">collective_variables</span><span class="p">,</span>
             <span class="n">unit</span><span class="o">=</span><span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;coupling&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">"coupling"</span><span class="p">,</span>
             <span class="o">**</span><span class="n">filtered_params</span><span class="p">,</span>
             <span class="o">**</span><span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="mf">0.0</span> <span class="o">*</span> <span class="n">dv</span><span class="o">.</span><span class="n">unit</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dynamical_variables</span><span class="p">},</span>
         <span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">([</span><span class="n">force</span><span class="p">],</span> <span class="n">dynamical_variables</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">return</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">(&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getEnergyFunction</span><span class="p">()</span><span class="si">}</span><span class="s1">&quot;)&#39;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s1">'</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s1">("</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">getEnergyFunction</span><span class="p">()</span><span class="si">}</span><span class="s1">")'</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_createFlippedForce</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">:</span>
         <span class="n">force</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
@@ -138,7 +138,7 @@
                 <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">dvs_to_flip</span>
             <span class="p">],</span>
             <span class="n">unit</span><span class="o">=</span><span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoule_per_mole</span><span class="p">,</span>
-            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;coupling&quot;</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">"coupling"</span><span class="p">,</span>
             <span class="o">**</span><span class="n">parameters</span><span class="p">,</span>
         <span class="p">)</span>
 
@@ -160,7 +160,7 @@
 
 
 
-<span class="n">CollectiveVariableCoupling</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.CollectiveVariableCoupling&quot;</span><span class="p">)</span>
+<span class="n">CollectiveVariableCoupling</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">"!openxps.CollectiveVariableCoupling"</span><span class="p">)</span>
 </pre></div>
 
           </div>
@@ -206,7 +206,7 @@
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>

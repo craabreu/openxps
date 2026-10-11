@@ -11,8 +11,8 @@
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css?v=572d9513" />
     <script src="../../../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
@@ -35,14 +35,14 @@
           <div class="body" role="main">
             
   <h1>Source code for openxps.integrators.csvr</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">.. module:: openxps.integrators.csvr</span>
 <span class="sd">   :platform: Linux, MacOS, Windows</span>
 <span class="sd">   :synopsis: Canonical Sampling through Velocity Rescaling (CSVR) integrator.</span>
 
 <span class="sd">.. classauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
 
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
@@ -55,10 +55,10 @@
 
 <div class="viewcode-block" id="CSVRIntegrator">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator">[docs]</a>
-<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;temperature&quot;</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
-<span class="nd">@add_property</span><span class="p">(</span><span class="s2">&quot;friction coefficient&quot;</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">)</span>
+<span class="nd">@add_property</span><span class="p">(</span><span class="s2">"temperature"</span><span class="p">,</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">)</span>
+<span class="nd">@add_property</span><span class="p">(</span><span class="s2">"friction coefficient"</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">CSVRIntegrator</span><span class="p">(</span><span class="n">IntegratorMixin</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomIntegrator</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;The Canonical Sampling through Velocity Rescaling integrator :cite:`Bussi2007`.</span>
+<span class="w">    </span><span class="sd">"""The Canonical Sampling through Velocity Rescaling integrator :cite:`Bussi2007`.</span>
 
 <span class="sd">    The Canonical Sampling through Velocity Rescaling (CSVR) thermostat scales all</span>
 <span class="sd">    velocities by a single factor stochastically determined in order to preserve the</span>
@@ -141,12 +141,12 @@
 <span class="sd">    &gt;&gt;&gt; integrator_ff.getNumDegreesOfFreedom()</span>
 <span class="sd">    51</span>
 <span class="sd">    &gt;&gt;&gt; integrator_ff.setRandomNumberSeed(1234)</span>
-<span class="sd">    &gt;&gt;&gt; platform = mm.Platform.getPlatformByName(&quot;Reference&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; platform = mm.Platform.getPlatformByName("Reference")</span>
 <span class="sd">    &gt;&gt;&gt; context = mm.Context(model.system, integrator_ff, platform)</span>
 <span class="sd">    &gt;&gt;&gt; context.setPositions(model.positions)</span>
 <span class="sd">    &gt;&gt;&gt; context.setVelocitiesToTemperature(300 * unit.kelvin, 4321)</span>
 <span class="sd">    &gt;&gt;&gt; integrator_ff.step(10)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
     <span class="nd">@preprocess_args</span>
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
@@ -172,41 +172,41 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">&quot;x1&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;sumRsq&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;mvv&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;friction&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">&quot;scaling_factor&quot;</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"x1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"sumRsq"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"mvv"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"kT"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"friction"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"scaling_factor"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_global_variables</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_global_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">kt</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">getTemperature</span><span class="p">()</span>
         <span class="n">friction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFrictionCoefficient</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;kT&quot;</span><span class="p">,</span> <span class="n">kt</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;friction&quot;</span><span class="p">,</span> <span class="n">friction</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">"kT"</span><span class="p">,</span> <span class="n">kt</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">"friction"</span><span class="p">,</span> <span class="n">friction</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_translation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;x + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*v&quot;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;x1&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"x + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*v"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"x1"</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainPositions</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v + (x - x1)/(</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt)&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"v + (x - x1)/(</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt)"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainVelocities</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;v + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*f/m&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"v + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*f/m"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addConstrainVelocities</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_rescaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeSum</span><span class="p">(</span><span class="s2">&quot;mvv&quot;</span><span class="p">,</span> <span class="s2">&quot;m*v*v&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputeSum</span><span class="p">(</span><span class="s2">"mvv"</span><span class="p">,</span> <span class="s2">"m*v*v"</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputeGlobal</span><span class="p">(</span>
-            <span class="s2">&quot;scaling_factor&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1)&quot;</span>
-            <span class="s2">&quot;; R1 = gaussian&quot;</span>
-            <span class="s2">&quot;; BC = (1 - A)*kT/mvv&quot;</span>
-            <span class="sa">f</span><span class="s2">&quot;; A = exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*friction)&quot;</span><span class="p">,</span>
+            <span class="s2">"scaling_factor"</span><span class="p">,</span>
+            <span class="s2">"sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1)"</span>
+            <span class="s2">"; R1 = gaussian"</span>
+            <span class="s2">"; BC = (1 - A)*kT/mvv"</span>
+            <span class="sa">f</span><span class="s2">"; A = exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*friction)"</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">,</span> <span class="s2">&quot;v*scaling_factor&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v"</span><span class="p">,</span> <span class="s2">"v*scaling_factor"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_sums_of_squared_gaussians</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">num_steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="n">sumRsq</span> <span class="o">=</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">standard_gamma</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="n">num_steps</span><span class="p">)</span>
@@ -217,17 +217,17 @@
 <div class="viewcode-block" id="CSVRIntegrator.getNumDegreesOfFreedom">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.getNumDegreesOfFreedom">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getNumDegreesOfFreedom</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the number of degrees of freedom in the system.</span>
+<span class="w">        </span><span class="sd">"""Get the number of degrees of freedom in the system.</span>
 
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
 <span class="sd">            If registerWithSystem has not been called first.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;The number of degrees of freedom has not been determined.</span><span class="se">\n</span><span class="s2">&quot;</span>
-                <span class="s2">&quot;Call the `registerWithSystem` method first.&quot;</span>
+                <span class="s2">"The number of degrees of freedom has not been determined.</span><span class="se">\n</span><span class="s2">"</span>
+                <span class="s2">"Call the `registerWithSystem` method first."</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_dof</span></div>
 
@@ -244,7 +244,7 @@
 <div class="viewcode-block" id="CSVRIntegrator.setRandomNumberSeed">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.setRandomNumberSeed">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">setRandomNumberSeed</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        This method overrides the :class:`openmm.CustomIntegrator` method to also set</span>
 <span class="sd">        the seed of the random number generator used to pick numbers from the gamma</span>
 <span class="sd">        distribution.</span>
@@ -252,7 +252,7 @@
 <span class="sd">        ----------</span>
 <span class="sd">        seed</span>
 <span class="sd">            The seed to use for the random number generator.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">seed</span> <span class="o">+</span> <span class="mi">2</span><span class="o">**</span><span class="mi">31</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setRandomNumberSeed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_rng</span><span class="o">.</span><span class="n">integers</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="mi">2</span><span class="o">**</span><span class="mi">31</span><span class="p">),</span> <span class="mi">2</span><span class="o">**</span><span class="mi">31</span><span class="p">))</span></div>
 
@@ -260,7 +260,7 @@
 <div class="viewcode-block" id="CSVRIntegrator.step">
 <a class="viewcode-back" href="../../../api/CSVRIntegrator.html#openxps.integrators.CSVRIntegrator.step">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">steps</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        This method overrides the :class:`openmm.CustomIntegrator` method to include the</span>
 <span class="sd">        efficient computation of the sum of squares of normally distributed random</span>
 <span class="sd">        numbers.</span>
@@ -268,9 +268,9 @@
 <span class="sd">        ----------</span>
 <span class="sd">        steps</span>
 <span class="sd">            The number of steps to take.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
+<span class="sd">        """</span>
         <span class="k">for</span> <span class="n">sumRsq</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_sums_of_squared_gaussians</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">&quot;sumRsq&quot;</span><span class="p">,</span> <span class="n">sumRsq</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">"sumRsq"</span><span class="p">,</span> <span class="n">sumRsq</span><span class="p">)</span>
             <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
 </div>
 
@@ -319,7 +319,7 @@
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>

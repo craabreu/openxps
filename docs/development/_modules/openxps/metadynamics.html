@@ -11,8 +11,8 @@
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css?v=572d9513" />
     <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../../_static/copybutton.js?v=ccdb6887"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -35,14 +35,14 @@
           <div class="body" role="main">
             
   <h1>Source code for openxps.metadynamics</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span></span><span class="sd">"""</span>
 <span class="sd">.. module:: openxps.metadynamics</span>
 <span class="sd">   :platform: Linux, Windows, macOS</span>
 <span class="sd">   :synopsis: Bias potentials applied to dynamical variables.</span>
 
 <span class="sd">.. moduleauthor:: Charlles Abreu &lt;craabreu@gmail.com&gt;</span>
 
-<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
@@ -72,7 +72,7 @@
 <a class="viewcode-back" href="../../api/ExtendedSpaceBiasVariable.html#openxps.ExtendedSpaceBiasVariable">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExtendedSpaceBiasVariable</span><span class="p">(</span><span class="n">Serializable</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    A dynamical variable augmented with a Gaussian bias kernel.</span>
 
 <span class="sd">    Parameters</span>
@@ -83,7 +83,7 @@
 <span class="sd">        The bandwidth (standard deviation) of the Gaussian bias kernel.</span>
 <span class="sd">    grid_width</span>
 <span class="sd">        The width of the grid for the bias kernel. If ``None``, the grid width is</span>
-<span class="sd">        automatically determined based on the dynamical variable&#39;s bounds and the</span>
+<span class="sd">        automatically determined based on the dynamical variable's bounds and the</span>
 <span class="sd">        bandwidth.</span>
 
 <span class="sd">    Example</span>
@@ -91,15 +91,15 @@
 <span class="sd">    &gt;&gt;&gt; import openxps as xps</span>
 <span class="sd">    &gt;&gt;&gt; from openmm import unit</span>
 <span class="sd">    &gt;&gt;&gt; dv = xps.DynamicalVariable(</span>
-<span class="sd">    ...     &quot;phi&quot;,</span>
+<span class="sd">    ...     "phi",</span>
 <span class="sd">    ...     unit.radian,</span>
 <span class="sd">    ...     3 * unit.dalton*(unit.nanometer/unit.radian)**2,</span>
 <span class="sd">    ...     xps.PeriodicBounds(-180, 180, unit.degree)</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; bias_variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)</span>
 <span class="sd">    &gt;&gt;&gt; bias_variable.dynamical_variable</span>
-<span class="sd">    DynamicalVariable(name=&#39;phi&#39;, unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    DynamicalVariable(name='phi', unit=rad, mass=3 nm**2 Da/(rad**2), bounds=...)</span>
+<span class="sd">    """</span>
 
     <span class="n">dynamical_variable</span><span class="p">:</span> <span class="n">DynamicalVariable</span>
     <span class="n">sigma</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span>
@@ -107,25 +107,25 @@
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;sigma must be a quantity&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"sigma must be a quantity"</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dynamical_variable</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;sigma must be compatible with the dynamical variable&#39;s unit&quot;</span>
+                <span class="s2">"sigma must be compatible with the dynamical variable's unit"</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">&quot;grid_width must be an integer or None&quot;</span><span class="p">)</span></div>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"grid_width must be an integer or None"</span><span class="p">)</span></div>
 
 
 
 <span class="n">ExtendedSpaceBiasVariable</span><span class="o">.</span><span class="fm">__init__</span> <span class="o">=</span> <span class="n">preprocess_args</span><span class="p">(</span><span class="n">ExtendedSpaceBiasVariable</span><span class="o">.</span><span class="fm">__init__</span><span class="p">)</span>
 
-<span class="n">ExtendedSpaceBiasVariable</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">&quot;!openxps.metadynamics.ExtendedSpaceBiasVariable&quot;</span><span class="p">)</span>
+<span class="n">ExtendedSpaceBiasVariable</span><span class="o">.</span><span class="n">registerTag</span><span class="p">(</span><span class="s2">"!openxps.metadynamics.ExtendedSpaceBiasVariable"</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="ExtendedSpaceMetadynamics">
 <a class="viewcode-back" href="../../api/ExtendedSpaceMetadynamics.html#openxps.ExtendedSpaceMetadynamics">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExtendedSpaceMetadynamics</span><span class="p">(</span><span class="n">mmapp</span><span class="o">.</span><span class="n">Metadynamics</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    Performs Extended Phase-Space (XPS) Metadynamics simulations, in which a bias</span>
 <span class="sd">    potential is applied to dynamical variables (DVs) to enhance sampling of the</span>
 <span class="sd">    physical coordinates.</span>
@@ -166,10 +166,10 @@
 <span class="sd">    &gt;&gt;&gt; import openmm</span>
 <span class="sd">    &gt;&gt;&gt; from openmmtools import testsystems</span>
 <span class="sd">    &gt;&gt;&gt; model = testsystems.AlanineDipeptideVacuum()</span>
-<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name="phi")</span>
 <span class="sd">    &gt;&gt;&gt; mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2</span>
-<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable(&quot;phi0&quot;, unit.radian, mass, xps.CircularBounds())</span>
-<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name=&quot;phi&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())</span>
+<span class="sd">    &gt;&gt;&gt; phi = cvpack.Torsion(6, 8, 14, 16, name="phi")</span>
 <span class="sd">    &gt;&gt;&gt; kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2</span>
 <span class="sd">    &gt;&gt;&gt; harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)</span>
 <span class="sd">    &gt;&gt;&gt; system = xps.ExtendedSpaceSystem(model.system, harmonic_force)</span>
@@ -191,7 +191,7 @@
 <span class="sd">    ...             temperature, 1 / unit.picosecond, 4 * unit.femtosecond</span>
 <span class="sd">    ...         )</span>
 <span class="sd">    ...     ),</span>
-<span class="sd">    ...     openmm.Platform.getPlatformByName(&quot;Reference&quot;),</span>
+<span class="sd">    ...     openmm.Platform.getPlatformByName("Reference"),</span>
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; context = simulation.context</span>
 <span class="sd">    &gt;&gt;&gt; context.setPositions(model.positions)</span>
@@ -201,9 +201,9 @@
 <span class="sd">    &gt;&gt;&gt; metadynamics.step(simulation, 100)</span>
 <span class="sd">    &gt;&gt;&gt; metadynamics.getFreeEnergy()</span>
 <span class="sd">    [... ... ...] kJ/mol</span>
-<span class="sd">    &quot;&quot;&quot;</span>
+<span class="sd">    """</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913, PLR0917</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">system</span><span class="p">:</span> <span class="n">ExtendedSpaceSystem</span><span class="p">,</span>
         <span class="n">variables</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="n">ExtendedSpaceBiasVariable</span><span class="p">],</span>
@@ -219,9 +219,9 @@
         <span class="k">for</span> <span class="n">variable</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
             <span class="n">dv</span> <span class="o">=</span> <span class="n">variable</span><span class="o">.</span><span class="n">dynamical_variable</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">dv</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">system_dvs</span><span class="p">:</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> not found in system&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> not found in system"</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has no bounds&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has no bounds"</span><span class="p">)</span>
             <span class="n">index</span> <span class="o">=</span> <span class="n">system_dvs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">dv</span><span class="p">)</span>
             <span class="n">bias_variables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="n">mmapp</span><span class="o">.</span><span class="n">BiasVariable</span><span class="p">(</span>
@@ -303,7 +303,7 @@
       &#169;2024 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>
