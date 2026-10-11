@@ -7,12 +7,15 @@
 
 """
 
+import typing as t
+
 import openmm as mm
 from openmm import app as mmapp
 
 from .context import ExtendedSpaceContext
 from .integrator import ExtendedSpaceIntegrator
 from .system import ExtendedSpaceSystem
+from .utils import STRING_SEPARATOR
 
 
 class ExtendedSpaceSimulation(mmapp.Simulation):
@@ -45,8 +48,9 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         A dictionary of platform-specific properties. If None, the default properties
         will be used.
     state
-        If specified, the simulation state will be set to this :OpenMM:`State` object
-        after initialization.
+        If specified, either an :OpenMM:`State` object or the name of a file written
+        by :meth:`saveState`, from which the simulation state is set after
+        initialization.
 
     Example
     -------
@@ -90,7 +94,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         integrator: ExtendedSpaceIntegrator,
         platform: mm.Platform | None = None,
         platformProperties: dict | None = None,
-        state: mm.State | None = None,
+        state: mm.State | str | None = None,
     ) -> None:
         self.topology = topology
         self.system = system
@@ -107,10 +111,72 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         self.currentStep = 0
         self.reporters = []
 
-        if state is not None:
+        if isinstance(state, str):
+            self.loadState(state)
+        elif state is not None:
             self.context.setState(state)
 
         try:
             self._usesPBC = self.system.usesPeriodicBoundaryConditions()
         except Exception:
             self._usesPBC = topology.getUnitCellDimensions() is not None
+
+    def minimizeEnergy(self, *args, **kwargs) -> None:
+        """
+        Minimize the energy of the physical system and synchronize the extension
+        context. Arguments are those of :OpenMM:`Simulation`.
+        """
+        super().minimizeEnergy(*args, **kwargs)
+        self.context.synchronize()
+
+    def saveState(self, file: str | t.IO) -> None:
+        """
+        Save the states of the physical and extension contexts to a file.
+
+        Parameters
+        ----------
+        file
+            A file name or an open file object.
+        """
+        physical = self.context.getState(
+            getPositions=True,
+            getVelocities=True,
+            getParameters=True,
+            getIntegratorParameters=True,
+            enforcePeriodicBox=self._usesPBC,
+        )
+        extension = self.context.getExtensionContext().getState(
+            getPositions=True, getVelocities=True, getParameters=True
+        )
+        content = (
+            mm.XmlSerializer.serialize(physical)
+            + STRING_SEPARATOR
+            + mm.XmlSerializer.serialize(extension)
+        )
+        if isinstance(file, str):
+            with open(file, "w", encoding="utf-8") as stream:
+                stream.write(content)
+        else:
+            file.write(content)
+
+    def loadState(self, file: str | t.IO) -> None:
+        """
+        Load the states written by :meth:`saveState` and synchronize the contexts.
+
+        Parameters
+        ----------
+        file
+            A file name or an open file object.
+        """
+        if isinstance(file, str):
+            with open(file, encoding="utf-8") as stream:
+                content = stream.read()
+        else:
+            content = file.read()
+        physical, _, extension = content.partition(STRING_SEPARATOR)
+        self.context.setState(mm.XmlSerializer.deserialize(physical))
+        if extension:
+            self.context.getExtensionContext().setState(
+                mm.XmlSerializer.deserialize(extension)
+            )
+        self.context.synchronize()

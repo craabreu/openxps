@@ -141,6 +141,17 @@ class ExtendedSpaceContext(mm.Context):
         """
         return self._integrator
 
+    def synchronize(self) -> None:
+        """
+        Push the dynamical variable values to the physical context and the
+        collective variable values to the extension context.
+
+        Call this after changing the physical state through a channel that bypasses
+        this class, such as an :OpenMM:`LocalEnergyMinimizer`.
+        """
+        self._coupling.updatePhysicalContext(self, self._extension_context)
+        self._coupling.updateExtensionContext(self, self._extension_context)
+
     def setParameter(self, name: str, value: mmunit.Quantity) -> None:
         """
         Set the value of a global parameter defined by a Force object in the System.
