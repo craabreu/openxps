@@ -83,7 +83,7 @@ class CollectiveVariableCoupling(Coupling):
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}("{self._forces[0].getEnergyFunction()}")'
 
-    def _createFlippedForce(self) -> mm.CustomCVForce:
+    def _createFlippedForce(self, dv_indices: t.Mapping[str, int]) -> mm.CustomCVForce:
         force = self._forces[0]
         parameters = force.getParameterDefaultValues()
         dvs_to_flip = [dv for dv in self._dynamical_variables if dv.name in parameters]
@@ -94,10 +94,7 @@ class CollectiveVariableCoupling(Coupling):
         )
         return cvpack.MetaCollectiveVariable(
             force.getEnergyFunction(),
-            [
-                dv.createCollectiveVariable(self._dv_indices[dv.name])
-                for dv in dvs_to_flip
-            ],
+            [dv.createCollectiveVariable(dv_indices[dv.name]) for dv in dvs_to_flip],
             unit=mmunit.kilojoule_per_mole,
             name="coupling",
             **parameters,

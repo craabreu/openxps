@@ -1189,3 +1189,60 @@ def test_harmonic_coupling_nonperiodic_pair_is_accepted():
         d0 = DynamicalVariable("d0", mmunit.nanometer, mass, bounds)
         coupling = HarmonicCoupling(distance, d0, kappa)
         assert "floor" not in coupling.getForce(0).getEnergyFunction()
+
+
+def _two_particle_system():
+    system = mm.System()
+    system.addParticle(1.0)
+    system.addParticle(1.0)
+    return system
+
+
+def _distance_coupling(dv_name="a"):
+    dv = DynamicalVariable(
+        dv_name, mmunit.nanometer, 10 * mmunit.dalton, NoBounds(0, 1, mmunit.nanometer)
+    )
+    return CollectiveVariableCoupling(
+        f"0.5*k*(d-{dv_name})^2",
+        [cvpack.Distance(0, 1, name="d")],
+        [dv],
+        k=100 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
+    )
+
+
+def _scaling_coupling():
+    force = mm.CustomBondForce("scaling*r^2")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addBond(0, 1, [])
+    lam = DynamicalVariable(
+        "lam",
+        mmunit.dimensionless,
+        1 * mmunit.dalton * mmunit.nanometer**2,
+        ReflectiveBounds(0, 1, mmunit.dimensionless),
+    )
+    return InnerProductCoupling([force], [lam], functions={"scaling": "lam^2"})
+
+
+def test_inner_product_function_in_sum_reads_its_own_particle():
+    """The function CV must read particle 'lam' (index 1), not 'a' (index 0)."""
+    coupling = _distance_coupling() + _scaling_coupling()
+    assert [dv.name for dv in coupling.getDynamicalVariables()] == ["a", "lam"]
+    context = ExtendedSpaceContext(
+        ExtendedSpaceSystem(_two_particle_system(), coupling),
+        LockstepIntegrator(mm.VerletIntegrator(0.001)),
+        mm.Platform.getPlatformByName("Reference"),
+    )
+    context.setPositions([mm.Vec3(0, 0, 0), mm.Vec3(0.5, 0, 0)])
+    context.setDynamicalVariableValues([0.3 * mmunit.nanometer, 0.7])
+    assert context.getParameter("scaling") == pytest.approx(0.49)
+
+
+def test_coupling_sum_does_not_mutate_children():
+    """A child coupling keeps its own indices after being summed."""
+    cb = _distance_coupling("b")
+    ca = _distance_coupling("a")
+    _ = cb + ca
+    assert cb._dv_indices == {"b": 0}
+    system = ExtendedSpaceSystem(_two_particle_system(), cb)
+    assert system.getExtensionSystem().getNumParticles() == 1

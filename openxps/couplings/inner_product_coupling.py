@@ -185,6 +185,14 @@ class InnerProductCoupling(Coupling):
 
         all_dvs = {dv.name for dv in self._dynamical_variables}
 
+        for fn in self._functions:
+            if unknown := fn.getVariables() - all_dvs:
+                raise ValueError(
+                    f"Function {fn.getName()} depends on names that are neither "
+                    "dynamical variables nor given parameters: "
+                    + ", ".join(sorted(unknown))
+                )
+
         if functions_missing_dvs := [
             fn.getName() for fn in self._functions if not (fn.getVariables() & all_dvs)
         ]:
@@ -231,21 +239,20 @@ class InnerProductCoupling(Coupling):
     def _derivativeName(parameter: str) -> str:
         return "derivative_with_respect_to_" + parameter
 
-    def _createFlippedForce(self) -> mm.CustomCVForce:
+    def _createFlippedForce(self, dv_indices: t.Mapping[str, int]) -> mm.CustomCVForce:
         flipped_force = mm.CustomCVForce(
             "+".join(f"{p}*{self._derivativeName(p)}" for p in self._dynamic_parameters)
         )
-        all_dvs = [dv.name for dv in self._dynamical_variables]
         for parameter in self._dynamic_parameters:
             flipped_force.addGlobalParameter(self._derivativeName(parameter), 0.0)
         for fn in self._functions:
             flipped_force.addCollectiveVariable(
-                fn.getName(), fn.createCollectiveVariable(all_dvs)
+                fn.getName(), fn.createCollectiveVariable(dv_indices)
             )
         for dv in self._dynamical_variables:
             if dv.name in self._dynamic_parameters:
                 flipped_force.addCollectiveVariable(
-                    dv.name, dv.createCollectiveVariable(self._dv_indices[dv.name])
+                    dv.name, dv.createCollectiveVariable(dv_indices[dv.name])
                 )
         return flipped_force
 
