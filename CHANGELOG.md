@@ -61,3 +61,10 @@
 - `CSVRIntegrator` leaves a system with zero kinetic energy at rest instead of producing
   NaN, and raises a clear error when stepped before `registerWithSystem`.
 - `MassiveGGMTIntegrator.getTimeConstant` returns a time.
+- The kinetic energy and temperature reported by `ExtensionWriter` count one degree of
+  freedom per dynamical variable instead of including the unused y and z velocity
+  components.
+- `ExtensionWriter` header getters work regardless of which columns are enabled and
+  raise a clear error before `initialize`.
+- `ExtendedSpaceBiasVariable` rejects non-positive `sigma` and `grid_width` values
+  smaller than 2.

@@ -8,6 +8,7 @@
 """
 
 import cvpack
+import numpy as np
 import openmm as mm
 from cvpack.reporting.custom_writer import CustomWriter
 from openmm import _openmm as mmswig
@@ -28,11 +29,11 @@ class ExtensionWriter(CustomWriter):
     Parameters
     ----------
     kinetic : bool, optional, default=False
-        If ``True``, the kinetic energy of the extension context will be reported
+        If ``True``, the kinetic energy of the dynamical variables will be reported
         in units of kJ/mol.
     temperature : bool, optional, default=False
-        If ``True``, the temperature of the extension context will be reported
-        in units of Kelvin.
+        If ``True``, the temperature of the dynamical variables, with one degree of
+        freedom per variable, will be reported in units of Kelvin.
     dynamical_variables : bool, optional, default=False
         If ``True``, the current values of all dynamical variables will be reported.
         Each variable will be reported with its name and unit.
@@ -119,39 +120,53 @@ class ExtensionWriter(CustomWriter):
         self._effective_masses = effective_masses
         self._coupling_functions = coupling_functions
 
-        self._needs_energy = kinetic or temperature
+        self._needs_velocities = kinetic or temperature
         self._needs_positions = dynamical_variables
         self._needs_forces = forces
 
         self._temp_factor = 0.0
         self._dv_objects = []
+        self._masses = np.empty(0)
         self._meta_cvs = []
         self._function_names = []
+        self._inner_cvs = []
+        self._mass_units = []
+        self._initialized = False
 
     def initialize(self, simulation: ExtendedSpaceSimulation) -> None:
         context = simulation.extended_space_context
         coupling = context.getSystem().getCoupling()
         self._dv_objects = coupling.getDynamicalVariables()
+        self._masses = np.array([dv.mass / dv.mass.unit for dv in self._dv_objects])
+        kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
+            mmunit.kilojoules_per_mole / mmunit.kelvin
+        )
+        self._temp_factor = 2 / (len(self._dv_objects) * kb)
+        self._meta_cvs = [
+            force
+            for force in coupling.getForces()
+            if isinstance(force, cvpack.MetaCollectiveVariable)
+        ]
+        self._inner_cvs = [
+            cv for meta_cv in self._meta_cvs for cv in meta_cv.getInnerVariables()
+        ]
+        self._mass_units = [
+            mmunit.dalton * (mmunit.nanometer / cv.getUnit()) ** 2
+            for cv in self._inner_cvs
+        ]
+        dv_names = {dv.name for dv in self._dv_objects}
+        self._function_names = [
+            parameter
+            for parameter in coupling.getProtectedParameters()
+            if parameter not in dv_names
+        ]
+        self._initialized = True
 
-        if self._temperature:
-            number = len(coupling.getDynamicalVariables())
-            kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
-                mmunit.kilojoules_per_mole / mmunit.kelvin
+    def _checkInitialized(self) -> None:
+        if not self._initialized:
+            raise RuntimeError(
+                "The writer must be initialized with a simulation first."
             )
-            self._temp_factor = 2 / (number * kb)
-
-        if self._collective_variables or self._effective_masses:
-            self._meta_cvs = []
-            for force in coupling.getForces():
-                if isinstance(force, cvpack.MetaCollectiveVariable):
-                    self._meta_cvs.append(force)
-
-        if self._coupling_functions:
-            self._function_names = []
-            dv_names = {dv.name for dv in self._dv_objects}
-            for parameter in coupling.getProtectedParameters():
-                if parameter not in dv_names:
-                    self._function_names.append(parameter)
 
     def getDynamicalVariableHeaders(self) -> list[str]:
         """Get the headers for all dynamical variables.
@@ -161,6 +176,7 @@ class ExtensionWriter(CustomWriter):
         list[str]
             The headers for all dynamical variables.
         """
+        self._checkInitialized()
         return [f"{dv.name} ({dv.unit.get_symbol()})" for dv in self._dv_objects]
 
     def getForceHeaders(self) -> list[str]:
@@ -171,6 +187,7 @@ class ExtensionWriter(CustomWriter):
         list[str]
             The headers for all forces.
         """
+        self._checkInitialized()
         return [
             f"Force on {dv.name} (kJ/(mol*{dv.unit.get_symbol()}))"
             for dv in self._dv_objects
@@ -184,11 +201,10 @@ class ExtensionWriter(CustomWriter):
         list[str]
             The headers for all collective variables.
         """
-        headers = []
-        for meta_cv in self._meta_cvs:
-            for cv in meta_cv.getInnerVariables():
-                headers.append(f"{cv.getName()} ({cv.getUnit().get_symbol()})")
-        return headers
+        self._checkInitialized()
+        return [
+            f"{cv.getName()} ({cv.getUnit().get_symbol()})" for cv in self._inner_cvs
+        ]
 
     def getEffectiveMassHeaders(self) -> list[str]:
         """Get the headers for all effective masses.
@@ -198,14 +214,14 @@ class ExtensionWriter(CustomWriter):
         list[str]
             The headers for all effective masses.
         """
-        headers = []
-        for meta_cv in self._meta_cvs:
-            for cv in meta_cv.getInnerVariables():
-                mass_unit = mmunit.dalton * (mmunit.nanometer / cv.getUnit()) ** 2
-                headers.append(f"emass[{cv.getName()}] ({mass_unit.get_symbol()})")
-        return headers
+        self._checkInitialized()
+        return [
+            f"emass[{cv.getName()}] ({mass_unit.get_symbol()})"
+            for cv, mass_unit in zip(self._inner_cvs, self._mass_units)
+        ]
 
-    def getHeaders(self) -> list[str]:  # noqa: PLR0912
+    def getHeaders(self) -> list[str]:
+        self._checkInitialized()
         headers = []
         if self._kinetic:
             headers.append("Extension Kinetic Energy (kJ/mole)")
@@ -227,12 +243,14 @@ class ExtensionWriter(CustomWriter):
         context = simulation.extended_space_context
         extension_context = context.getExtensionContext()
         state = extension_context.getState(
-            getEnergy=self._needs_energy,
+            getVelocities=self._needs_velocities,
             getPositions=self._needs_positions,
             getForces=self._needs_forces,
         )
-        if self._needs_energy:
-            kinetic_energy = mmswig.State_getKineticEnergy(state)
+        if self._needs_velocities:
+            velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
+            rates = np.array([velocity.x for velocity in velocities])
+            kinetic_energy = 0.5 * float(np.dot(self._masses, rates * rates))
         if self._needs_positions:
             positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         if self._forces:
@@ -250,17 +268,16 @@ class ExtensionWriter(CustomWriter):
             for force in forces:
                 values.append(force.x)
         if self._collective_variables:
-            for meta_cv in self._meta_cvs:
-                for cv in meta_cv.getInnerVariables():
-                    values.append(extension_context.getParameter(cv.getName()))
+            for cv in self._inner_cvs:
+                values.append(extension_context.getParameter(cv.getName()))
         if self._effective_masses:
-            for meta_cv in self._meta_cvs:
-                for cv, mass in zip(
-                    meta_cv.getInnerVariables(),
-                    meta_cv.getInnerEffectiveMasses(context).values(),
-                ):
-                    mass_unit = mmunit.dalton * (mmunit.nanometer / cv.getUnit()) ** 2
-                    values.append(mass.value_in_unit(mass_unit))
+            masses = [
+                mass
+                for meta_cv in self._meta_cvs
+                for mass in meta_cv.getInnerEffectiveMasses(context).values()
+            ]
+            for mass, mass_unit in zip(masses, self._mass_units):
+                values.append(mass.value_in_unit(mass_unit))
         if self._coupling_functions:
             for name in self._function_names:
                 values.append(context.getParameter(name))
