@@ -19,7 +19,8 @@
 - Every test lives under `openxps/tests/` and runs with `pytest openxps/tests/<file>.py -p no:cacheprovider`; the full suite is `pytest` (which includes doctests). A task is done only when the full suite passes.
 - Docstring examples are doctests with `ELLIPSIS`; when an integrator's computation steps change, its docstring listing changes too.
 - Commit messages follow the repository style: a short imperative first line (e.g. `Fix generated property setters`), no scope prefixes.
-- Branch names: `fix/<theme>` or `feat/<theme>`; one PR per branch; each PR description lists the finding IDs it closes.
+- Branch names: `fix/<theme>` or `feat/<theme>`; one PR per branch. PR descriptions describe the changes in the repository's own terms: no finding IDs, no references to `CODE_REVIEW.md` or the `code-review-notes` branch.
+- Commit messages and PR descriptions carry no attribution trailers or session links (no `Co-Authored-By: Claude`, no `Claude-Session:`, no "Generated with Claude Code" footer). Implementer dispatches must say so explicitly.
 
 ## Review Focus
 
@@ -52,7 +53,7 @@ git checkout main && git pull
 git checkout -b <branch>
 ```
 
-and ends with the full suite green (`pytest`), `ruff check openxps` and `ruff format --check openxps` clean, and a PR whose description lists the closed finding IDs.
+and ends with the full suite green (`pytest`), `ruff check openxps` and `ruff format --check openxps` clean, and a PR whose description summarizes the changes in plain terms.
 
 ---
 
@@ -280,7 +281,7 @@ git commit -m "Add changelog"
 git push -u origin fix/packaging-ci
 ```
 
-PR title: `Fix packaging metadata and CI`. Body: closes H1, M21, M22, L18, L19, L20, L21, L22.
+PR title: `Fix packaging metadata and CI`. Body: a bullet list of the changes, in the repository's own terms (no finding IDs or review-notes references).
 
 ---
 
@@ -737,7 +738,7 @@ git commit -m "Make DynamicalVariable hashable"
 git push -u origin fix/bounds-dv-semantics
 ```
 
-PR title: `Fix bounds and dynamical variable semantics`. Body: closes H8, M6, M7, M8, M9, L8, L9, part of L14 and M18.
+PR title: `Fix bounds and dynamical variable semantics`. Body: a bullet list of the changes, in the repository's own terms (no finding IDs or review-notes references).
 
 ---
 
@@ -1555,7 +1556,7 @@ Expected: all PASS
 git push -u origin fix/couplings-context-sync
 ```
 
-PR title: `Fix coupling index mapping and context synchronization`. Body: closes H5, H6, H7, M1, M12, M14, M20, L7, L11, L16.
+PR title: `Fix coupling index mapping and context synchronization`. Body: a bullet list of the changes, in the repository's own terms (no finding IDs or review-notes references).
 
 ---
 
@@ -2151,7 +2152,7 @@ git commit -m "Add thermostat sampling tests"
 git push -u origin fix/integrators
 ```
 
-PR title: `Fix integrator setters, step-size handling, pickling and CSVR edge cases`. Body: closes H4, M2, M10, M11, M15, L2, L3, L4, L5, L15 and the integrator part of M23.
+PR title: `Fix integrator setters, step-size handling, pickling and CSVR edge cases`. Body: a bullet list of the changes, in the repository's own terms (no finding IDs or review-notes references).
 
 ---
 
@@ -2432,7 +2433,7 @@ git commit -m "Replace the GGMT v2 reflection with a Coulomb splitting of the su
 git push -u origin feat/ggmt-coulomb-splitting
 ```
 
-PR title: `Singularity-free GGMT thermostat via Coulomb splitting`. Body: closes M24; link the manuscript repository.
+PR title: `Singularity-free GGMT thermostat via Coulomb splitting`. Body: a bullet list of the changes, in the repository's own terms (no finding IDs or review-notes references).
 
 ---
 
@@ -2788,7 +2789,7 @@ Run: `pytest -p no:cacheprovider && ruff check openxps && ruff format --check op
 git push -u origin fix/reporting-metadynamics
 ```
 
-PR title: `Fix extension writer energies and add metadynamics tests`. Body: closes M3, M16, L6, L17, writer part of L14 and reporting part of M23.
+PR title: `Fix extension writer energies and add metadynamics tests`. Body: a bullet list of the changes, in the repository's own terms (no finding IDs or review-notes references).
 
 ---
 
@@ -3259,7 +3260,7 @@ git commit -m "Make ForceMatchingRegressor.fit robust and its accessors side-eff
 git push -u origin fix/regression
 ```
 
-PR title: `Fix ForceMatchingRegressor training and accessors`. Body: closes H2, H3, H9, M4, M5, M13, M17, M19, L1, L10, L12, L13 and the regression part of M18.
+PR title: `Fix ForceMatchingRegressor training and accessors`. Body: a bullet list of the changes, in the repository's own terms (no finding IDs or review-notes references).
 
 ---
 
