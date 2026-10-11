@@ -215,8 +215,9 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         seed
             The seed to use for the random number generators.
         """
+        rng = np.random.default_rng(None if seed == 0 else seed % 2**32)
         super().setRandomNumberSeed(seed)
-        self._rng = np.random.default_rng(None if seed == 0 else seed)
+        self._rng = rng
 
     def step(self, steps: int) -> None:
         """

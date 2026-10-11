@@ -167,7 +167,7 @@ def test_csvr_at_rest_does_not_produce_nan():
     assert np.all(velocities == 0)
 
 
-def _mean_kinetic_energy_per_dof(integrator, num_particles=100, equil=500, prod=1500):
+def _mean_kinetic_energy_per_dof(integrator, num_particles=100, equil=2000, prod=6000):
     system = _ideal_gas(num_particles)
     if isinstance(integrator, integrators.CSVRIntegrator):
         integrator.registerWithSystem(system, False)
@@ -193,10 +193,62 @@ def _mean_kinetic_energy_per_dof(integrator, num_particles=100, equil=500, prod=
     ],
 )
 def test_thermostats_reproduce_target_temperature(factory):
-    """Each thermostat gives <K>/dof = kT/2 within 5% on an ideal gas."""
+    """Each thermostat gives <K>/dof = kT/2 within 3% on an ideal gas."""
     integrator = factory()
     integrator.setRandomNumberSeed(7)
     kt = (mmunit.MOLAR_GAS_CONSTANT_R * 300 * KELVIN).value_in_unit(
         mmunit.kilojoule_per_mole
     )
-    assert _mean_kinetic_energy_per_dof(integrator) == pytest.approx(0.5 * kt, rel=0.05)
+    assert _mean_kinetic_energy_per_dof(integrator) == pytest.approx(0.5 * kt, rel=0.03)
+
+
+@pytest.mark.parametrize(
+    "build",
+    [
+        lambda: SplitIntegrator(
+            integrators.SymmetricLangevinIntegrator(300 * KELVIN, 10 / PS, 4 * FS)
+        ),
+        lambda: LockstepIntegrator(
+            integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 1 * FS, forceFirst=True)
+        ),
+        lambda: SplitIntegrator(
+            integrators.RegulatedNHLIntegrator(300 * KELVIN, 0.1 * PS, 4 * FS)
+        ),
+    ],
+)
+def test_pickle_round_trip_with_default_extension_integrator(build):
+    original = build()
+    restored = pickle.loads(pickle.dumps(original))
+    for old, new in (
+        (original.getPhysicalIntegrator(), restored.getPhysicalIntegrator()),
+        (original.getExtensionIntegrator(), restored.getExtensionIntegrator()),
+    ):
+        assert type(new) is type(old)
+        assert new.getGlobalVariableByName("kT") == old.getGlobalVariableByName("kT")
+        assert new.getTemperature() == old.getTemperature()
+
+
+def test_copies_do_not_share_random_generators():
+    csvr = integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 1 * FS, forceFirst=True)
+    original = LockstepIntegrator(csvr)
+    for clone in (copy.copy(original), copy.deepcopy(original)):
+        assert clone.getPhysicalIntegrator()._rng is not csvr._rng
+        assert (
+            clone.getExtensionIntegrator()._rng
+            is not original.getExtensionIntegrator()._rng
+        )
+
+
+@pytest.mark.parametrize("seed", [42, -1, 2**31 - 1])
+def test_default_extension_seed_is_valid_and_different(seed):
+    langevin = mm.LangevinMiddleIntegrator(300 * KELVIN, 1 / PS, 1 * FS)
+    langevin.setRandomNumberSeed(seed)
+    extension_seed = LockstepIntegrator(langevin).getExtensionIntegrator()
+    extension_seed = extension_seed.getRandomNumberSeed()
+    assert extension_seed not in (0, seed)
+
+
+def test_csvr_accepts_negative_seeds():
+    integrator = integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 1 * FS)
+    integrator.setRandomNumberSeed(-3)
+    assert integrator.getRandomNumberSeed() == -3

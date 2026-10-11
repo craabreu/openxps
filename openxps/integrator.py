@@ -8,7 +8,7 @@
 """
 
 from abc import ABC, abstractmethod
-from copy import deepcopy
+from copy import copy, deepcopy
 
 import numpy as np
 import openmm as mm
@@ -40,7 +40,7 @@ KNOWN_SYMMETRIC_INTEGRATORS = (
 def _integrator_state(integrator: mm.Integrator) -> tuple[type, str, dict]:
     attributes = {
         key: value.in_unit_system(mmunit.md_unit_system)
-        if isinstance(value, Quantity)
+        if mmunit.is_quantity(value)
         else value
         for key, value in vars(integrator).items()
         if key != "this"
@@ -63,7 +63,7 @@ def _restore_integrator(cls: type, xml: str, attributes: dict) -> mm.Integrator:
 def _decorrelate_random_seed(physical: mm.Integrator, extension: mm.Integrator) -> None:
     if hasattr(physical, "getRandomNumberSeed"):
         seed = physical.getRandomNumberSeed()
-        extension.setRandomNumberSeed(0 if seed == 0 else seed + 1)
+        extension.setRandomNumberSeed(0 if seed == 0 else seed % (2**31 - 1) + 1)
 
 
 class ExtendedSpaceIntegrator(mm.Integrator, ABC):
@@ -101,7 +101,10 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
     def __copy__(self) -> "ExtendedSpaceIntegrator":
         """Return an unconfigured copy of the integrator."""
         clone = self.__class__.__new__(self.__class__)
-        clone.__setstate__(self.__getstate__())
+        clone._physical_integrator = copy(self._physical_integrator)
+        clone._extension_integrator = copy(self._extension_integrator)
+        clone._assume_valid = self._assume_valid
+        clone._initialize()
         return clone
 
     def __deepcopy__(self, memo: dict) -> "ExtendedSpaceIntegrator":
