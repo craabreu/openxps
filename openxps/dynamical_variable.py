@@ -17,7 +17,7 @@ from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit
 
-from .bounds import Bounds, NoBounds, PeriodicBounds
+from .bounds import Bounds, PeriodicBounds
 from .utils import preprocess_args
 
 
@@ -40,9 +40,9 @@ class DynamicalVariable(Serializable):
     bounds
         The boundary condition to be applied to this dynamical variable. It must
         be an instance of :class:`PeriodicBounds`, :class:`ReflectiveBounds`, or
-        :class:`NoBounds` (for unbounded variables). If it is not
-        :class:`~openxps.NoBounds`, its unit of measurement must be compatible with
-        the dynamical variable's own unit.
+        :class:`NoBounds` (for unbounded variables, whose bounds are then typical
+        values rather than actual limits). Its unit of measurement must be
+        compatible with the dynamical variable's own unit.
 
     Example
     -------
@@ -77,9 +77,6 @@ class DynamicalVariable(Serializable):
             raise TypeError(f"Mass units must be compatible with {mass_unit}.")
         object.__setattr__(self, "mass", Quantity(self.mass.in_units_of(mass_unit)))
 
-        if isinstance(self.bounds, NoBounds):
-            return
-
         if isinstance(self.bounds, Bounds):
             if not self.bounds.unit.is_compatible(self.unit):
                 raise ValueError("Provided bounds have incompatible units.")
@@ -97,6 +94,9 @@ class DynamicalVariable(Serializable):
 
     def __setstate__(self, keywords: dict[str, t.Any]) -> None:
         self.__init__(**keywords)
+
+    def __hash__(self) -> int:
+        return hash((self.name, str(self.unit), self.bounds))
 
     def in_md_units(self) -> "DynamicalVariable":
         """
@@ -168,12 +168,8 @@ class DynamicalVariable(Serializable):
         ... )
         >>> cv = dv.createCollectiveVariable(0)
         """
-        bounds = self.bounds
-        if bounds is None:
-            force = mm.CustomExternalForce("x")
-        else:
-            force = mm.CustomExternalForce(bounds.leptonExpression("x"))
-            bounds = bounds.asQuantity() if self.isPeriodic() else None
+        force = mm.CustomExternalForce(self.bounds.leptonExpression("x"))
+        bounds = self.bounds.asQuantity() if self.isPeriodic() else None
         force.addParticle(index, [])
         return cvpack.OpenMMForceWrapper(
             force,
@@ -185,21 +181,25 @@ class DynamicalVariable(Serializable):
     def _distanceToCV(self, other: cvpack.CollectiveVariable) -> str:
         name = other.getName()
         diff = f"{name}-{self.name}"
+        if not other.getUnit().is_compatible(self.unit):
+            raise ValueError("Incompatible units.")
         if other.getPeriodicBounds() is None and not self.isPeriodic():
             return f"({diff})"
         if self.isPeriodic() and other.getPeriodicBounds() == self.bounds.asQuantity():
-            period = self.bounds.period
+            period = self.bounds.in_md_units().period
             return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
         raise ValueError("Incompatible boundary conditions.")
 
     def _distanceToDV(self, other: te.Self) -> str:
         diff = f"{other.name}-{self.name}"
+        if not other.unit.is_compatible(self.unit):
+            raise ValueError("Incompatible units.")
         if not (self.isPeriodic() or other.isPeriodic()):
             return f"({diff})"
-        if other.isPeriodic() and self.isPeriodic():
-            period = self.bounds.period
-            return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
-        raise ValueError("Incompatible boundary conditions.")
+        if self.bounds != other.bounds:
+            raise ValueError("Incompatible boundary conditions.")
+        period = self.bounds.in_md_units().period
+        return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
 
     def distanceTo(self, other: cvpack.CollectiveVariable | te.Self) -> str:
         """

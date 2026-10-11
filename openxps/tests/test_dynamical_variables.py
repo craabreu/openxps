@@ -7,7 +7,7 @@ import pytest
 import yaml
 from openmm import unit as mmunit
 
-from openxps.bounds import NoBounds, PeriodicBounds, ReflectiveBounds
+from openxps.bounds import CircularBounds, NoBounds, PeriodicBounds, ReflectiveBounds
 from openxps.dynamical_variable import DynamicalVariable
 
 
@@ -30,7 +30,7 @@ def test_dv_invalid_unit():
             "phi",
             "not_a_unit",
             3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
-            NoBounds(0, 1, mmunit.dimensionless),
+            NoBounds(0, 1, mmunit.radian),
         )
     assert "The unit must be a valid OpenMM unit." in str(excinfo.value)
 
@@ -38,7 +38,7 @@ def test_dv_invalid_unit():
 def test_dv_mass_without_unit():
     """Test DynamicalVariable initialization with mass missing a unit."""
     with pytest.raises(TypeError) as excinfo:
-        DynamicalVariable("phi", mmunit.radian, 3, NoBounds(0, 1, mmunit.dimensionless))
+        DynamicalVariable("phi", mmunit.radian, 3, NoBounds(0, 1, mmunit.radian))
     assert "Mass must be have units of measurement." in str(excinfo.value)
 
 
@@ -46,7 +46,7 @@ def test_dv_incompatible_mass_unit():
     """Test DynamicalVariable initialization with mass having incompatible units."""
     with pytest.raises(TypeError):
         DynamicalVariable(
-            "phi", mmunit.radian, 3 * mmunit.meter, NoBounds(0, 1, mmunit.dimensionless)
+            "phi", mmunit.radian, 3 * mmunit.meter, NoBounds(0, 1, mmunit.radian)
         )
 
 
@@ -125,15 +125,15 @@ def test_dv_distance_method():
 
     with pytest.raises(ValueError) as excinfo:
         psi0.distanceTo(cvpack.Distance(0, 1))
-    assert "Incompatible boundary conditions." in str(excinfo.value)
+    assert "Incompatible units." in str(excinfo.value)
 
     with pytest.raises(ValueError) as excinfo:
         psi0.distanceTo(
             DynamicalVariable(
                 "x",
-                mmunit.nanometer,
-                3 * mmunit.dalton,
-                NoBounds(0, 1, mmunit.dimensionless),
+                mmunit.radian,
+                3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
+                NoBounds(0, 1, mmunit.radian),
             )
         )
     assert "Incompatible boundary conditions." in str(excinfo.value)
@@ -150,6 +150,69 @@ def test_dv_distance_method():
         "distance1",
         mmunit.nanometer,
         3 * mmunit.dalton,
-        NoBounds(0, 1, mmunit.dimensionless),
+        NoBounds(0, 1, mmunit.nanometer),
     )
     assert distance1.distanceTo(distance0) == "(distance0-distance1)"
+
+
+def test_dv_no_bounds_units_are_checked_and_converted():
+    """NoBounds values are typical values, so they must be in the DV's unit."""
+    mass = 1 * mmunit.dalton
+    with pytest.raises(ValueError, match="incompatible units"):
+        DynamicalVariable(
+            "x", mmunit.nanometer, mass, NoBounds(-180, 180, mmunit.degree)
+        )
+    dv = DynamicalVariable(
+        "x", mmunit.nanometer, mass, NoBounds(1, 10, mmunit.angstrom)
+    )
+    assert dv.bounds.unit == mmunit.nanometer
+    assert dv.bounds.lower == pytest.approx(0.1)
+    assert dv.bounds.upper == pytest.approx(1.0)
+
+
+def test_distance_to_cv_uses_md_units_for_degree_dv():
+    """A degree DV coupled to a radian torsion must wrap with period 2*pi."""
+    mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.degree) ** 2
+    dv = DynamicalVariable(
+        "phi0", mmunit.degree, mass, PeriodicBounds(-180, 180, mmunit.degree)
+    )
+    phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    expression = dv.distanceTo(phi)
+    assert "360" not in expression
+    assert "6.28318" in expression
+
+
+def test_distance_to_dv_requires_matching_bounds():
+    """Periodic DVs with different periods cannot be compared."""
+    mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
+    a = DynamicalVariable(
+        "a", mmunit.radian, mass, PeriodicBounds(-1, 1, mmunit.radian)
+    )
+    b = DynamicalVariable("b", mmunit.radian, mass, CircularBounds())
+    with pytest.raises(ValueError, match="Incompatible boundary conditions"):
+        a.distanceTo(b)
+    with pytest.raises(ValueError, match="Incompatible boundary conditions"):
+        b.distanceTo(a)
+    c = DynamicalVariable(
+        "c",
+        mmunit.degree,
+        3 * mmunit.dalton * (mmunit.nanometer / mmunit.degree) ** 2,
+        PeriodicBounds(-180, 180, mmunit.degree),
+    )
+    assert "6.28318" in b.distanceTo(c)
+    x = DynamicalVariable(
+        "x", mmunit.nanometer, 1 * mmunit.dalton, NoBounds(0, 1, mmunit.nanometer)
+    )
+    with pytest.raises(ValueError, match="Incompatible units"):
+        x.distanceTo(a)
+
+
+def test_dv_is_hashable_and_hash_matches_equality():
+    mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
+    a = DynamicalVariable(
+        "phi", mmunit.radian, mass, PeriodicBounds(-180, 180, mmunit.degree)
+    )
+    b = DynamicalVariable("phi", mmunit.radian, mass, CircularBounds())
+    assert a == b
+    assert hash(a) == hash(b)
+    assert len({a, b}) == 1

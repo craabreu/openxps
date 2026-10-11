@@ -7,7 +7,13 @@ import pytest
 import yaml
 from openmm import unit as mmunit
 
-from openxps.bounds import Bounds, CircularBounds, PeriodicBounds, ReflectiveBounds
+from openxps.bounds import (
+    Bounds,
+    CircularBounds,
+    NoBounds,
+    PeriodicBounds,
+    ReflectiveBounds,
+)
 
 
 def test_bounds_initialization():
@@ -128,3 +134,33 @@ def test_bounds_transformation_not_implemented():
     bounds = Bounds(-1, 1, mmunit.meters)
     with pytest.raises(NotImplementedError):
         bounds.leptonExpression("x")
+
+
+def test_bounds_equality_requires_same_kind():
+    """NoBounds and PeriodicBounds with the same range are not equal."""
+    assert NoBounds(-np.pi, np.pi, mmunit.radian) != CircularBounds()
+    assert PeriodicBounds(-np.pi, np.pi, mmunit.radian) == CircularBounds()
+    assert ReflectiveBounds(0, 1, mmunit.nanometer) != PeriodicBounds(
+        0, 1, mmunit.nanometer
+    )
+
+
+def test_bounds_equality_is_symmetric_across_units():
+    """Equality after unit conversion holds in both directions."""
+    a = ReflectiveBounds(12.11, 57.66, mmunit.angstrom)
+    b = ReflectiveBounds(1.211, 5.766, mmunit.nanometer)
+    assert a == b
+    assert b == a
+    assert hash(a) == hash(b)
+    assert ReflectiveBounds(3, 10, mmunit.angstrom) == ReflectiveBounds(
+        0.3, 1, mmunit.nanometer
+    )
+
+
+def test_bounds_accept_numpy_scalars_and_reject_non_finite():
+    """numpy scalars are real numbers; bools, NaN and inf are not valid bounds."""
+    bounds = PeriodicBounds(np.int64(0), np.float32(1), mmunit.nanometer)
+    assert bounds.lower == 0 and bounds.upper == pytest.approx(1)
+    for lower, upper in ((True, 2), (np.nan, 1), (0, np.inf)):
+        with pytest.raises((TypeError, ValueError)):
+            PeriodicBounds(lower, upper, mmunit.nanometer)

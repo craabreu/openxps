@@ -6,6 +6,7 @@ from copy import copy
 from math import pi
 
 import cvpack
+import numpy as np
 import openmm as mm
 import pytest
 import yaml
@@ -15,9 +16,11 @@ from openmmtools import testsystems
 from openxps import (
     CollectiveVariableCoupling,
     DynamicalVariable,
+    ExtendedSpaceContext,
     ExtendedSpaceSystem,
     HarmonicCoupling,
     InnerProductCoupling,
+    LockstepIntegrator,
 )
 from openxps.bounds import CircularBounds, NoBounds, ReflectiveBounds
 from openxps.couplings import CouplingSum
@@ -353,7 +356,7 @@ def test_harmonic_coupling_incompatible_periodicity_nonperiodic_dv():
     # Create non-periodic DV
     mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
     phi_s = DynamicalVariable(
-        "phi_s", mmunit.radian, mass, NoBounds(0, 1, mmunit.dimensionless)
+        "phi_s", mmunit.radian, mass, NoBounds(0, 1, mmunit.radian)
     )
     kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
 
@@ -1145,3 +1148,44 @@ def test_inner_product_coupling_serialization():
         deserialized.getForce(0).getNumGlobalParameters()
         == coupling.getForce(0).getNumGlobalParameters()
     )
+
+
+def test_harmonic_coupling_nonperiodic_angstrom_dv_energy():
+    """A non-periodic DV in angstrom couples to a distance CV in nanometers."""
+    model = create_test_system()
+    distance = cvpack.Distance(0, 1, name="d")
+    d0 = DynamicalVariable(
+        "d0",
+        mmunit.angstrom,
+        10 * mmunit.dalton * (mmunit.nanometer / mmunit.angstrom) ** 2,
+        ReflectiveBounds(0, 20, mmunit.angstrom),
+    )
+    kappa = 100 * mmunit.kilojoule_per_mole / mmunit.angstrom**2
+    coupling = HarmonicCoupling(distance, d0, kappa)
+    context = ExtendedSpaceContext(
+        ExtendedSpaceSystem(model.system, coupling),
+        LockstepIntegrator(mm.VerletIntegrator(0.001)),
+        mm.Platform.getPlatformByName("Reference"),
+    )
+    context.setPositions(model.positions)
+    positions = model.positions.value_in_unit(mmunit.angstrom)
+    actual = np.linalg.norm(np.array(positions[1]) - np.array(positions[0]))
+    context.setDynamicalVariableValues([(actual + 1) * mmunit.angstrom])
+    energy = (
+        coupling.getForce(0).getValue(context).value_in_unit(mmunit.kilojoule_per_mole)
+    )
+    assert energy == pytest.approx(0.5 * 100 * 1.0**2, rel=1e-6)
+
+
+def test_harmonic_coupling_nonperiodic_pair_is_accepted():
+    """A non-periodic CV with a non-periodic DV is a valid harmonic coupling."""
+    distance = cvpack.Distance(0, 1, name="d")
+    mass = 10 * mmunit.dalton
+    kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.nanometer**2
+    for bounds in (
+        NoBounds(0, 1, mmunit.nanometer),
+        ReflectiveBounds(0, 1, mmunit.nanometer),
+    ):
+        d0 = DynamicalVariable("d0", mmunit.nanometer, mass, bounds)
+        coupling = HarmonicCoupling(distance, d0, kappa)
+        assert "floor" not in coupling.getForce(0).getEnergyFunction()

@@ -9,6 +9,8 @@ Base class for boundary conditions.
 
 """
 
+import math
+import numbers
 import typing as t
 from dataclasses import dataclass
 
@@ -39,10 +41,17 @@ class Bounds(Serializable):
     upper: float
     unit: cvpack.units.Unit
 
+    #: The kind of boundary condition; subclasses override it.
+    kind: t.ClassVar[str] = "bounds"
+
     def __post_init__(self) -> None:
         for kind in ("lower", "upper"):
-            if not isinstance(getattr(self, kind), (int, float)):
+            value = getattr(self, kind)
+            if isinstance(value, bool) or not isinstance(value, numbers.Real):
                 raise TypeError(f"The {kind} bound must be a real number.")
+            if not math.isfinite(value):
+                raise ValueError(f"The {kind} bound must be finite.")
+            object.__setattr__(self, kind, float(value))
         if self.lower >= self.upper:
             raise ValueError("The upper bound must be greater than the lower bound.")
         if not mmunit.is_unit(self.unit):
@@ -57,15 +66,21 @@ class Bounds(Serializable):
         self.__init__(keywords["lower"], keywords["upper"], keywords["unit"])
 
     def __eq__(self, other: t.Any) -> bool:
-        return (
-            isinstance(other, Bounds)
-            and self.lower * self.unit == other.lower * other.unit
-            and self.upper * self.unit == other.upper * other.unit
+        if not isinstance(other, Bounds) or self.kind != other.kind:
+            return False
+        _, self_factor = self._md_unit_and_conversion_factor()
+        other_md_unit, other_factor = other._md_unit_and_conversion_factor()
+        if not self.unit.is_compatible(other_md_unit):
+            return False
+        return math.isclose(
+            self.lower * self_factor, other.lower * other_factor, rel_tol=1e-9
+        ) and math.isclose(
+            self.upper * self_factor, other.upper * other_factor, rel_tol=1e-9
         )
 
     def __hash__(self) -> int:
-        unit, factor = self._md_unit_and_conversion_factor()
-        return hash((self.lower * factor, self.upper * factor, unit))
+        unit, _ = self._md_unit_and_conversion_factor()
+        return hash((self.kind, str(unit)))
 
     def _md_unit_and_conversion_factor(self) -> tuple[mmunit.Unit, float]:
         """
@@ -132,7 +147,7 @@ class Bounds(Serializable):
         >>> from openmm import unit
         >>> bounds = xps.bounds.PeriodicBounds(-180, 180, unit.degree)
         >>> bounds.asQuantity()
-        (-180, 180) deg
+        (-180.0, 180.0) deg
         """
         return Quantity((self.lower, self.upper), self.unit)
 
@@ -156,13 +171,13 @@ class Bounds(Serializable):
         >>> from openmm import unit
         >>> periodic = xps.bounds.PeriodicBounds(-180, 180, unit.degree)
         >>> print(periodic.leptonExpression("x"))
-        (scaled_x-floor(scaled_x))*360-180;
-        scaled_x=(x+180)/360
+        (scaled_x-floor(scaled_x))*360.0-180.0;
+        scaled_x=(x+180.0)/360.0
         >>> reflective = xps.bounds.ReflectiveBounds(1, 10, unit.angstrom)
         >>> print(reflective.leptonExpression("y"))
-        min(wrapped_y,1-wrapped_y)*18+1;
+        min(wrapped_y,1-wrapped_y)*18.0+1.0;
         wrapped_y=scaled_y-floor(scaled_y);
-        scaled_y=(y-1)/18
+        scaled_y=(y-1.0)/18.0
         """
         raise NotImplementedError(
             "The method transformation must be implemented in subclasses."

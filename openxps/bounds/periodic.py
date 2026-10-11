@@ -9,6 +9,8 @@ Periodic boundary condition.
 
 """
 
+import typing as t
+
 from .base import Bounds
 
 
@@ -34,9 +36,11 @@ class PeriodicBounds(Bounds):
     >>> from openmm import unit
     >>> bounds = xps.PeriodicBounds(-180, 180, unit.degree)
     >>> print(bounds)
-    PeriodicBounds(lower=-180, upper=180, unit=deg)
+    PeriodicBounds(lower=-180.0, upper=180.0, unit=deg)
     >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
     """
+
+    kind: t.ClassVar[str] = "periodic"
 
     def __post_init__(self) -> None:
         super().__post_init__()
