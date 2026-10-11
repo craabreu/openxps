@@ -1272,3 +1272,10 @@ def test_inner_product_coupling_uses_dedicated_force_group():
         "derivative_with_respect_to_scaling"
     )
     assert derivative == pytest.approx(expected)
+
+
+def test_inner_product_coupling_in_sum_records_force_groups():
+    """A summed inner product coupling still restricts its derivative evaluation."""
+    scaling = _scaling_coupling()
+    ExtendedSpaceSystem(_two_particle_system(), _distance_coupling() + scaling)
+    assert scaling.getForceGroups()

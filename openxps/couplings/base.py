@@ -392,6 +392,10 @@ class CouplingSum(Coupling):
             *[coupling.getProtectedParameters() for coupling in self._couplings]
         )
 
+    def addToPhysicalSystem(self, system: mm.System) -> None:
+        for coupling in self._couplings:
+            coupling.addToPhysicalSystem(system)
+
     def addToExtensionSystem(
         self, system: mm.System, dv_indices: t.Mapping[str, int] | None = None
     ) -> None:
