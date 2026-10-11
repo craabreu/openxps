@@ -30,7 +30,7 @@ def test_dv_invalid_unit():
             "phi",
             "not_a_unit",
             3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
-            NoBounds(0, 1, mmunit.dimensionless),
+            NoBounds(0, 1, mmunit.radian),
         )
     assert "The unit must be a valid OpenMM unit." in str(excinfo.value)
 
@@ -38,7 +38,7 @@ def test_dv_invalid_unit():
 def test_dv_mass_without_unit():
     """Test DynamicalVariable initialization with mass missing a unit."""
     with pytest.raises(TypeError) as excinfo:
-        DynamicalVariable("phi", mmunit.radian, 3, NoBounds(0, 1, mmunit.dimensionless))
+        DynamicalVariable("phi", mmunit.radian, 3, NoBounds(0, 1, mmunit.radian))
     assert "Mass must be have units of measurement." in str(excinfo.value)
 
 
@@ -46,7 +46,7 @@ def test_dv_incompatible_mass_unit():
     """Test DynamicalVariable initialization with mass having incompatible units."""
     with pytest.raises(TypeError):
         DynamicalVariable(
-            "phi", mmunit.radian, 3 * mmunit.meter, NoBounds(0, 1, mmunit.dimensionless)
+            "phi", mmunit.radian, 3 * mmunit.meter, NoBounds(0, 1, mmunit.radian)
         )
 
 
@@ -133,7 +133,7 @@ def test_dv_distance_method():
                 "x",
                 mmunit.nanometer,
                 3 * mmunit.dalton,
-                NoBounds(0, 1, mmunit.dimensionless),
+                NoBounds(0, 1, mmunit.nanometer),
             )
         )
     assert "Incompatible boundary conditions." in str(excinfo.value)
@@ -150,6 +150,21 @@ def test_dv_distance_method():
         "distance1",
         mmunit.nanometer,
         3 * mmunit.dalton,
-        NoBounds(0, 1, mmunit.dimensionless),
+        NoBounds(0, 1, mmunit.nanometer),
     )
     assert distance1.distanceTo(distance0) == "(distance0-distance1)"
+
+
+def test_dv_no_bounds_units_are_checked_and_converted():
+    """NoBounds values are typical values, so they must be in the DV's unit."""
+    mass = 1 * mmunit.dalton
+    with pytest.raises(ValueError, match="incompatible units"):
+        DynamicalVariable(
+            "x", mmunit.nanometer, mass, NoBounds(-180, 180, mmunit.degree)
+        )
+    dv = DynamicalVariable(
+        "x", mmunit.nanometer, mass, NoBounds(1, 10, mmunit.angstrom)
+    )
+    assert dv.bounds.unit == mmunit.nanometer
+    assert dv.bounds.lower == pytest.approx(0.1)
+    assert dv.bounds.upper == pytest.approx(1.0)
