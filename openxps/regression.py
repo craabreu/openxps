@@ -134,7 +134,7 @@ class GradMatch(pl.LightningModule):
         wd: float = 1e-4,
     ) -> None:
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(ignore=["dynamical_variables"])
         self.f = RBFPotential(dynamical_variables, M)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
@@ -337,9 +337,12 @@ class ForceMatchingRegressor:
                 trainer = pl.Trainer(**trainer_kwargs)
                 trainer.fit(self._model, train_dl, val_dl)
                 if checkpoint.best_model_path:
-                    self._model = GradMatch.load_from_checkpoint(
-                        checkpoint.best_model_path
+                    state = torch.load(
+                        checkpoint.best_model_path,
+                        map_location="cpu",
+                        weights_only=True,
                     )
+                    self._model.load_state_dict(state["state_dict"])
 
             path = os.path.join(logger.log_dir, "metrics.csv")
             if os.path.exists(path):
