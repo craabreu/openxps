@@ -10,11 +10,12 @@ dependencies:
   - openmm
   - cvpack
   - pyyaml
+  - pandas
+  - typing-extensions
 
   # Conda build
   - anaconda-client
   - conda-build
-  - boa
 
   # Machine learning dependencies
   - pytorch
