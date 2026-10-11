@@ -309,7 +309,7 @@ def test_getstate_setstate_lockstep():
 
     # Get state
     state = original.__getstate__()
-    assert isinstance(state, str)
+    assert isinstance(state, dict)
 
     # Create new instance and set state
     new_integrator = LockstepIntegrator.__new__(LockstepIntegrator)
@@ -337,7 +337,7 @@ def test_getstate_setstate_split():
 
     # Get state
     state = original.__getstate__()
-    assert isinstance(state, str)
+    assert isinstance(state, dict)
 
     # Create new instance and set state
     new_integrator = SplitIntegrator.__new__(SplitIntegrator)

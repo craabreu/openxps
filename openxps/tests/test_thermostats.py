@@ -2,12 +2,16 @@
 Unit tests for the integrators in openxps.integrators.
 """
 
+import copy
+import pickle
+
 import numpy as np
 import openmm as mm
 import pytest
 from openmm import unit as mmunit
 
-from openxps import integrators
+from openxps import LockstepIntegrator, SplitIntegrator, integrators
+from openxps.tests.test_integrator import create_non_force_first_integrator
 
 KELVIN = mmunit.kelvin
 PS = mmunit.picosecond
@@ -76,3 +80,29 @@ def test_repr_has_no_blank_line_without_per_dof_variables():
     integrator.addComputePerDof("v", "v")
     text = integrators.utils.IntegratorMixin.__repr__(integrator)
     assert not text.startswith("  \n")
+
+
+def test_pickled_extended_integrator_keeps_subclasses():
+    """CSVR's Python-level step() must survive a pickle round trip."""
+    csvr = integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 1 * FS, forceFirst=True)
+    original = LockstepIntegrator(mm.VerletIntegrator(1 * FS), csvr)
+    restored = pickle.loads(pickle.dumps(original))
+    assert isinstance(restored.getExtensionIntegrator(), integrators.CSVRIntegrator)
+    assert isinstance(restored.getPhysicalIntegrator(), mm.VerletIntegrator)
+    extension = restored.getExtensionIntegrator()
+    extension.registerWithSystem(_ideal_gas(4), True)
+    context = _context(_ideal_gas(4), extension)
+    before = extension.getGlobalVariableByName("sumRsq")
+    extension.step(1)
+    assert extension.getGlobalVariableByName("sumRsq") != before
+    assert context.getStepCount() == 1
+
+
+def test_deepcopy_keeps_assume_flags():
+    custom = create_non_force_first_integrator(1 * FS)
+    lockstep = LockstepIntegrator(custom, assume_force_first=True)
+    assert isinstance(copy.deepcopy(lockstep), LockstepIntegrator)
+    split = SplitIntegrator(
+        mm.LangevinIntegrator(300 * KELVIN, 1 / PS, 2 * FS), assume_symmetric=True
+    )
+    assert isinstance(copy.copy(split), SplitIntegrator)

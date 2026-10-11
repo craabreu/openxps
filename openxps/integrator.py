@@ -12,13 +12,13 @@ from copy import deepcopy
 
 import numpy as np
 import openmm as mm
+from cvpack.units import Quantity
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
 from . import integrators
 from .couplings import Coupling
 from .integrators.utils import IntegratorMixin
-from .utils import STRING_SEPARATOR
 
 #: Tuple of OpenMM integrator classes known to evaluate forces exclusively at the
 #: beginning of each time step (force-first or leapfrog schemes).
@@ -35,6 +35,29 @@ KNOWN_SYMMETRIC_INTEGRATORS = (
     integrators.SymmetricVerletIntegrator,
     integrators.SymmetricLangevinIntegrator,
 )
+
+
+def _integrator_state(integrator: mm.Integrator) -> tuple[type, str, dict]:
+    attributes = {
+        key: value.in_unit_system(mmunit.md_unit_system)
+        if isinstance(value, Quantity)
+        else value
+        for key, value in vars(integrator).items()
+        if key != "this"
+    }
+    return type(integrator), mm.XmlSerializer.serialize(integrator), attributes
+
+
+def _restore_integrator(cls: type, xml: str, attributes: dict) -> mm.Integrator:
+    integrator = cls.__new__(cls)
+    integrator.this = mm.XmlSerializer.deserialize(xml).this
+    integrator.__dict__.update(
+        {
+            key: Quantity(value) if mmunit.is_quantity(value) else value
+            for key, value in attributes.items()
+        }
+    )
+    return integrator
 
 
 class ExtendedSpaceIntegrator(mm.Integrator, ABC):
@@ -66,28 +89,31 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
     ) -> None:
         self._physical_integrator = physical_integrator
         self._extension_integrator = extension_integrator
+        self._assume_valid = getattr(self, "_assume_valid", False)
         self._initialize()
 
     def __copy__(self) -> "ExtendedSpaceIntegrator":
         """Return an unconfigured copy of the integrator."""
-        return self.__class__(
-            self._physical_integrator.__copy__(),
-            self._extension_integrator.__copy__(),
-        )
+        clone = self.__class__.__new__(self.__class__)
+        clone.__setstate__(self.__getstate__())
+        return clone
 
-    def __getstate__(self) -> str:
-        """Get the state of the integrator as a string."""
-        return (
-            self._physical_integrator.__getstate__()
-            + STRING_SEPARATOR
-            + self._extension_integrator.__getstate__()
-        )
+    def __deepcopy__(self, memo: dict) -> "ExtendedSpaceIntegrator":
+        return self.__copy__()
 
-    def __setstate__(self, state: str) -> None:
-        """Set the state of the integrator from a string."""
-        physical_state, extension_state = state.split(STRING_SEPARATOR)
-        self._physical_integrator = mm.XmlSerializer.deserialize(physical_state)
-        self._extension_integrator = mm.XmlSerializer.deserialize(extension_state)
+    def __getstate__(self) -> dict:
+        """Get the state of the integrator as a picklable dictionary."""
+        return {
+            "physical": _integrator_state(self._physical_integrator),
+            "extension": _integrator_state(self._extension_integrator),
+            "assume_valid": self._assume_valid,
+        }
+
+    def __setstate__(self, state: dict) -> None:
+        """Set the state of the integrator from a dictionary."""
+        self._physical_integrator = _restore_integrator(*state["physical"])
+        self._extension_integrator = _restore_integrator(*state["extension"])
+        self._assume_valid = state["assume_valid"]
         self._initialize()
 
     def _initialize(self) -> None:
@@ -259,6 +285,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
         extension_integrator: mm.Integrator | None = None,
         assume_force_first: bool = False,
     ) -> None:
+        self._assume_valid = assume_force_first
         if extension_integrator is None:
             extension_integrator = deepcopy(physical_integrator)
         elif not np.isclose(
@@ -398,6 +425,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         extension_integrator: mm.Integrator | None = None,
         assume_symmetric: bool = False,
     ) -> None:
+        self._assume_valid = assume_symmetric
         physical_step_size = mmswig.Integrator_getStepSize(physical_integrator)
         if extension_integrator is None:
             extension_integrator = deepcopy(physical_integrator)
