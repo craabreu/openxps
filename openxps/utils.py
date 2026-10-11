@@ -173,17 +173,11 @@ class Function(Serializable):
         given_parameters: dict[str, mmunit.Quantity],
     ) -> tuple[set[str], set[str]]:
         given_parameters = set(given_parameters.keys())
-        dependencies = (
-            set(re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", self._expression))
-            - LEPTON_FUNCTIONS
-        )
-        variables = dependencies - given_parameters
-        parameters = dependencies & given_parameters
-        if missing := dependencies - (variables | parameters):
-            raise ValueError(
-                f"Function {self._name} has unknown dependencies: {missing}"
-            )
-        return variables, parameters
+        _, *definitions = self._expression.split(";")
+        defined = {definition.partition("=")[0].strip() for definition in definitions}
+        identifiers = set(re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", self._expression))
+        dependencies = identifiers - LEPTON_FUNCTIONS - defined
+        return dependencies - given_parameters, dependencies & given_parameters
 
     def getName(self) -> str:
         """Return the name of the function."""
@@ -203,15 +197,16 @@ class Function(Serializable):
 
     def createCollectiveVariable(
         self,
-        all_variables: list[str],
+        variable_indices: t.Mapping[str, int],
     ) -> cvpack.AtomicFunction:
         """
         Create a collective variable from the function.
 
         Parameters
         ----------
-        all_variables
-            The list of all variables in the system.
+        variable_indices
+            A mapping from the name of each variable of the function to the index of
+            the particle whose x coordinate represents it.
 
         Returns
         -------
@@ -224,7 +219,7 @@ class Function(Serializable):
         >>> import openmm as mm
         >>> from math import exp, cos, pi
         >>> fn = Function("g", "exp(-x)*cos(2*pi*y)", pi=3.14159)
-        >>> cv = fn.createCollectiveVariable(["x", "y"])
+        >>> cv = fn.createCollectiveVariable({"x": 0, "y": 1})
         >>> system = mm.System()
         >>> for _ in range(2):
         ...     _ = system.addParticle(1.0)
@@ -237,13 +232,19 @@ class Function(Serializable):
         >>> print(context.getState(getEnergy=True).getPotentialEnergy())
         0.1353352... kJ/mol
         """
+        variables = sorted(self._variables)
+        if unknown := set(variables) - set(variable_indices):
+            raise ValueError(
+                f"Function {self._name} depends on unknown variables: "
+                + ", ".join(sorted(unknown))
+            )
         return cvpack.AtomicFunction(
             function=";".join(
                 [self._expression]
-                + [f"{variable}=x{i + 1}" for i, variable in enumerate(self._variables)]
+                + [f"{variable}=x{i + 1}" for i, variable in enumerate(variables)]
             ),
             unit=mmunit.kilojoule_per_mole,
-            groups=[[all_variables.index(variable) for variable in self._variables]],
+            groups=[[variable_indices[variable] for variable in variables]],
             name=self._name,
             **self._parameters,
         )
