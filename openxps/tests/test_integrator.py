@@ -2,6 +2,8 @@
 Unit tests for the openxps.integrator module.
 """
 
+import math
+
 import openmm as mm
 import pytest
 from openmm import _openmm as mmswig
@@ -351,3 +353,17 @@ def test_getstate_setstate_split():
     assert mmswig.Integrator_getStepSize(
         new_integrator.getExtensionIntegrator()
     ) == pytest.approx(mmswig.Integrator_getStepSize(original.getExtensionIntegrator()))
+
+
+def test_split_default_extension_integrator_has_consistent_coefficients():
+    """The halved extension step comes with a recomputed friction factor."""
+    physical = integrators.SymmetricLangevinIntegrator(
+        300 * mmunit.kelvin, 10 / mmunit.picosecond, 4 * mmunit.femtosecond
+    )
+    split = SplitIntegrator(physical)
+    extension = split.getExtensionIntegrator()
+    assert mmswig.Integrator_getStepSize(extension) == pytest.approx(0.002)
+    assert extension.getGlobalVariableByName("a") == pytest.approx(math.exp(-0.02))
+    split.setStepSize(8 * mmunit.femtosecond)
+    assert physical.getGlobalVariableByName("a") == pytest.approx(math.exp(-0.08))
+    assert extension.getGlobalVariableByName("a") == pytest.approx(math.exp(-0.04))

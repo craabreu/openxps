@@ -180,13 +180,11 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         if mmunit.is_quantity(size):
             size = size.value_in_unit(mmunit.picosecond)
         factor = size / self._step_size
-        mmswig.Integrator_setStepSize(
-            self._physical_integrator,
-            factor * mmswig.Integrator_getStepSize(self._physical_integrator),
+        self._physical_integrator.setStepSize(
+            factor * mmswig.Integrator_getStepSize(self._physical_integrator)
         )
-        mmswig.Integrator_setStepSize(
-            self._extension_integrator,
-            factor * mmswig.Integrator_getStepSize(self._extension_integrator),
+        self._extension_integrator.setStepSize(
+            factor * mmswig.Integrator_getStepSize(self._extension_integrator)
         )
         self._step_size = size
 
@@ -404,7 +402,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         if extension_integrator is None:
             extension_integrator = deepcopy(physical_integrator)
             extension_step_size = physical_step_size / 2
-            mmswig.Integrator_setStepSize(extension_integrator, extension_step_size)
+            extension_integrator.setStepSize(extension_step_size)
         else:
             extension_step_size = mmswig.Integrator_getStepSize(extension_integrator)
         if not (
