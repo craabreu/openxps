@@ -182,21 +182,25 @@ class DynamicalVariable(Serializable):
     def _distanceToCV(self, other: cvpack.CollectiveVariable) -> str:
         name = other.getName()
         diff = f"{name}-{self.name}"
+        if not other.getUnit().is_compatible(self.unit):
+            raise ValueError("Incompatible units.")
         if other.getPeriodicBounds() is None and not self.isPeriodic():
             return f"({diff})"
         if self.isPeriodic() and other.getPeriodicBounds() == self.bounds.asQuantity():
-            period = self.bounds.period
+            period = self.bounds.in_md_units().period
             return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
         raise ValueError("Incompatible boundary conditions.")
 
     def _distanceToDV(self, other: te.Self) -> str:
         diff = f"{other.name}-{self.name}"
+        if not other.unit.is_compatible(self.unit):
+            raise ValueError("Incompatible units.")
         if not (self.isPeriodic() or other.isPeriodic()):
             return f"({diff})"
-        if other.isPeriodic() and self.isPeriodic():
-            period = self.bounds.period
-            return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
-        raise ValueError("Incompatible boundary conditions.")
+        if self.bounds != other.bounds:
+            raise ValueError("Incompatible boundary conditions.")
+        period = self.bounds.in_md_units().period
+        return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
 
     def distanceTo(self, other: cvpack.CollectiveVariable | te.Self) -> str:
         """
