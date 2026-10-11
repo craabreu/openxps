@@ -136,7 +136,7 @@ class DynamicalVariable(Serializable):
         return isinstance(self.bounds, PeriodicBounds)
 
     def createCollectiveVariable(
-        self, index: int, name: t.Optional[str] = None
+        self, index: int, name: str | None = None
     ) -> cvpack.OpenMMForceWrapper:
         """
         Returns a :CVPack:`OpenMMForceWrapper` object associating this extra degree of

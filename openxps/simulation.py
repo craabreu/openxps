@@ -7,8 +7,6 @@
 
 """
 
-import typing as t
-
 import openmm as mm
 from openmm import app as mmapp
 
@@ -90,9 +88,9 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         topology: mmapp.Topology,
         system: ExtendedSpaceSystem,
         integrator: ExtendedSpaceIntegrator,
-        platform: t.Optional[mm.Platform] = None,
-        platformProperties: t.Optional[dict] = None,
-        state: t.Optional[mm.State] = None,
+        platform: mm.Platform | None = None,
+        platformProperties: dict | None = None,
+        state: mm.State | None = None,
     ) -> None:
         self.topology = topology
         self.system = system

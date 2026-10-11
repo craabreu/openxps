@@ -7,7 +7,6 @@
 
 """
 
-import typing as t
 from abc import ABC, abstractmethod
 from copy import deepcopy
 
@@ -259,7 +258,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     def __init__(
         self,
         physical_integrator: mm.Integrator,
-        extension_integrator: t.Optional[mm.Integrator] = None,
+        extension_integrator: mm.Integrator | None = None,
         assume_force_first: bool = False,
     ) -> None:
         if extension_integrator is None:
@@ -398,7 +397,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
     def __init__(
         self,
         physical_integrator: mm.Integrator,
-        extension_integrator: t.Optional[mm.Integrator] = None,
+        extension_integrator: mm.Integrator | None = None,
         assume_symmetric: bool = False,
     ) -> None:
         physical_step_size = mmswig.Integrator_getStepSize(physical_integrator)
