@@ -203,7 +203,10 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
             f"(2*step(q) - 1)*log(abs(q) + sqrt(q*q + 1)); q=w*sqrt(z/(2*c)); c={c}",
         )
         add("T1", f"th + 0.5*sinh(2*th) + s*{fraction}*dt/zmin")
-        add("th", "0.5*log(q + sqrt(q*q + 1)); q=2*abs(T1)")
+        add(
+            "th",
+            "0.5*select(step(q - 1e6), log(2*q), log(q + sqrt(q*q + 1))); q=2*abs(T1)",
+        )
         for _ in range(self._newton_iterations):
             add("th", "th - (th + 0.5*sinh(2*th) - abs(T1))/(1 + cosh(2*th))")
         add("th", "(2*step(T1) - 1)*th")

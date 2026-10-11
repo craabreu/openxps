@@ -16,8 +16,9 @@
   extension contexts; `loadState` and the `state` argument accept such files as well
   as plain OpenMM state files.
 - `MassiveGGMTIntegrator` propagates the fourth-moment thermostat sub-dynamics with a
-  singularity-free Coulomb splitting instead of a reflective bound on `v2`, so it no
-  longer produces NaN at large step sizes; the per-DOF variable `v2lb` is gone.
+  singularity-free Coulomb splitting instead of a reflective bound on `v2`, so its
+  thermostat step no longer fails with a negative square-root argument at large step
+  sizes; the per-DOF variable `v2lb` is gone.
 
 ### Added
 - `MassiveGGMTIntegrator` accepts `newtonIterations`.
