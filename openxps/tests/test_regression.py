@@ -201,6 +201,18 @@ class TestGradMatch:
         model = GradMatch(create_test_dynamical_variables(), M=4)
         assert set(model.hparams) == {"M", "lr", "wd"}
 
+    def test_weight_decay_applies_only_to_weights(self):
+        model = GradMatch(create_test_dynamical_variables(), M=4)
+        optimizer = model.configure_optimizers()
+        decay = {
+            id(param): group["weight_decay"]
+            for group in optimizer.param_groups
+            for param in group["params"]
+        }
+        assert decay[id(model.f.w)] == pytest.approx(1e-4)
+        assert decay[id(model.f.c)] == 0.0
+        assert decay[id(model.f.logsig)] == 0.0
+
 
 class TestForceMatchingRegressor:
     """Tests for ForceMatchingRegressor class."""

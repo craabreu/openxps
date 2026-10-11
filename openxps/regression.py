@@ -139,7 +139,11 @@ class GradMatch(pl.LightningModule):
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.AdamW(
-            self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.wd
+            [
+                {"params": [self.f.w], "weight_decay": self.hparams.wd},
+                {"params": [self.f.c, self.f.logsig], "weight_decay": 0.0},
+            ],
+            lr=self.hparams.lr,
         )
 
     def _loss(self, batch: tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
