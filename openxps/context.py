@@ -147,8 +147,10 @@ class ExtendedSpaceContext(mm.Context):
 
         Notes
         -----
-        If the parameter is a dynamical variable, the value will be wrapped to the
-        appropriate boundary condition if necessary.
+        Parameters that represent dynamical variables are protected and cannot be set
+        through this method; use :meth:`setDynamicalVariableValues` instead. A
+        parameter that also exists in the extension system (e.g. a coupling constant)
+        is updated in both contexts.
 
         Parameters
         ----------
@@ -163,6 +165,24 @@ class ExtendedSpaceContext(mm.Context):
                 "set automatically via setDynamicalVariableValues."
             )
         super().setParameter(name, value)
+        if name in self._extension_context.getParameters():
+            self._extension_context.setParameter(name, value)
+
+    def reinitialize(self, preserveState: bool = False) -> None:
+        """
+        Reinitialize the physical context and restore the dynamical variable
+        parameters from the extension context, whose state is always preserved.
+
+        Parameters
+        ----------
+        preserveState
+            Whether to preserve the state of the physical context.
+        """
+        super().reinitialize(preserveState)
+        self._extension_context.reinitialize(True)
+        self._coupling.updatePhysicalContext(self, self._extension_context)
+        if preserveState:
+            self._coupling.updateExtensionContext(self, self._extension_context)
 
     def setPositions(self, positions: mmunit.Quantity) -> None:
         """
@@ -186,6 +206,12 @@ class ExtendedSpaceContext(mm.Context):
             A sequence of quantities containing the values and units of all extra
             degrees of freedom.
         """
+        values = list(values)
+        if len(values) != len(self._dvs):
+            raise ValueError(
+                f"Expected values for {len(self._dvs)} dynamical variables, "
+                f"got {len(values)}."
+            )
         positions = []
         for dv, quantity in zip(self._dvs, values):
             if mmunit.is_quantity(quantity):
@@ -198,14 +224,20 @@ class ExtendedSpaceContext(mm.Context):
 
     def getDynamicalVariableValues(self) -> tuple[mmunit.Quantity]:
         """
-        Get the values of the dynamical variables.
+        Get the values of the dynamical variables, wrapped into their bounds.
 
         Returns
         -------
         t.Tuple[mmunit.Quantity]
             A tuple containing the values of the dynamical variables.
         """
-        return tuple(self.getParameter(dv.name) * dv.unit for dv in self._dvs)
+        state = mmswig.Context_getState(self._extension_context, mm.State.Positions)
+        positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
+        values = []
+        for i, dv in enumerate(self._dvs):
+            value, _ = dv.bounds.wrap(positions[i].x, 0)
+            values.append(value * dv.unit)
+        return tuple(values)
 
     def setDynamicalVariableVelocities(
         self, velocities: t.Iterable[mmunit.Quantity]
@@ -216,9 +248,15 @@ class ExtendedSpaceContext(mm.Context):
         Parameters
         ----------
         velocities
-            A dictionary containing the velocities of the dynamical variables.
+            A sequence of quantities containing the velocities of the dynamical
+            variables.
         """
         velocities = list(velocities)
+        if len(velocities) != len(self._dvs):
+            raise ValueError(
+                f"Expected velocities for {len(self._dvs)} dynamical variables, "
+                f"got {len(velocities)}."
+            )
         for i, dv in enumerate(self._dvs):
             value = velocities[i]
             if mmunit.is_quantity(value):
