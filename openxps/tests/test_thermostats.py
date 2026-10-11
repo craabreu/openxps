@@ -165,3 +165,38 @@ def test_csvr_at_rest_does_not_produce_nan():
     velocities = state.getVelocities(asNumpy=True)._value
     assert np.all(np.isfinite(velocities))
     assert np.all(velocities == 0)
+
+
+def _mean_kinetic_energy_per_dof(integrator, num_particles=100, equil=500, prod=1500):
+    system = _ideal_gas(num_particles)
+    if isinstance(integrator, integrators.CSVRIntegrator):
+        integrator.registerWithSystem(system, False)
+    context = _context(system, integrator)
+    integrator.step(equil)
+    total = 0.0
+    for _ in range(prod // 10):
+        integrator.step(10)
+        total += context.getState(getEnergy=True).getKineticEnergy()._value
+    return total / (prod // 10) / (3 * num_particles)
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: integrators.SymmetricLangevinIntegrator(300 * KELVIN, 10 / PS, 2 * FS),
+        lambda: integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 2 * FS),
+        lambda: integrators.MassiveGGMTIntegrator(300 * KELVIN, 0.1 * PS, 2 * FS),
+        lambda: integrators.MassiveGGMTIntegrator(
+            300 * KELVIN, 0.1 * PS, 2 * FS, stochastic=True
+        ),
+        lambda: integrators.RegulatedNHLIntegrator(300 * KELVIN, 0.1 * PS, 2 * FS),
+    ],
+)
+def test_thermostats_reproduce_target_temperature(factory):
+    """Each thermostat gives <K>/dof = kT/2 within 5% on an ideal gas."""
+    integrator = factory()
+    integrator.setRandomNumberSeed(7)
+    kt = (mmunit.MOLAR_GAS_CONSTANT_R * 300 * KELVIN).value_in_unit(
+        mmunit.kilojoule_per_mole
+    )
+    assert _mean_kinetic_energy_per_dof(integrator) == pytest.approx(0.5 * kt, rel=0.05)
