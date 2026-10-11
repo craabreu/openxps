@@ -29,6 +29,10 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         When used outside OpenXPS, the :meth:`registerWithSystem` method must be called
         with `isExtension=False` before starting a simulation.
 
+    .. note::
+        A system with zero kinetic energy is left at rest. Initialize the velocities
+        before starting a simulation.
+
     Parameters
     ----------
     temperature
@@ -74,7 +78,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
        6: v <- v + (x - x1)/(0.5*dt)
        7: constrain velocities
        8: mvv <- sum(m*v*v)
-       9: scaling_factor <- sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1); R1 = ...
+       9: scaling_factor <- select(mvv, sqrt(A + BC*(R1^2 + ...), 1); R1 = ...
       10: v <- v*scaling_factor
       11: x <- x + 0.5*dt*v
       12: x1 <- x
@@ -162,7 +166,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addComputeSum("mvv", "m*v*v")
         self.addComputeGlobal(
             "scaling_factor",
-            "sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1)"
+            "select(mvv, sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1), 1)"
             "; R1 = gaussian"
             "; BC = (1 - A)*kT/mvv"
             f"; A = exp(-{fraction}*dt*friction)",

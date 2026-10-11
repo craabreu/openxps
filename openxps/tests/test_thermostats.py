@@ -148,3 +148,20 @@ def test_csvr_step_before_register_raises_clear_error():
 def test_ggmt_time_constant_unit():
     integrator = integrators.MassiveGGMTIntegrator(300 * KELVIN, 0.1, 1 * FS)
     assert integrator.getTimeConstant() == 0.1 * PS
+
+
+def test_csvr_at_rest_does_not_produce_nan():
+    """A system at rest under zero force stays at rest."""
+    integrator = integrators.CSVRIntegrator(
+        300 * KELVIN, 10 / PS, 1 * FS, forceFirst=True
+    )
+    system = _ideal_gas(3)
+    integrator.registerWithSystem(system, True)
+    context = mm.Context(system, integrator, mm.Platform.getPlatformByName("Reference"))
+    context.setPositions(np.zeros((3, 3)))
+    context.setVelocities(np.zeros((3, 3)))
+    integrator.step(5)
+    state = context.getState(getVelocities=True)
+    velocities = state.getVelocities(asNumpy=True)._value
+    assert np.all(np.isfinite(velocities))
+    assert np.all(velocities == 0)
