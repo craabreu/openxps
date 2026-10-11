@@ -19,6 +19,10 @@
   singularity-free Coulomb splitting instead of a reflective bound on `v2`, so its
   thermostat step no longer fails with a negative square-root argument at large step
   sizes; the per-DOF variable `v2lb` is gone.
+- `ForceMatchingRegressor` takes a `devices` keyword, defaulting to 1, so it no longer
+  launches distributed training on multi-GPU hosts; `get_learning_curve()` returns a
+  copy, with one row per epoch, and raises before the first fit; positions and forces
+  must be given in MD units.
 
 ### Added
 - `MassiveGGMTIntegrator` accepts `newtonIterations`.
@@ -68,3 +72,7 @@
   raise a clear error before `initialize`.
 - `ExtendedSpaceBiasVariable` rejects non-positive `sigma` and `grid_width` values
   smaller than 2.
+- `ForceMatchingRegressor.fit` tolerates non-finite validation losses, validates the
+  shapes of positions and forces, and no longer reseeds NumPy's global generator;
+  `get_parameters()` no longer alters the fitted model; kernel centers start inside
+  the variables' ranges; weight decay applies only to kernel weights.

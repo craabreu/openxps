@@ -2,6 +2,8 @@
 Unit tests for the openxps.regression module.
 """
 
+import warnings
+
 import numpy as np
 import pytest
 import torch
@@ -9,7 +11,12 @@ from openmm import unit as mmunit
 
 import openxps as xps
 from openxps.bounds import NoBounds, PeriodicBounds
-from openxps.regression import ForceMatchingRegressor, GradMatch, RBFPotential
+from openxps.regression import (
+    ForceMatchingRegressor,
+    GradMatch,
+    RBFPotential,
+    _LearningCurveRecorder,
+)
 
 
 def create_test_dynamical_variables():
@@ -111,6 +118,31 @@ class TestRBFPotential:
 
         assert not potential.c.requires_grad
 
+    def test_centers_start_inside_bounds(self):
+        """Centers are drawn uniformly in [lower, upper]."""
+        dvs = create_test_dynamical_variables_mixed()
+        torch.manual_seed(0)
+        potential = RBFPotential(dvs, M=2000)
+        centers = potential.c.detach().numpy()
+        for column, dv in zip(centers.T, dvs):
+            bounds = dv.bounds
+            assert column.min() >= bounds.lower
+            assert column.max() <= bounds.upper
+            midpoint = 0.5 * (bounds.lower + bounds.upper)
+            assert abs(column.mean() - midpoint) < 0.05 * bounds.length
+
+    def test_constants_are_buffers(self):
+        potential = RBFPotential(create_test_dynamical_variables(), M=5)
+        assert {name for name, _ in potential.named_buffers()} == {
+            "_length_over_pi",
+            "_periodic",
+        }
+        assert {name for name, _ in potential.named_parameters()} == {
+            "c",
+            "logsig",
+            "w",
+        }
+
 
 class TestGradMatch:
     """Tests for GradMatch class."""
@@ -175,6 +207,18 @@ class TestGradMatch:
         """Checkpoints must be loadable with weights_only=True."""
         model = GradMatch(create_test_dynamical_variables(), M=4)
         assert set(model.hparams) == {"M", "lr", "wd"}
+
+    def test_weight_decay_applies_only_to_weights(self):
+        model = GradMatch(create_test_dynamical_variables(), M=4)
+        optimizer = model.configure_optimizers()
+        decay = {
+            id(param): group["weight_decay"]
+            for group in optimizer.param_groups
+            for param in group["params"]
+        }
+        assert decay[id(model.f.w)] == pytest.approx(1e-4)
+        assert decay[id(model.f.c)] == 0.0
+        assert decay[id(model.f.logsig)] == 0.0
 
 
 class TestForceMatchingRegressor:
@@ -384,3 +428,124 @@ class TestForceMatchingRegressor:
         assert regressor._model is not None
         predictions = regressor.predict(positions[:5])
         assert predictions.shape == (5,)
+
+
+class TestFitBehavior:
+    def test_fit_with_validation_records_epochs(self):
+        dvs = create_test_dynamical_variables()
+        regressor = ForceMatchingRegressor(
+            dvs, num_kernels=5, num_epochs=3, validation_fraction=0.2
+        )
+        rng = np.random.default_rng(42)
+        positions = rng.standard_normal((100, 2)) * 0.5
+        forces = -rng.standard_normal((100, 2)) * 0.1
+        regressor.fit(positions, forces, seed=1)
+        curve = regressor.get_learning_curve()
+        assert list(curve.epoch) == [0, 1, 2]
+        assert {"train_loss", "val_loss"} <= set(curve.columns)
+        assert np.all(np.isfinite(regressor.predict(positions)))
+
+    def test_rejects_validation_fraction_without_training_data(self):
+        with pytest.raises(ValueError, match="validation_fraction"):
+            ForceMatchingRegressor(
+                create_test_dynamical_variables(), 5, validation_fraction=1.0
+            )
+
+    def test_devices_default_to_one(self):
+        regressor = ForceMatchingRegressor(
+            create_test_dynamical_variables(), num_kernels=5
+        )
+        assert regressor._devices == 1
+
+    def test_fit_rejects_mismatched_shapes(self):
+        dvs = create_test_dynamical_variables()
+        regressor = ForceMatchingRegressor(dvs, num_kernels=5, num_epochs=1)
+        with pytest.raises(ValueError, match=r"positions must have shape \(N, 2\)"):
+            regressor.fit(np.zeros((10, 3)), np.zeros((10, 3)))
+        with pytest.raises(ValueError, match="forces must have the same shape"):
+            regressor.fit(np.zeros((10, 2)), np.zeros(10))
+
+    def test_fit_twice_resets_model_and_curve(self):
+        dvs = create_test_dynamical_variables()
+        regressor = ForceMatchingRegressor(
+            dvs, num_kernels=5, num_epochs=2, validation_fraction=0.0
+        )
+        rng = np.random.default_rng(0)
+        positions = rng.standard_normal((40, 2)) * 0.5
+        forces = -rng.standard_normal((40, 2)) * 0.1
+        with pytest.raises(RuntimeError, match="not been fitted"):
+            regressor.get_learning_curve()
+        regressor.fit(positions, forces, seed=1)
+        first_centers, _, _ = regressor.get_parameters()
+        first_curve = regressor.get_learning_curve()
+        regressor._num_epochs = 1
+        regressor.fit(positions, forces, seed=2)
+        second_centers, _, _ = regressor.get_parameters()
+        assert len(regressor.get_learning_curve()) == 1
+        assert len(first_curve) == 2
+        assert not np.allclose(first_centers, second_centers)
+
+    def test_get_parameters_does_not_change_predictions(self):
+        dv = xps.DynamicalVariable(
+            "r",
+            mmunit.nanometer,
+            3 * mmunit.dalton,
+            xps.ReflectiveBounds(0, 1, mmunit.nanometer),
+        )
+        regressor = ForceMatchingRegressor(
+            [dv], num_kernels=20, num_epochs=1, validation_fraction=0.0
+        )
+        rng = np.random.default_rng(0)
+        positions = rng.uniform(0, 1, (50, 1))
+        regressor.fit(positions, -positions, seed=1)
+        with torch.no_grad():
+            regressor._model.f.c += 1.5
+        before = regressor.predict(positions)
+        centers, _, _ = regressor.get_parameters()
+        assert np.all((centers >= 0) & (centers <= 1))
+        np.testing.assert_allclose(regressor.predict(positions), before)
+
+    def test_fit_does_not_touch_global_numpy_rng(self):
+        dvs = create_test_dynamical_variables()
+        regressor = ForceMatchingRegressor(
+            dvs, num_kernels=5, num_epochs=1, validation_fraction=0.0
+        )
+        np.random.seed(123)
+        expected = np.random.rand()
+        np.random.seed(123)
+        regressor.fit(np.zeros((20, 2)), np.zeros((20, 2)), seed=None)
+        assert np.random.rand() == expected
+
+    def test_fit_emits_no_checkpoint_directory_warning(self):
+        dvs = create_test_dynamical_variables()
+        regressor = ForceMatchingRegressor(
+            dvs, num_kernels=5, num_epochs=1, validation_fraction=0.2
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            regressor.fit(np.zeros((20, 2)), np.zeros((20, 2)), seed=1)
+        assert not [w for w in caught if "exists and is not empty" in str(w.message)]
+
+
+class _FakeTrainer:
+    def __init__(self, epoch, metrics, sanity_checking=False):
+        self.current_epoch = epoch
+        self.callback_metrics = metrics
+        self.sanity_checking = sanity_checking
+
+
+def test_learning_curve_recorder_tolerates_nan_validation_loss():
+    """A NaN val_loss must not break the epoch alignment."""
+    recorder = _LearningCurveRecorder()
+    sanity = _FakeTrainer(0, {"val_loss": torch.tensor(9.0)}, sanity_checking=True)
+    recorder.on_validation_epoch_end(sanity, None)
+    for epoch, val in enumerate((0.5, float("nan"), 0.3)):
+        trainer = _FakeTrainer(epoch, {"val_loss": torch.tensor(val)})
+        recorder.on_validation_epoch_end(trainer, None)
+        trainer = _FakeTrainer(epoch, {"train_loss": torch.tensor(1.0 / (epoch + 1))})
+        recorder.on_train_epoch_end(trainer, None)
+    frame = recorder.to_frame()
+    assert list(frame.columns) == ["epoch", "val_loss", "train_loss"]
+    assert list(frame.epoch) == [0, 1, 2]
+    assert np.isnan(frame.val_loss[1])
+    assert frame.train_loss[2] == pytest.approx(1 / 3)

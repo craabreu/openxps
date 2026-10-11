@@ -7,7 +7,6 @@
 
 """
 
-import os
 import tempfile
 import typing as t
 
@@ -57,7 +56,7 @@ class RBFPotential(nn.Module):
         for dv in dynamical_variables:
             lengths.append(dv.bounds.length)
             periodic.append(isinstance(dv.bounds, PeriodicBounds))
-            random_points.append(torch.randn(M) * dv.bounds.length + dv.bounds.lower)
+            random_points.append(torch.rand(M) * dv.bounds.length + dv.bounds.lower)
 
         self.c = nn.Parameter(
             torch.stack(random_points, dim=-1), requires_grad=learn_centers
@@ -67,12 +66,12 @@ class RBFPotential(nn.Module):
             torch.tensor(np.repeat(log_sigmas[None, :], M, axis=0), dtype=torch.float32)
         )
         self.w = nn.Parameter(torch.zeros(M))
-        self._length_over_pi = nn.Parameter(
+        self.register_buffer(
+            "_length_over_pi",
             torch.tensor(np.array(lengths) / np.pi, dtype=torch.float32)[None, None, :],
-            requires_grad=False,
         )
-        self._periodic = nn.Parameter(
-            torch.tensor(periodic, dtype=torch.bool)[None, None, :], requires_grad=False
+        self.register_buffer(
+            "_periodic", torch.tensor(periodic, dtype=torch.bool)[None, None, :]
         )
 
     def _delta2_fn(self, disp: torch.Tensor) -> torch.Tensor:
@@ -139,7 +138,11 @@ class GradMatch(pl.LightningModule):
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.AdamW(
-            self.parameters(), lr=self.hparams.lr, weight_decay=self.hparams.wd
+            [
+                {"params": [self.f.w], "weight_decay": self.hparams.wd},
+                {"params": [self.f.c, self.f.logsig], "weight_decay": 0.0},
+            ],
+            lr=self.hparams.lr,
         )
 
     def _loss(self, batch: tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
@@ -159,6 +162,36 @@ class GradMatch(pl.LightningModule):
         loss = self._loss(batch)
         self.log("val_loss", loss, prog_bar=True, on_step=False, on_epoch=True)
         return loss
+
+
+class _LearningCurveRecorder(pl.Callback):
+    """Collect per-epoch training and validation losses keyed by epoch."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._records: dict[int, dict[str, float]] = {}
+
+    def _record(self, trainer: pl.Trainer, key: str) -> None:
+        value = trainer.callback_metrics.get(key)
+        if value is not None:
+            epoch = trainer.current_epoch
+            record = self._records.setdefault(epoch, {"epoch": epoch})
+            record[key] = float(value)
+
+    def on_train_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ) -> None:
+        self._record(trainer, "train_loss")
+
+    def on_validation_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ) -> None:
+        if not trainer.sanity_checking:
+            self._record(trainer, "val_loss")
+
+    def to_frame(self) -> pd.DataFrame:
+        """Return the recorded losses with one row per epoch."""
+        return pd.DataFrame(list(self._records.values()))
 
 
 class ForceMatchingRegressor:
@@ -193,7 +226,9 @@ class ForceMatchingRegressor:
     Parameters
     ----------
     dynamical_variables
-        The dynamical variables to be used in the potential.
+        The dynamical variables to be used in the potential. They are converted to
+        the MD unit system, so the positions and forces passed to :meth:`fit` and
+        :meth:`predict` must be expressed in MD units.
     num_kernels
         The number of kernels to be used in the potential.
 
@@ -214,6 +249,9 @@ class ForceMatchingRegressor:
     accelerator
         The accelerator to be used for training. Valid options can be found
         `here <https://lightning.ai/docs/pytorch/LTS/common/trainer.html#accelerator>`_.
+    devices
+        The number of devices, or ``"auto"``, passed to the Lightning trainer. The
+        default of 1 avoids launching distributed training on multi-GPU hosts.
     num_workers
         The number of data loading workers to be used for training.
     """
@@ -230,8 +268,11 @@ class ForceMatchingRegressor:
         learning_rate: float = 2e-3,
         weight_decay: float = 1e-4,
         accelerator: str = "auto",
+        devices: int | str = 1,
         num_workers: int = 0,
     ):
+        if not 0 <= validation_fraction < 1:
+            raise ValueError("validation_fraction must be in the interval [0, 1).")
         self._dynamical_variables = tuple(
             dv.in_md_units() for dv in dynamical_variables
         )
@@ -242,6 +283,7 @@ class ForceMatchingRegressor:
         self._lr = learning_rate
         self._wd = weight_decay
         self._accelerator = accelerator
+        self._devices = devices
         self._num_workers = num_workers
         self._M = num_kernels
         self._model = None
@@ -249,7 +291,7 @@ class ForceMatchingRegressor:
 
     @staticmethod
     def _as_numpy(x: torch.Tensor) -> np.ndarray:
-        return x.detach().cpu().numpy()
+        return x.detach().cpu().clone().numpy()
 
     def _create_dataloaders(
         self, X: torch.Tensor, G: torch.Tensor
@@ -289,6 +331,18 @@ class ForceMatchingRegressor:
         )
         return checkpoint, early_stopping
 
+    def _validate_shapes(self, X: torch.Tensor, G: torch.Tensor) -> None:
+        d = len(self._dynamical_variables)
+        if X.shape != (*X.shape[:1], d):
+            raise ValueError(
+                f"positions must have shape (N, {d}), got {tuple(X.shape)}"
+            )
+        if G.shape != X.shape:
+            raise ValueError(
+                f"forces must have the same shape as positions {tuple(X.shape)}, "
+                f"got {tuple(G.shape)}"
+            )
+
     def fit(
         self, positions: ArrayLike, forces: ArrayLike, *, seed: int | None = None
     ) -> None:
@@ -297,43 +351,46 @@ class ForceMatchingRegressor:
         Parameters
         ----------
         positions
-            The positions to be used for training.
+            An array of shape (N, d) with the positions in MD units.
         forces
-            The forces to be used for training.
+            An array of shape (N, d) with the forces in MD units.
 
         Keyword Arguments
         -----------------
         seed
-            The seed to be used for training. If None, a random seed is generated.
+            The seed used to split the data and initialize the kernels. If None, a
+            random seed is used. NumPy's global random state is left untouched,
+            while PyTorch's global seed is set.
         """
-        np.random.seed(seed)
-        torch.manual_seed(np.random.randint(0, 1000000))
+        rng = np.random.default_rng(seed)
+        torch.manual_seed(int(rng.integers(0, 2**31 - 1)))
 
-        X = torch.as_tensor(positions, dtype=torch.float32)
-        G = -torch.as_tensor(forces, dtype=torch.float32)
+        X = torch.as_tensor(np.asarray(positions, dtype=np.float32))
+        G = -torch.as_tensor(np.asarray(forces, dtype=np.float32))
+        self._validate_shapes(X, G)
+        self._metrics = None
         train_dl, val_dl = self._create_dataloaders(X, G)
 
         self._model = GradMatch(self._dynamical_variables, self._M, self._lr, self._wd)
+        recorder = _LearningCurveRecorder()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
-            logger = pl.loggers.CSVLogger(save_dir=tmp_dir, version=0)
-
             trainer_kwargs = {
                 "max_epochs": self._num_epochs,
                 "accelerator": self._accelerator,
-                "devices": "auto",
-                "logger": logger,
+                "devices": self._devices,
+                "logger": False,
                 "enable_progress_bar": True,
                 "enable_model_summary": True,
+                "callbacks": [recorder],
             }
-
             if val_dl is None:
                 trainer_kwargs["enable_checkpointing"] = False
                 trainer = pl.Trainer(**trainer_kwargs)
                 trainer.fit(self._model, train_dl)
             else:
                 checkpoint, early_stopping = self._create_callbacks(tmp_dir)
-                trainer_kwargs["callbacks"] = [checkpoint, early_stopping]
+                trainer_kwargs["callbacks"] += [checkpoint, early_stopping]
                 trainer = pl.Trainer(**trainer_kwargs)
                 trainer.fit(self._model, train_dl, val_dl)
                 if checkpoint.best_model_path:
@@ -344,12 +401,7 @@ class ForceMatchingRegressor:
                     )
                     self._model.load_state_dict(state["state_dict"])
 
-            path = os.path.join(logger.log_dir, "metrics.csv")
-            if os.path.exists(path):
-                df = pd.read_csv(path)
-                self._metrics = df[df.train_loss.notna()].copy()
-                if val_dl is not None:
-                    self._metrics["val_loss"] = df.val_loss[df.val_loss.notna()].values
+        self._metrics = recorder.to_frame()
 
     def predict(self, positions: ArrayLike) -> np.ndarray:
         """Predict the potential at the given positions.
@@ -395,11 +447,19 @@ class ForceMatchingRegressor:
         )
 
     def get_learning_curve(self) -> pd.DataFrame:
-        """Get the learning curve of the potential regressor.
+        """Get the learning curve of the last fit.
 
         Returns
         -------
         pd.DataFrame
-            The learning curve of the potential regressor.
+            A copy of the per-epoch losses, with columns ``epoch``, ``train_loss``
+            and, when a validation set is used, ``val_loss``.
+
+        Raises
+        ------
+        RuntimeError
+            If :meth:`fit` has not been called.
         """
-        return self._metrics
+        if self._metrics is None:
+            raise RuntimeError("The model has not been fitted yet.")
+        return self._metrics.copy()
