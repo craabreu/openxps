@@ -128,3 +128,26 @@ def test_bounds_transformation_not_implemented():
     bounds = Bounds(-1, 1, mmunit.meters)
     with pytest.raises(NotImplementedError):
         bounds.leptonExpression("x")
+
+
+def test_bounds_equality_requires_same_kind():
+    """NoBounds and PeriodicBounds with the same range are not equal."""
+    from openxps.bounds import NoBounds
+
+    assert NoBounds(-np.pi, np.pi, mmunit.radian) != CircularBounds()
+    assert PeriodicBounds(-np.pi, np.pi, mmunit.radian) == CircularBounds()
+    assert ReflectiveBounds(0, 1, mmunit.nanometer) != PeriodicBounds(
+        0, 1, mmunit.nanometer
+    )
+
+
+def test_bounds_equality_is_symmetric_across_units():
+    """Equality after unit conversion holds in both directions."""
+    a = ReflectiveBounds(12.11, 57.66, mmunit.angstrom)
+    b = ReflectiveBounds(1.211, 5.766, mmunit.nanometer)
+    assert a == b
+    assert b == a
+    assert hash(a) == hash(b)
+    assert ReflectiveBounds(3, 10, mmunit.angstrom) == ReflectiveBounds(
+        0.3, 1, mmunit.nanometer
+    )
