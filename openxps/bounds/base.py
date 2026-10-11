@@ -9,6 +9,7 @@ Base class for boundary conditions.
 
 """
 
+import math
 import typing as t
 from dataclasses import dataclass
 
@@ -39,6 +40,9 @@ class Bounds(Serializable):
     upper: float
     unit: cvpack.units.Unit
 
+    #: The kind of boundary condition; subclasses override it.
+    kind: t.ClassVar[str] = "bounds"
+
     def __post_init__(self) -> None:
         for kind in ("lower", "upper"):
             if not isinstance(getattr(self, kind), (int, float)):
@@ -57,15 +61,21 @@ class Bounds(Serializable):
         self.__init__(keywords["lower"], keywords["upper"], keywords["unit"])
 
     def __eq__(self, other: t.Any) -> bool:
-        return (
-            isinstance(other, Bounds)
-            and self.lower * self.unit == other.lower * other.unit
-            and self.upper * self.unit == other.upper * other.unit
+        if not isinstance(other, Bounds) or self.kind != other.kind:
+            return False
+        _, self_factor = self._md_unit_and_conversion_factor()
+        other_md_unit, other_factor = other._md_unit_and_conversion_factor()
+        if not self.unit.is_compatible(other_md_unit):
+            return False
+        return math.isclose(
+            self.lower * self_factor, other.lower * other_factor, rel_tol=1e-9
+        ) and math.isclose(
+            self.upper * self_factor, other.upper * other_factor, rel_tol=1e-9
         )
 
     def __hash__(self) -> int:
-        unit, factor = self._md_unit_and_conversion_factor()
-        return hash((self.lower * factor, self.upper * factor, unit))
+        unit, _ = self._md_unit_and_conversion_factor()
+        return hash((self.kind, str(unit)))
 
     def _md_unit_and_conversion_factor(self) -> tuple[mmunit.Unit, float]:
         """

@@ -9,6 +9,8 @@ No boundary condition.
 
 """
 
+import typing as t
+
 from .base import Bounds
 
 
@@ -35,6 +37,8 @@ class NoBounds(Bounds):
     NoBounds(lower=0, upper=1, unit=dimensionless)
     >>> assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
     """
+
+    kind: t.ClassVar[str] = "none"
 
     def leptonExpression(self, variable: str) -> str:
         return f"{variable}"

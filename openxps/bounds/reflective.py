@@ -9,6 +9,8 @@ Reflective boundary condition.
 
 """
 
+import typing as t
+
 from .base import Bounds
 
 
@@ -37,6 +39,8 @@ class ReflectiveBounds(Bounds):
     >>> print(bounds)
     ReflectiveBounds(lower=1, upper=10, unit=A)
     """
+
+    kind: t.ClassVar[str] = "reflective"
 
     def __post_init__(self) -> None:
         super().__post_init__()
