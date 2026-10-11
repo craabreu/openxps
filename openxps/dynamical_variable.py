@@ -95,6 +95,9 @@ class DynamicalVariable(Serializable):
     def __setstate__(self, keywords: dict[str, t.Any]) -> None:
         self.__init__(**keywords)
 
+    def __hash__(self) -> int:
+        return hash((self.name, str(self.unit), self.bounds))
+
     def in_md_units(self) -> "DynamicalVariable":
         """
         Return the dynamical variable in the MD unit system.
@@ -165,12 +168,8 @@ class DynamicalVariable(Serializable):
         ... )
         >>> cv = dv.createCollectiveVariable(0)
         """
-        bounds = self.bounds
-        if bounds is None:
-            force = mm.CustomExternalForce("x")
-        else:
-            force = mm.CustomExternalForce(bounds.leptonExpression("x"))
-            bounds = bounds.asQuantity() if self.isPeriodic() else None
+        force = mm.CustomExternalForce(self.bounds.leptonExpression("x"))
+        bounds = self.bounds.asQuantity() if self.isPeriodic() else None
         force.addParticle(index, [])
         return cvpack.OpenMMForceWrapper(
             force,

@@ -205,3 +205,14 @@ def test_distance_to_dv_requires_matching_bounds():
     )
     with pytest.raises(ValueError, match="Incompatible units"):
         x.distanceTo(a)
+
+
+def test_dv_is_hashable_and_hash_matches_equality():
+    mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
+    a = DynamicalVariable(
+        "phi", mmunit.radian, mass, PeriodicBounds(-180, 180, mmunit.degree)
+    )
+    b = DynamicalVariable("phi", mmunit.radian, mass, CircularBounds())
+    assert a == b
+    assert hash(a) == hash(b)
+    assert len({a, b}) == 1
