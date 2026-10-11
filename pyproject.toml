@@ -74,7 +74,6 @@ where = ["."]
 # Ref https://setuptools.pypa.io/en/latest/userguide/datafiles.html#package-data
 [tool.setuptools.package-data]
 openxps = [
-    "py.typed",
     "data/*.pdb"
 ]
 
