@@ -19,9 +19,13 @@ requirements:
     - versioningit
     - pip
   run:
-    - python
+    - python >=3.10
     - numpy
-    - openmm
+    - openmm >=8.4
+    - cvpack
+    - pyyaml
+    - pandas
+    - typing-extensions
     - pytorch
     - lightning
 
@@ -31,7 +35,7 @@ test:
 
 about:
   home: https://github.com/craabreu/openxps
-  summary: Useful Collective Variables for OpenMM
+  summary: Extended Phase-Space Simulations with OpenMM
   license: MIT
   license_family: MIT
   license_file: LICENSE.md

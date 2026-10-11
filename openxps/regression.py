@@ -290,7 +290,7 @@ class ForceMatchingRegressor:
         return checkpoint, early_stopping
 
     def fit(
-        self, positions: ArrayLike, forces: ArrayLike, *, seed: t.Optional[int] = None
+        self, positions: ArrayLike, forces: ArrayLike, *, seed: int | None = None
     ) -> None:
         """Fit the potential regressor to the given positions and forces.
 

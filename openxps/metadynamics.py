@@ -64,7 +64,7 @@ class ExtendedSpaceBiasVariable(Serializable):
 
     dynamical_variable: DynamicalVariable
     sigma: mmunit.Quantity
-    grid_width: t.Optional[int] = field(default_factory=lambda: None)
+    grid_width: int | None = field(default_factory=lambda: None)
 
     def __post_init__(self) -> None:
         if not mmunit.is_quantity(self.sigma):
@@ -157,8 +157,8 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
     >>> context.setDynamicalVariableValues([180 * unit.degree])
     >>> context.setDynamicalVariableVelocitiesToTemperature(temperature, 1234)
     >>> metadynamics.step(simulation, 100)
-    >>> metadynamics.getFreeEnergy()
-    [... ... ...] kJ/mol
+    >>> print(metadynamics.getFreeEnergy())
+    [...] kJ/mol
     """
 
     def __init__(  # noqa: PLR0913, PLR0917
@@ -169,8 +169,8 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         biasFactor: float,
         height: mmunit.Quantity,
         frequency: int,
-        saveFrequency: t.Optional[int] = None,
-        biasDir: t.Optional[str] = None,
+        saveFrequency: int | None = None,
+        biasDir: str | None = None,
     ) -> None:
         system_dvs = system.getDynamicalVariables()
         bias_variables = []

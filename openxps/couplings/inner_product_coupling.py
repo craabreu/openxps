@@ -130,7 +130,7 @@ class InnerProductCoupling(Coupling):
         self,
         forces: t.Iterable[mm.Force],
         dynamical_variables: t.Iterable[DynamicalVariable],
-        functions: t.Optional[dict[str, str]] = None,
+        functions: dict[str, str] | None = None,
         **parameters: mmunit.Quantity,
     ) -> None:
         forces = [

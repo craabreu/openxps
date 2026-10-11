@@ -7,7 +7,6 @@
 
 """
 
-import typing as t
 from abc import ABC, abstractmethod
 from copy import deepcopy
 
@@ -244,7 +243,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     ...     300 * unit.kelvin, 1 / unit.picosecond, 1 * unit.femtosecond
     ... )
     >>> xps_integrator = xps.LockstepIntegrator(integrator)
-    >>> xps_integrator.getStepSize()
+    >>> print(xps_integrator.getStepSize())
     0.001 ps
 
     Using CSVR integrator with force-first scheme for the extension system
@@ -259,7 +258,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     def __init__(
         self,
         physical_integrator: mm.Integrator,
-        extension_integrator: t.Optional[mm.Integrator] = None,
+        extension_integrator: mm.Integrator | None = None,
         assume_force_first: bool = False,
     ) -> None:
         if extension_integrator is None:
@@ -361,7 +360,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
 
     >>> integrator = xps.integrators.SymmetricVerletIntegrator(4 * unit.femtosecond)
     >>> xps_integrator = xps.SplitIntegrator(integrator)
-    >>> xps_integrator.getStepSize()
+    >>> print(xps_integrator.getStepSize())
     0.004 ps
     >>> xps_integrator.getNumSubsteps()
     1
@@ -375,7 +374,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
     ...     300 * unit.kelvin, 1 / unit.picosecond, 1 * unit.femtosecond
     ... )
     >>> xps_integrator = xps.SplitIntegrator(physical, extension)
-    >>> xps_integrator.getStepSize()
+    >>> print(xps_integrator.getStepSize())
     0.004 ps
     >>> xps_integrator.getNumSubsteps()
     2
@@ -389,7 +388,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
     ...     300 * unit.kelvin, 1 / unit.picosecond, 8 * unit.femtosecond
     ... )
     >>> xps_integrator = xps.SplitIntegrator(physical, extension)
-    >>> xps_integrator.getStepSize()
+    >>> print(xps_integrator.getStepSize())
     0.008 ps
     >>> xps_integrator.getNumSubsteps()
     2
@@ -398,7 +397,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
     def __init__(
         self,
         physical_integrator: mm.Integrator,
-        extension_integrator: t.Optional[mm.Integrator] = None,
+        extension_integrator: mm.Integrator | None = None,
         assume_symmetric: bool = False,
     ) -> None:
         physical_step_size = mmswig.Integrator_getStepSize(physical_integrator)

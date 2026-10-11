@@ -7,8 +7,6 @@
 
 """
 
-import typing as t
-
 import openmm as mm
 from openmm import app as mmapp
 
@@ -81,8 +79,8 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     ...     300 * unit.kelvin, 1234
     ... )
     >>> simulation.step(100)
-    >>> simulation.context.getDynamicalVariableValues()
-    (... rad,)
+    >>> print("phi0 =", *simulation.context.getDynamicalVariableValues())
+    phi0 = ... rad
     """
 
     def __init__(  # noqa: PLR0913 pylint: disable=super-init-not-called
@@ -90,9 +88,9 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         topology: mmapp.Topology,
         system: ExtendedSpaceSystem,
         integrator: ExtendedSpaceIntegrator,
-        platform: t.Optional[mm.Platform] = None,
-        platformProperties: t.Optional[dict] = None,
-        state: t.Optional[mm.State] = None,
+        platform: mm.Platform | None = None,
+        platformProperties: dict | None = None,
+        state: mm.State | None = None,
     ) -> None:
         self.topology = topology
         self.system = system

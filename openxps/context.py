@@ -70,19 +70,19 @@ class ExtendedSpaceContext(mm.Context):
     >>> context.setDynamicalVariableValues([180 * unit.degree])
     >>> context.setDynamicalVariableVelocitiesToTemperature(temp, 1234)
     >>> context.getIntegrator().step(100)
-    >>> context.getDynamicalVariableValues()
-    (... rad,)
+    >>> print("phi0 =", *context.getDynamicalVariableValues())
+    phi0 = ... rad
     >>> state = context.getExtensionContext().getState(getEnergy=True)
-    >>> state.getPotentialEnergy(), state.getKineticEnergy()
-    (... kJ/mol, ... kJ/mol)
+    >>> print("U =", state.getPotentialEnergy(), "K =", state.getKineticEnergy())
+    U = ... kJ/mol K = ... kJ/mol
     """
 
     def __init__(
         self,
         system: ExtendedSpaceSystem,
         integrator: ExtendedSpaceIntegrator,
-        platform: t.Optional[mm.Platform] = None,
-        properties: t.Optional[dict] = None,
+        platform: mm.Platform | None = None,
+        properties: dict | None = None,
     ) -> None:
         self._validate(system, integrator)
         args = [system, integrator.getPhysicalIntegrator()]
@@ -227,7 +227,7 @@ class ExtendedSpaceContext(mm.Context):
         self._extension_context.setVelocities(velocities)
 
     def setDynamicalVariableVelocitiesToTemperature(
-        self, temperature: mmunit.Quantity, seed: t.Optional[int] = None
+        self, temperature: mmunit.Quantity, seed: int | None = None
     ) -> None:
         """
         Set the velocities of the dynamical variables to a temperature.

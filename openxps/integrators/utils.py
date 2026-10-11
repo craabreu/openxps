@@ -138,12 +138,12 @@ def add_property(property: str, unit: mmunit.Unit) -> t.Callable[[type[T]], type
     PascalCaseName = "".join(s.capitalize() for s in property.split())
     snake_case_name = "_".join(s.lower() for s in property.split())
 
-    def set_value(self, value: t.Union[mmunit.Quantity, float]) -> None:
+    def set_value(self, value: mmunit.Quantity | float) -> None:
         args = [value] if mmunit.is_quantity(value) else [value, unit]
         setattr(self, f"_{snake_case_name}", Quantity(*args))
 
     @preprocess_args
-    def set_and_update(self, value: t.Union[mmunit.Quantity, float]) -> None:
+    def set_and_update(self, value: mmunit.Quantity | float) -> None:
         set_value(value)
         if hasattr(self, "_update_global_variables"):
             self._update_global_variables()

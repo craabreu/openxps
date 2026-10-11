@@ -227,9 +227,9 @@ class ExtensionWriter(CustomWriter):
         context = simulation.extended_space_context
         extension_context = context.getExtensionContext()
         state = extension_context.getState(
-            energy=self._needs_energy,
-            positions=self._needs_positions,
-            forces=self._needs_forces,
+            getEnergy=self._needs_energy,
+            getPositions=self._needs_positions,
+            getForces=self._needs_forces,
         )
         if self._needs_energy:
             kinetic_energy = mmswig.State_getKineticEnergy(state)

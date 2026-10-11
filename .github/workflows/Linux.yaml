@@ -20,27 +20,24 @@ jobs:
     name: Test on ${{ matrix.os }}, Python ${{ matrix.python-version }}, OpenMM ${{ matrix.openmm-version }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
             python-version: "3.13"
-            openmm-version: "8.3"
+            openmm-version: "8.6"
 
           - os: ubuntu-latest
             python-version: "3.12"
-            openmm-version: "8.2"
+            openmm-version: "8.5"
 
           - os: ubuntu-latest
             python-version: "3.11"
-            openmm-version: "8.1"
-
-          - os: ubuntu-latest
-            python-version: "3.11"
-            openmm-version: "8.0"
+            openmm-version: "8.4"
 
           - os: ubuntu-latest
             python-version: "3.10"
-            openmm-version: "7.7"
+            openmm-version: "8.4"
 
     steps:
       - uses: actions/checkout@v4
@@ -58,6 +55,7 @@ jobs:
           environment-name: test
           create-args: >-
             python=${{ matrix.python-version }}
+            openmm=${{ matrix.openmm-version }}
 
       - name: Install package
         # conda setup requires this special shell
@@ -73,8 +71,8 @@ jobs:
           pytest
 
       - name: CodeCov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v4
         with:
-          file: ./coverage.xml
+          files: ./coverage.xml
           flags: unittests
           name: codecov-${{ matrix.os }}-py${{ matrix.python-version }}

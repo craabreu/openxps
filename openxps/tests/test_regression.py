@@ -171,7 +171,6 @@ class TestGradMatch:
         assert isinstance(loss, torch.Tensor)
         assert loss.item() >= 0
 
-
     def test_hyperparameters_exclude_dynamical_variables(self):
         """Checkpoints must be loadable with weights_only=True."""
         model = GradMatch(create_test_dynamical_variables(), M=4)
