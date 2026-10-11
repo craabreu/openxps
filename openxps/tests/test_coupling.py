@@ -1246,3 +1246,29 @@ def test_coupling_sum_does_not_mutate_children():
     assert cb._dv_indices == {"b": 0}
     system = ExtendedSpaceSystem(_two_particle_system(), cb)
     assert system.getExtensionSystem().getNumParticles() == 1
+
+
+def test_inner_product_coupling_uses_dedicated_force_group():
+    """Derivative evaluation touches only the coupling forces."""
+    model = create_test_system()
+    coupling = _scaling_coupling()
+    groups_before = {f.getForceGroup() for f in model.system.getForces()}
+    system = ExtendedSpaceSystem(model.system, coupling)
+    groups = coupling.getForceGroups()
+    assert groups and not groups & groups_before
+    assert groups == {f.getForceGroup() for f in coupling.getForces()}
+    context = ExtendedSpaceContext(
+        system,
+        LockstepIntegrator(mm.VerletIntegrator(0.001)),
+        mm.Platform.getPlatformByName("Reference"),
+    )
+    context.setPositions(model.positions)
+    context.setDynamicalVariableValues([0.5])
+    full = context.getState(getParameterDerivatives=True)
+    partial = context.getState(getParameterDerivatives=True, groups=groups)
+    expected = full.getEnergyParameterDerivatives()["scaling"]
+    assert partial.getEnergyParameterDerivatives()["scaling"] == pytest.approx(expected)
+    derivative = context.getExtensionContext().getParameter(
+        "derivative_with_respect_to_scaling"
+    )
+    assert derivative == pytest.approx(expected)

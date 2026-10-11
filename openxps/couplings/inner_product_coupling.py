@@ -148,6 +148,7 @@ class InnerProductCoupling(Coupling):
             for name, expression in (functions or {}).items()
         ]
         self._parameters = parameters
+        self._force_groups = set()
         super().__init__(forces, dynamical_variables)
         self._dynamic_parameters = self._getDynamicParameters()
 
@@ -155,11 +156,13 @@ class InnerProductCoupling(Coupling):
         state = super().__getstate__()
         state["functions"] = self._functions
         state["parameters"] = self._parameters
+        state["force_groups"] = self._force_groups
         return state
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self._functions = state["functions"]
         self._parameters = state["parameters"]
+        self._force_groups = state.get("force_groups", set())
         super().__setstate__(state)
         self._dynamic_parameters = self._getDynamicParameters()
 
@@ -256,13 +259,27 @@ class InnerProductCoupling(Coupling):
                 )
         return flipped_force
 
+    def getForceGroups(self) -> set[int]:
+        """
+        Get the force groups of the coupling forces, which are empty until the
+        coupling is added to a physical system.
+        """
+        return self._force_groups
+
+    def addToPhysicalSystem(self, system: mm.System) -> None:
+        super().addToPhysicalSystem(system)
+        self._force_groups = {force.getForceGroup() for force in self._forces}
+
     def updateExtensionContext(
         self,
         physical_context: mm.Context,
         extension_context: mm.Context,
     ) -> None:
-        state = mmswig.Context_getState(physical_context, mm.State.ParameterDerivatives)
-        for name, value in mmswig.State_getEnergyParameterDerivatives(state).items():
+        groups = sum(1 << group for group in self._force_groups) or -1
+        state = mm.Context.getState(
+            physical_context, getParameterDerivatives=True, groups=groups
+        )
+        for name, value in state.getEnergyParameterDerivatives().items():
             if name in self._dynamic_parameters:
                 mmswig.Context_setParameter(
                     extension_context, self._derivativeName(name), value
