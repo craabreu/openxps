@@ -16,7 +16,7 @@ from openxps.utils import preprocess_args
 
 
 @add_property("temperature", mmunit.kelvin)
-@add_property("time constant", 1 / mmunit.picosecond)
+@add_property("time constant", mmunit.picosecond)
 @add_property("friction coefficient", 1 / mmunit.picosecond)
 class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     r"""A massive, second- and fourth-moment GGMT integrator :cite:`Liu2000`.

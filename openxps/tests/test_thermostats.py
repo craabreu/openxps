@@ -143,3 +143,8 @@ def test_csvr_step_before_register_raises_clear_error():
     with pytest.raises(ValueError, match="registerWithSystem"):
         integrator.step(1)
     assert context.getStepCount() == 0
+
+
+def test_ggmt_time_constant_unit():
+    integrator = integrators.MassiveGGMTIntegrator(300 * KELVIN, 0.1, 1 * FS)
+    assert integrator.getTimeConstant() == 0.1 * PS
