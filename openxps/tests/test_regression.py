@@ -172,6 +172,12 @@ class TestGradMatch:
         assert loss.item() >= 0
 
 
+    def test_hyperparameters_exclude_dynamical_variables(self):
+        """Checkpoints must be loadable with weights_only=True."""
+        model = GradMatch(create_test_dynamical_variables(), M=4)
+        assert set(model.hparams) == {"M", "lr", "wd"}
+
+
 class TestForceMatchingRegressor:
     """Tests for ForceMatchingRegressor class."""
 

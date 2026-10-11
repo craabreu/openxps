@@ -235,7 +235,7 @@ class Function(Serializable):
         0.13533528...
         >>> context.setPositions([mm.Vec3(x, 0.0, 0.0), mm.Vec3(y, 0.0, 0.0)])
         >>> context.getState(getEnergy=True).getPotentialEnergy()
-        0.13533528... kJ/mol
+        0.1353352... kJ/mol
         """
         return cvpack.AtomicFunction(
             function=";".join(
