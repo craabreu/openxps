@@ -112,8 +112,12 @@
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s2">"sigma must be compatible with the dynamical variable's unit"</span>
             <span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="o">.</span><span class="n">unit</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"sigma must be positive"</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span><span class="p">,</span> <span class="nb">int</span><span class="p">)):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"grid_width must be an integer or None"</span><span class="p">)</span></div>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"grid_width must be an integer or None"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">grid_width</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"grid_width must be greater than 1"</span><span class="p">)</span></div>
 
 
 
@@ -156,6 +160,12 @@
 <span class="sd">    biasDir</span>
 <span class="sd">        The directory to which biases should be written, and from which biases written</span>
 <span class="sd">        by other processes should be loaded.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        The bias force is added to the extension system of ``system`` when this</span>
+<span class="sd">        object is created, so it must be created before the</span>
+<span class="sd">        :class:`~openxps.ExtendedSpaceSimulation` or</span>
+<span class="sd">        :class:`~openxps.ExtendedSpaceContext` that uses the system.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>

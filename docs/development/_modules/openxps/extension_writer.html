@@ -45,6 +45,7 @@
 <span class="sd">"""</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">cvpack.reporting.custom_writer</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomWriter</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
@@ -67,11 +68,11 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    kinetic : bool, optional, default=False</span>
-<span class="sd">        If ``True``, the kinetic energy of the extension context will be reported</span>
+<span class="sd">        If ``True``, the kinetic energy of the dynamical variables will be reported</span>
 <span class="sd">        in units of kJ/mol.</span>
 <span class="sd">    temperature : bool, optional, default=False</span>
-<span class="sd">        If ``True``, the temperature of the extension context will be reported</span>
-<span class="sd">        in units of Kelvin.</span>
+<span class="sd">        If ``True``, the temperature of the dynamical variables, with one degree of</span>
+<span class="sd">        freedom per variable, will be reported in units of Kelvin.</span>
 <span class="sd">    dynamical_variables : bool, optional, default=False</span>
 <span class="sd">        If ``True``, the current values of all dynamical variables will be reported.</span>
 <span class="sd">        Each variable will be reported with its name and unit.</span>
@@ -158,14 +159,18 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_effective_masses</span> <span class="o">=</span> <span class="n">effective_masses</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_functions</span> <span class="o">=</span> <span class="n">coupling_functions</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span> <span class="o">=</span> <span class="n">kinetic</span> <span class="ow">or</span> <span class="n">temperature</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span> <span class="o">=</span> <span class="n">kinetic</span> <span class="ow">or</span> <span class="n">temperature</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_needs_positions</span> <span class="o">=</span> <span class="n">dynamical_variables</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_needs_forces</span> <span class="o">=</span> <span class="n">forces</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_temp_factor</span> <span class="o">=</span> <span class="mf">0.0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_masses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_cvs</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mass_units</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span> <span class="o">=</span> <span class="kc">False</span>
 
 <div class="viewcode-block" id="ExtensionWriter.initialize">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.initialize">[docs]</a>
@@ -173,27 +178,37 @@
         <span class="n">context</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">extended_space_context</span>
         <span class="n">coupling</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getCoupling</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span> <span class="o">=</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_masses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">dv</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">])</span>
+        <span class="n">kb</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span>
+            <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">kelvin</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_temp_factor</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">)</span> <span class="o">*</span> <span class="n">kb</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">force</span>
+            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getForces</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_inner_cvs</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">cv</span> <span class="k">for</span> <span class="n">meta_cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span> <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">()</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_mass_units</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">())</span> <span class="o">**</span> <span class="mi">2</span>
+            <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_cvs</span>
+        <span class="p">]</span>
+        <span class="n">dv_names</span> <span class="o">=</span> <span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">parameter</span>
+            <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getProtectedParameters</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">parameter</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dv_names</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span> <span class="o">=</span> <span class="kc">True</span></div>
 
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_temperature</span><span class="p">:</span>
-            <span class="n">number</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">())</span>
-            <span class="n">kb</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span>
-                <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">kelvin</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_checkInitialized</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">"The writer must be initialized with a simulation first."</span>
             <span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_temp_factor</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">number</span> <span class="o">*</span> <span class="n">kb</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span> <span class="ow">or</span> <span class="bp">self</span><span class="o">.</span><span class="n">_effective_masses</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getForces</span><span class="p">():</span>
-                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">MetaCollectiveVariable</span><span class="p">):</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">force</span><span class="p">)</span>
-
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_functions</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span> <span class="o">=</span> <span class="p">[]</span>
-            <span class="n">dv_names</span> <span class="o">=</span> <span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">}</span>
-            <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getProtectedParameters</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">parameter</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dv_names</span><span class="p">:</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">parameter</span><span class="p">)</span></div>
-
 
 <div class="viewcode-block" id="ExtensionWriter.getDynamicalVariableHeaders">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getDynamicalVariableHeaders">[docs]</a>
@@ -205,6 +220,7 @@
 <span class="sd">        list[str]</span>
 <span class="sd">            The headers for all dynamical variables.</span>
 <span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_checkInitialized</span><span class="p">()</span>
         <span class="k">return</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)"</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">]</span></div>
 
 
@@ -218,6 +234,7 @@
 <span class="sd">        list[str]</span>
 <span class="sd">            The headers for all forces.</span>
 <span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_checkInitialized</span><span class="p">()</span>
         <span class="k">return</span> <span class="p">[</span>
             <span class="sa">f</span><span class="s2">"Force on </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> (kJ/(mol*</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">))"</span>
             <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span>
@@ -234,11 +251,10 @@
 <span class="sd">        list[str]</span>
 <span class="sd">            The headers for all collective variables.</span>
 <span class="sd">        """</span>
-        <span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">meta_cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">():</span>
-                <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">headers</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_checkInitialized</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">()</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)"</span> <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_cvs</span>
+        <span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="ExtensionWriter.getEffectiveMassHeaders">
@@ -251,17 +267,17 @@
 <span class="sd">        list[str]</span>
 <span class="sd">            The headers for all effective masses.</span>
 <span class="sd">        """</span>
-        <span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
-        <span class="k">for</span> <span class="n">meta_cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">():</span>
-                <span class="n">mass_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">())</span> <span class="o">**</span> <span class="mi">2</span>
-                <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">"emass[</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2">] (</span><span class="si">{</span><span class="n">mass_unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">headers</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_checkInitialized</span><span class="p">()</span>
+        <span class="k">return</span> <span class="p">[</span>
+            <span class="sa">f</span><span class="s2">"emass[</span><span class="si">{</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2">] (</span><span class="si">{</span><span class="n">mass_unit</span><span class="o">.</span><span class="n">get_symbol</span><span class="p">()</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="k">for</span> <span class="n">cv</span><span class="p">,</span> <span class="n">mass_unit</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_inner_cvs</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mass_units</span><span class="p">)</span>
+        <span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="ExtensionWriter.getHeaders">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getHeaders">[docs]</a>
-    <span class="k">def</span><span class="w"> </span><span class="nf">getHeaders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>  <span class="c1"># noqa: PLR0912</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getHeaders</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_checkInitialized</span><span class="p">()</span>
         <span class="n">headers</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kinetic</span><span class="p">:</span>
             <span class="n">headers</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">"Extension Kinetic Energy (kJ/mole)"</span><span class="p">)</span>
@@ -286,12 +302,14 @@
         <span class="n">context</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">extended_space_context</span>
         <span class="n">extension_context</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span>
         <span class="n">state</span> <span class="o">=</span> <span class="n">extension_context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
-            <span class="n">getEnergy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">,</span>
+            <span class="n">getVelocities</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span><span class="p">,</span>
             <span class="n">getPositions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_positions</span><span class="p">,</span>
             <span class="n">getForces</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_forces</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">:</span>
-            <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State_getKineticEnergy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span><span class="p">:</span>
+            <span class="n">velocities</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Velocities</span><span class="p">)</span>
+            <span class="n">rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">velocity</span><span class="o">.</span><span class="n">x</span> <span class="k">for</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="n">velocities</span><span class="p">])</span>
+            <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_masses</span><span class="p">,</span> <span class="n">rates</span> <span class="o">*</span> <span class="n">rates</span><span class="p">))</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_positions</span><span class="p">:</span>
             <span class="n">positions</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">:</span>
@@ -309,17 +327,16 @@
             <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">forces</span><span class="p">:</span>
                 <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_collective_variables</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">meta_cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">():</span>
-                    <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extension_context</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()))</span>
+            <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_cvs</span><span class="p">:</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">extension_context</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">cv</span><span class="o">.</span><span class="n">getName</span><span class="p">()))</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_effective_masses</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">meta_cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">cv</span><span class="p">,</span> <span class="n">mass</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
-                    <span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerVariables</span><span class="p">(),</span>
-                    <span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerEffectiveMasses</span><span class="p">(</span><span class="n">context</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
-                <span class="p">):</span>
-                    <span class="n">mass_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="n">cv</span><span class="o">.</span><span class="n">getUnit</span><span class="p">())</span> <span class="o">**</span> <span class="mi">2</span>
-                    <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mass</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">))</span>
+            <span class="n">masses</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">mass</span>
+                <span class="k">for</span> <span class="n">meta_cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span>
+                <span class="k">for</span> <span class="n">mass</span> <span class="ow">in</span> <span class="n">meta_cv</span><span class="o">.</span><span class="n">getInnerEffectiveMasses</span><span class="p">(</span><span class="n">context</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+            <span class="p">]</span>
+            <span class="k">for</span> <span class="n">mass</span><span class="p">,</span> <span class="n">mass_unit</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">masses</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_mass_units</span><span class="p">):</span>
+                <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mass</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">))</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling_functions</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span><span class="p">:</span>
                 <span class="n">values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">context</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">name</span><span class="p">))</span>

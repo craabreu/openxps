@@ -64,6 +64,10 @@ the same time it writes biases, it also checks for updated biases written by
 other processes and loads them in. This must be a multiple of frequency.</p></li>
 <li><p><strong>biasDir</strong> (<em>str</em><em> | </em><em>None</em>) – The directory to which biases should be written, and from which biases written
 by other processes should be loaded.</p></li>
+<li><p><strong>note::</strong> (<em>..</em>) – The bias force is added to the extension system of <code class="docutils literal notranslate"><span class="pre">system</span></code> when this
+object is created, so it must be created before the
+<a class="reference internal" href="ExtendedSpaceSimulation.html#openxps.ExtendedSpaceSimulation" title="openxps.ExtendedSpaceSimulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation</span></code></a> or
+<a class="reference internal" href="ExtendedSpaceContext.html#openxps.ExtendedSpaceContext" title="openxps.ExtendedSpaceContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceContext</span></code></a> that uses the system.</p></li>
 </ul>
 </dd>
 </dl>
