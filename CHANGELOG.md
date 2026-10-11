@@ -45,3 +45,14 @@
   raises an error.
 - Lepton definitions after `;` in `functions` are no longer taken as variables.
 - `InnerProductCoupling` evaluates parameter derivatives only for its own forces.
+- The `setTemperature`, `setFrictionCoefficient` and `setTimeConstant` methods of the
+  OpenXPS integrators no longer crash.
+- Changing the step size of an integrator, or of an extended-space integrator, updates
+  the step-size-dependent thermostat coefficients.
+- Copying or pickling an extended-space integrator keeps the integrator classes and the
+  `assume_force_first`/`assume_symmetric` flags.
+- A default extension integrator copied from the physical one gets a different random
+  seed, and `CSVRIntegrator` follows OpenMM's seed conventions.
+- `CSVRIntegrator` leaves a system with zero kinetic energy at rest instead of producing
+  NaN, and raises a clear error when stepped before `registerWithSystem`.
+- `MassiveGGMTIntegrator.getTimeConstant` returns a time.

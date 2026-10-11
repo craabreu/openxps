@@ -29,6 +29,10 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         When used outside OpenXPS, the :meth:`registerWithSystem` method must be called
         with `isExtension=False` before starting a simulation.
 
+    .. note::
+        A system with zero kinetic energy is left at rest. Initialize the velocities
+        before starting a simulation.
+
     Parameters
     ----------
     temperature
@@ -74,7 +78,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
        6: v <- v + (x - x1)/(0.5*dt)
        7: constrain velocities
        8: mvv <- sum(m*v*v)
-       9: scaling_factor <- sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1); R1 = ...
+       9: scaling_factor <- select(mvv, sqrt(A + BC*(R1^2 + ...), 1); R1 = ...
       10: v <- v*scaling_factor
       11: x <- x + 0.5*dt*v
       12: x1 <- x
@@ -162,7 +166,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addComputeSum("mvv", "m*v*v")
         self.addComputeGlobal(
             "scaling_factor",
-            "sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1)"
+            "select(mvv, sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1), 1)"
             "; R1 = gaussian"
             "; BC = (1 - A)*kT/mvv"
             f"; A = exp(-{fraction}*dt*friction)",
@@ -170,8 +174,9 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addComputePerDof("v", "v*scaling_factor")
 
     def _sums_of_squared_gaussians(self, num_steps: int) -> np.ndarray:
-        sumRsq = 2.0 * self._rng.standard_gamma((self._num_dof - 1) // 2, num_steps)
-        if self._num_dof % 2 == 0:
+        num_dof = self.getNumDegreesOfFreedom()
+        sumRsq = 2.0 * self._rng.standard_gamma((num_dof - 1) // 2, num_steps)
+        if num_dof % 2 == 0:
             sumRsq += self._rng.standard_normal(num_steps) ** 2
         return sumRsq
 
@@ -198,16 +203,21 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
 
     def setRandomNumberSeed(self, seed: int) -> None:
         """
-        This method overrides the :class:`openmm.CustomIntegrator` method to also set
-        the seed of the random number generator used to pick numbers from the gamma
-        distribution.
+        This method overrides the :class:`openmm.CustomIntegrator` method to also seed
+        the generator used to draw the sum of squared Gaussian variates. As in OpenMM,
+        a seed of 0 selects a random, non-reproducible seed.
+
+        .. note::
+            The state of this generator is not stored in context checkpoints.
+
         Parameters
         ----------
         seed
-            The seed to use for the random number generator.
+            The seed to use for the random number generators.
         """
-        self._rng = np.random.default_rng(seed + 2**31)
-        super().setRandomNumberSeed(self._rng.integers(-(2**31), 2**31))
+        rng = np.random.default_rng(None if seed == 0 else seed % 2**32)
+        super().setRandomNumberSeed(seed)
+        self._rng = rng
 
     def step(self, steps: int) -> None:
         """
