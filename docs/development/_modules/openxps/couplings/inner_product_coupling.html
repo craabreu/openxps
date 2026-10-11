@@ -187,6 +187,7 @@
             <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">expression</span> <span class="ow">in</span> <span class="p">(</span><span class="n">functions</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
         <span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span> <span class="o">=</span> <span class="n">parameters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_force_groups</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span> <span class="n">dynamical_variables</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getDynamicParameters</span><span class="p">()</span>
 
@@ -194,11 +195,13 @@
         <span class="n">state</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__getstate__</span><span class="p">()</span>
         <span class="n">state</span><span class="p">[</span><span class="s2">"functions"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span>
         <span class="n">state</span><span class="p">[</span><span class="s2">"parameters"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span>
+        <span class="n">state</span><span class="p">[</span><span class="s2">"force_groups"</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_force_groups</span>
         <span class="k">return</span> <span class="n">state</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__setstate__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"functions"</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"parameters"</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_force_groups</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"force_groups"</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__setstate__</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getDynamicParameters</span><span class="p">()</span>
 
@@ -223,6 +226,14 @@
             <span class="p">)</span>
 
         <span class="n">all_dvs</span> <span class="o">=</span> <span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">unknown</span> <span class="o">:=</span> <span class="n">fn</span><span class="o">.</span><span class="n">getVariables</span><span class="p">()</span> <span class="o">-</span> <span class="n">all_dvs</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Function </span><span class="si">{</span><span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2"> depends on names that are neither "</span>
+                    <span class="s2">"dynamical variables nor given parameters: "</span>
+                    <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">unknown</span><span class="p">))</span>
+                <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">functions_missing_dvs</span> <span class="o">:=</span> <span class="p">[</span>
             <span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span> <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">fn</span><span class="o">.</span><span class="n">getVariables</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">all_dvs</span><span class="p">)</span>
@@ -270,23 +281,39 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="s2">"derivative_with_respect_to_"</span> <span class="o">+</span> <span class="n">parameter</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_createFlippedForce</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_createFlippedForce</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dv_indices</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Mapping</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">:</span>
         <span class="n">flipped_force</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">(</span>
             <span class="s2">"+"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">p</span><span class="si">}</span><span class="s2">*</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">)</span>
         <span class="p">)</span>
-        <span class="n">all_dvs</span> <span class="o">=</span> <span class="p">[</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
             <span class="n">flipped_force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span><span class="p">:</span>
             <span class="n">flipped_force</span><span class="o">.</span><span class="n">addCollectiveVariable</span><span class="p">(</span>
-                <span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span> <span class="n">fn</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">all_dvs</span><span class="p">)</span>
+                <span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span> <span class="n">fn</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">dv_indices</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
                 <span class="n">flipped_force</span><span class="o">.</span><span class="n">addCollectiveVariable</span><span class="p">(</span>
-                    <span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_dv_indices</span><span class="p">[</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
+                    <span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">dv</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">dv_indices</span><span class="p">[</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">])</span>
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">flipped_force</span>
+
+<div class="viewcode-block" id="InnerProductCoupling.getForceGroups">
+<a class="viewcode-back" href="../../../api/InnerProductCoupling.html#openxps.couplings.InnerProductCoupling.getForceGroups">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getForceGroups</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">set</span><span class="p">[</span><span class="nb">int</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get the force groups of the coupling forces, which are empty until the</span>
+<span class="sd">        coupling is added to a physical system.</span>
+<span class="sd">        """</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_force_groups</span></div>
+
+
+<div class="viewcode-block" id="InnerProductCoupling.addToPhysicalSystem">
+<a class="viewcode-back" href="../../../api/InnerProductCoupling.html#openxps.couplings.InnerProductCoupling.addToPhysicalSystem">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">addToPhysicalSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">addToPhysicalSystem</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_force_groups</span> <span class="o">=</span> <span class="p">{</span><span class="n">force</span><span class="o">.</span><span class="n">getForceGroup</span><span class="p">()</span> <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">}</span></div>
+
 
 <div class="viewcode-block" id="InnerProductCoupling.updateExtensionContext">
 <a class="viewcode-back" href="../../../api/InnerProductCoupling.html#openxps.couplings.InnerProductCoupling.updateExtensionContext">[docs]</a>
@@ -295,8 +322,11 @@
         <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
         <span class="n">extension_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">state</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_getState</span><span class="p">(</span><span class="n">physical_context</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">ParameterDerivatives</span><span class="p">)</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State_getEnergyParameterDerivatives</span><span class="p">(</span><span class="n">state</span><span class="p">)</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">groups</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">group</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_force_groups</span><span class="p">)</span> <span class="ow">or</span> <span class="o">-</span><span class="mi">1</span>
+        <span class="n">state</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
+            <span class="n">physical_context</span><span class="p">,</span> <span class="n">getParameterDerivatives</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span>
+        <span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">getEnergyParameterDerivatives</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
                 <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span>
                     <span class="n">extension_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">value</span>

@@ -140,6 +140,29 @@ functions (i.e., <code class="docutils literal notranslate"><span class="pre">ke
 </div>
 <p class="rubric">Methods</p>
 <dl class="py method">
+<dt class="sig sig-object py" id="openxps.couplings.InnerProductCoupling.addToPhysicalSystem">
+<span class="sig-name descname"><span class="pre">addToPhysicalSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/inner_product_coupling.html#InnerProductCoupling.addToPhysicalSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.InnerProductCoupling.addToPhysicalSystem" title="Link to this definition">¶</a></dt>
+<dd><p>Add this coupling to an OpenMM system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>system</strong> (<em>System</em>) – The system to which the coupling should be added.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.couplings.InnerProductCoupling.getForceGroups">
+<span class="sig-name descname"><span class="pre">getForceGroups</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/inner_product_coupling.html#InnerProductCoupling.getForceGroups"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.InnerProductCoupling.getForceGroups" title="Link to this definition">¶</a></dt>
+<dd><p>Get the force groups of the coupling forces, which are empty until the
+coupling is added to a physical system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>set[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="openxps.couplings.InnerProductCoupling.updateExtensionContext">
 <span class="sig-name descname"><span class="pre">updateExtensionContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">physical_context</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">extension_context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/inner_product_coupling.html#InnerProductCoupling.updateExtensionContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.InnerProductCoupling.updateExtensionContext" title="Link to this definition">¶</a></dt>
 <dd><p>Update the extension context with the current physical parameters.</p>

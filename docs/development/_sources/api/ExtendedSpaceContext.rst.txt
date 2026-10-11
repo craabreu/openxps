@@ -14,8 +14,11 @@ ExtendedSpaceContext
     .. automethod:: getIntegrator
     .. automethod:: getSystem
     .. automethod:: loadCheckpoint
+    .. automethod:: reinitialize
     .. automethod:: setDynamicalVariableValues
     .. automethod:: setDynamicalVariableVelocities
     .. automethod:: setDynamicalVariableVelocitiesToTemperature
     .. automethod:: setParameter
     .. automethod:: setPositions
+    .. automethod:: setState
+    .. automethod:: synchronize

@@ -117,7 +117,7 @@ even integer ratio.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getDynamicalVariableValues">
 <span class="sig-name descname"><span class="pre">getDynamicalVariableValues</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getDynamicalVariableValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getDynamicalVariableValues" title="Link to this definition">¶</a></dt>
-<dd><p>Get the values of the dynamical variables.</p>
+<dd><p>Get the values of the dynamical variables, wrapped into their bounds.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>A tuple containing the values of the dynamical variables.</p>
@@ -197,6 +197,18 @@ even integer ratio.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.reinitialize">
+<span class="sig-name descname"><span class="pre">reinitialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">preserveState</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.reinitialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.reinitialize" title="Link to this definition">¶</a></dt>
+<dd><p>Reinitialize the physical context and restore the dynamical variable
+parameters from the extension context, whose state is always preserved.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>preserveState</strong> (<em>bool</em>) – Whether to preserve the state of the physical context.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setDynamicalVariableValues">
 <span class="sig-name descname"><span class="pre">setDynamicalVariableValues</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">values</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setDynamicalVariableValues"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setDynamicalVariableValues" title="Link to this definition">¶</a></dt>
 <dd><p>Set the values of the dynamical variables.</p>
@@ -214,7 +226,8 @@ degrees of freedom.</p>
 <dd><p>Set the velocities of the dynamical variables.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>velocities</strong> (<em>Iterable</em><em>[</em><em>Quantity</em><em>]</em>) – A dictionary containing the velocities of the dynamical variables.</p>
+<dd class="field-odd"><p><strong>velocities</strong> (<em>Iterable</em><em>[</em><em>Quantity</em><em>]</em>) – A sequence of quantities containing the velocities of the dynamical
+variables.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -235,8 +248,10 @@ degrees of freedom.</p>
 <span class="sig-name descname"><span class="pre">setParameter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setParameter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setParameter" title="Link to this definition">¶</a></dt>
 <dd><p>Set the value of a global parameter defined by a Force object in the System.</p>
 <p class="rubric">Notes</p>
-<p>If the parameter is a dynamical variable, the value will be wrapped to the
-appropriate boundary condition if necessary.</p>
+<p>Parameters that represent dynamical variables are protected and cannot be set
+through this method; use <a class="reference internal" href="#openxps.ExtendedSpaceContext.setDynamicalVariableValues" title="openxps.ExtendedSpaceContext.setDynamicalVariableValues"><code class="xref py py-meth docutils literal notranslate"><span class="pre">setDynamicalVariableValues()</span></code></a> instead. A
+parameter that also exists in the extension system (e.g. a coupling constant)
+is updated in both contexts.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -255,6 +270,28 @@ appropriate boundary condition if necessary.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>positions</strong> (<em>Quantity</em>) – The positions for each particle in the system.</p>
 </dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setState">
+<span class="sig-name descname"><span class="pre">setState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setState" title="Link to this definition">¶</a></dt>
+<dd><p>Set the state of the physical context and synchronize both contexts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>state</strong> (<em>State</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">openmm.State</a> to apply to the physical context.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.synchronize">
+<span class="sig-name descname"><span class="pre">synchronize</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.synchronize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.synchronize" title="Link to this definition">¶</a></dt>
+<dd><p>Push the dynamical variable values to the physical context and the
+collective variable values to the extension context.</p>
+<p>Call this after changing the physical state through a channel that bypasses
+this class, such as an <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.LocalEnergyMinimizer.html">openmm.LocalEnergyMinimizer</a>.</p>
+<dl class="field-list simple">
 </dl>
 </dd></dl>
 

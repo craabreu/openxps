@@ -7,4 +7,6 @@ InnerProductCoupling
 
     .. rubric:: Methods
 
+    .. automethod:: addToPhysicalSystem
+    .. automethod:: getForceGroups
     .. automethod:: updateExtensionContext

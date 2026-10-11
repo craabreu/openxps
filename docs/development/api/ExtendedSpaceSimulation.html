@@ -62,8 +62,9 @@ even integer ratio.</p></li>
 will be used.</p></li>
 <li><p><strong>platformProperties</strong> (<em>dict</em><em> | </em><em>None</em>) – A dictionary of platform-specific properties. If None, the default properties
 will be used.</p></li>
-<li><p><strong>state</strong> (<em>State</em><em> | </em><em>None</em>) – If specified, the simulation state will be set to this <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">openmm.State</a> object
-after initialization.</p></li>
+<li><p><strong>state</strong> (<em>State</em><em> | </em><em>str</em><em> | </em><em>None</em>) – If specified, either an <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">openmm.State</a> object or the name of a file written
+by <a class="reference internal" href="#openxps.ExtendedSpaceSimulation.saveState" title="openxps.ExtendedSpaceSimulation.saveState"><code class="xref py py-meth docutils literal notranslate"><span class="pre">saveState()</span></code></a>, from which the simulation state is set after
+initialization.</p></li>
 </ul>
 </dd>
 </dl>
@@ -101,6 +102,38 @@ after initialization.</p></li>
 <span class="go">phi0 = ... rad</span>
 </pre></div>
 </div>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceSimulation.loadState">
+<span class="sig-name descname"><span class="pre">loadState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/simulation.html#ExtendedSpaceSimulation.loadState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSimulation.loadState" title="Link to this definition">¶</a></dt>
+<dd><p>Load the states written by <a class="reference internal" href="#openxps.ExtendedSpaceSimulation.saveState" title="openxps.ExtendedSpaceSimulation.saveState"><code class="xref py py-meth docutils literal notranslate"><span class="pre">saveState()</span></code></a> and synchronize the contexts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file</strong> (<em>str</em><em> | </em><em>IO</em>) – A file name or an open file object.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceSimulation.minimizeEnergy">
+<span class="sig-name descname"><span class="pre">minimizeEnergy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/simulation.html#ExtendedSpaceSimulation.minimizeEnergy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSimulation.minimizeEnergy" title="Link to this definition">¶</a></dt>
+<dd><p>Minimize the energy of the physical system and synchronize the extension
+context. Arguments are those of <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.Simulation.html">openmm.Simulation</a>.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceSimulation.saveState">
+<span class="sig-name descname"><span class="pre">saveState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/simulation.html#ExtendedSpaceSimulation.saveState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceSimulation.saveState" title="Link to this definition">¶</a></dt>
+<dd><p>Save the states of the physical and extension contexts to a file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file</strong> (<em>str</em><em> | </em><em>IO</em>) – A file name or an open file object.</p>
+</dd>
+</dl>
+</dd></dl>
+
 </dd></dl>
 
 </section>
