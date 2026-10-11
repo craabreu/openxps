@@ -515,3 +515,20 @@ def test_state_argument_accepts_filename(tmp_path):
     )
     (value,) = restored.context.getDynamicalVariableValues()
     assert value.value_in_unit(mmunit.radian) == pytest.approx(1.0)
+
+
+def test_state_argument_accepts_state_object():
+    """A State passed at construction leaves both contexts in sync."""
+    simulation, coupling = _simulation()
+    state = simulation.context.getState(getPositions=True)
+    model, _, coupling2, integrator = create_test_system()
+    restored = xps.ExtendedSpaceSimulation(
+        model.topology,
+        xps.ExtendedSpaceSystem(model.system, coupling2),
+        xps.LockstepIntegrator(integrator),
+        mm.Platform.getPlatformByName("Reference"),
+        state=state,
+    )
+    expected = coupling2.getCollectiveVariableValues(restored.context)["phi"]
+    actual = restored.context.getExtensionContext().getParameter("phi")
+    assert actual == pytest.approx(expected)

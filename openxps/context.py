@@ -195,6 +195,18 @@ class ExtendedSpaceContext(mm.Context):
         if preserveState:
             self._coupling.updateExtensionContext(self, self._extension_context)
 
+    def setState(self, state: mm.State) -> None:
+        """
+        Set the state of the physical context and synchronize both contexts.
+
+        Parameters
+        ----------
+        state
+            The :OpenMM:`State` to apply to the physical context.
+        """
+        super().setState(state)
+        self.synchronize()
+
     def setPositions(self, positions: mmunit.Quantity) -> None:
         """
         Sets the positions of all particles in the physical system.

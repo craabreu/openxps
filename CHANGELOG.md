@@ -10,6 +10,17 @@
 - `NoBounds` units are validated and converted like other bounds.
 - `Bounds` equality distinguishes periodic, reflective and unbounded kinds.
 - `DynamicalVariable.distanceTo` raises for mismatched periods or incompatible units.
+- `Function.createCollectiveVariable` takes a mapping from variable names to particle
+  indices instead of a list of names.
+- `ExtendedSpaceSimulation.saveState` writes the states of both the physical and the
+  extension contexts; `loadState` and the `state` argument accept such files as well
+  as plain OpenMM state files.
+
+### Added
+- `ExtendedSpaceContext.synchronize()` re-synchronizes the physical and extension
+  contexts after changes made outside the context's own methods.
+- The `state` argument of `ExtendedSpaceSimulation` accepts a file name.
+- `InnerProductCoupling.getForceGroups()` returns the force groups of its forces.
 
 ### Fixed
 - `pandas` and `typing-extensions` are now declared as runtime dependencies.
@@ -23,3 +34,14 @@
 - `DynamicalVariable` is hashable.
 - Bounds accept NumPy scalars, reject booleans and non-finite values, and are stored as
   floats.
+- An `InnerProductCoupling` with `functions` inside a sum of couplings read the wrong
+  dynamical variables.
+- Summing couplings no longer alters the couplings being summed.
+- `getDynamicalVariableValues` works for dynamical variables used only in `functions`.
+- `setParameter` updates parameters shared with the extension context, and
+  `setState`, `reinitialize`, `minimizeEnergy` and `loadState` keep both contexts in
+  sync.
+- Setting dynamical variable values or velocities with the wrong number of entries
+  raises an error.
+- Lepton definitions after `;` in `functions` are no longer taken as variables.
+- `InnerProductCoupling` evaluates parameter derivatives only for its own forces.

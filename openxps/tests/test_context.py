@@ -472,16 +472,21 @@ def test_set_state_and_reinitialize_resync():
     context.setDynamicalVariableValues([0.5, 0.3, -0.2])
     coupling = context.getSystem().getCoupling()
     extension = context.getExtensionContext()
+    state = context.getState(getPositions=True, getParameters=True)
     before = extension.getParameter("phi")
-    state = context.getState(getPositions=True)
-    shifted = state.getPositions(asNumpy=True) * 1.02
-    context.setPositions(shifted)
-    expected = coupling.getCollectiveVariableValues(context)["phi"]
-    assert extension.getParameter("phi") == pytest.approx(expected)
+    moved = state.getPositions(asNumpy=True).value_in_unit(mmunit.nanometer).copy()
+    moved[16] += [0.05, -0.05, 0.05]
+    context.setPositions(moved * mmunit.nanometer)
+    assert extension.getParameter("phi") != pytest.approx(before)
+    context.setDynamicalVariableValues([1.5, 0.3, -0.2])
     context.setState(state)
+    assert extension.getParameter("phi") == pytest.approx(
+        coupling.getCollectiveVariableValues(context)["phi"]
+    )
     assert extension.getParameter("phi") == pytest.approx(before)
+    assert context.getParameter("phi0") == pytest.approx(1.5)
     context.reinitialize()
-    assert context.getParameter("phi0") == pytest.approx(0.5)
+    assert context.getParameter("phi0") == pytest.approx(1.5)
 
 
 def test_set_dv_values_wrong_length():
