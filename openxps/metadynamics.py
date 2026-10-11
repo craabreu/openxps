@@ -73,8 +73,12 @@ class ExtendedSpaceBiasVariable(Serializable):
             raise ValueError(
                 "sigma must be compatible with the dynamical variable's unit"
             )
+        if self.sigma / self.sigma.unit <= 0:
+            raise ValueError("sigma must be positive")
         if not (self.grid_width is None or isinstance(self.grid_width, int)):
             raise TypeError("grid_width must be an integer or None")
+        if self.grid_width is not None and self.grid_width <= 1:
+            raise ValueError("grid_width must be greater than 1")
 
 
 ExtendedSpaceBiasVariable.__init__ = preprocess_args(ExtendedSpaceBiasVariable.__init__)
@@ -114,6 +118,12 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
     biasDir
         The directory to which biases should be written, and from which biases written
         by other processes should be loaded.
+
+    .. note::
+        The bias force is added to the extension system of ``system`` when this
+        object is created, so it must be created before the
+        :class:`~openxps.ExtendedSpaceSimulation` or
+        :class:`~openxps.ExtendedSpaceContext` that uses the system.
 
     Example
     -------
