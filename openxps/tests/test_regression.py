@@ -111,6 +111,31 @@ class TestRBFPotential:
 
         assert not potential.c.requires_grad
 
+    def test_centers_start_inside_bounds(self):
+        """Centers are drawn uniformly in [lower, upper]."""
+        dvs = create_test_dynamical_variables_mixed()
+        torch.manual_seed(0)
+        potential = RBFPotential(dvs, M=2000)
+        centers = potential.c.detach().numpy()
+        for column, dv in zip(centers.T, dvs):
+            bounds = dv.bounds
+            assert column.min() >= bounds.lower
+            assert column.max() <= bounds.upper
+            midpoint = 0.5 * (bounds.lower + bounds.upper)
+            assert abs(column.mean() - midpoint) < 0.05 * bounds.length
+
+    def test_constants_are_buffers(self):
+        potential = RBFPotential(create_test_dynamical_variables(), M=5)
+        assert {name for name, _ in potential.named_buffers()} == {
+            "_length_over_pi",
+            "_periodic",
+        }
+        assert {name for name, _ in potential.named_parameters()} == {
+            "c",
+            "logsig",
+            "w",
+        }
+
 
 class TestGradMatch:
     """Tests for GradMatch class."""

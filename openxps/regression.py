@@ -57,7 +57,7 @@ class RBFPotential(nn.Module):
         for dv in dynamical_variables:
             lengths.append(dv.bounds.length)
             periodic.append(isinstance(dv.bounds, PeriodicBounds))
-            random_points.append(torch.randn(M) * dv.bounds.length + dv.bounds.lower)
+            random_points.append(torch.rand(M) * dv.bounds.length + dv.bounds.lower)
 
         self.c = nn.Parameter(
             torch.stack(random_points, dim=-1), requires_grad=learn_centers
@@ -67,12 +67,12 @@ class RBFPotential(nn.Module):
             torch.tensor(np.repeat(log_sigmas[None, :], M, axis=0), dtype=torch.float32)
         )
         self.w = nn.Parameter(torch.zeros(M))
-        self._length_over_pi = nn.Parameter(
+        self.register_buffer(
+            "_length_over_pi",
             torch.tensor(np.array(lengths) / np.pi, dtype=torch.float32)[None, None, :],
-            requires_grad=False,
         )
-        self._periodic = nn.Parameter(
-            torch.tensor(periodic, dtype=torch.bool)[None, None, :], requires_grad=False
+        self.register_buffer(
+            "_periodic", torch.tensor(periodic, dtype=torch.bool)[None, None, :]
         )
 
     def _delta2_fn(self, disp: torch.Tensor) -> torch.Tensor:
