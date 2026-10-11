@@ -1172,3 +1172,17 @@ def test_harmonic_coupling_nonperiodic_angstrom_dv_energy():
         coupling.getForce(0).getValue(context).value_in_unit(mmunit.kilojoule_per_mole)
     )
     assert energy == pytest.approx(0.5 * 100 * 1.0**2, rel=1e-6)
+
+
+def test_harmonic_coupling_nonperiodic_pair_is_accepted():
+    """A non-periodic CV with a non-periodic DV is a valid harmonic coupling."""
+    distance = cvpack.Distance(0, 1, name="d")
+    mass = 10 * mmunit.dalton
+    kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.nanometer**2
+    for bounds in (
+        NoBounds(0, 1, mmunit.nanometer),
+        ReflectiveBounds(0, 1, mmunit.nanometer),
+    ):
+        d0 = DynamicalVariable("d0", mmunit.nanometer, mass, bounds)
+        coupling = HarmonicCoupling(distance, d0, kappa)
+        assert "floor" not in coupling.getForce(0).getEnergyFunction()

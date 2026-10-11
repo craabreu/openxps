@@ -75,8 +75,9 @@ class HarmonicCoupling(CollectiveVariableCoupling):
         pair = f"{cv.getName()} and {dv.name}"
         if not cv.getUnit().is_compatible(dv.unit):
             raise ValueError(f"Incompatible units for {pair}.")
-        if (dv.isPeriodic() == cv.getPeriodicBounds() is None) or (
-            cv.getPeriodicBounds() != dv.bounds.asQuantity()
+        cv_periodic = cv.getPeriodicBounds() is not None
+        if cv_periodic != dv.isPeriodic() or (
+            cv_periodic and cv.getPeriodicBounds() != dv.bounds.asQuantity()
         ):
             raise ValueError(f"Incompatible periodicity for {pair}.")
         if mmunit.is_quantity(kappa) and not kappa.unit.is_compatible(
