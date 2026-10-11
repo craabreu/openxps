@@ -14,6 +14,7 @@ from openxps import (
     DynamicalVariable,
     ExtendedSpaceContext,
     ExtendedSpaceSystem,
+    InnerProductCoupling,
     LockstepIntegrator,
 )
 from openxps.bounds import CircularBounds, NoBounds, ReflectiveBounds
@@ -419,3 +420,81 @@ def test_set_dv_values_without_units():
 
     for i, (val, dv) in enumerate(zip(dv_values, dvs)):
         assert val.value_in_unit(dv.unit) == pytest.approx(dv_values_raw[i])
+
+
+def test_get_dv_values_for_function_only_dv():
+    """A DV that appears only inside functions= is not a physical parameter."""
+    force = mm.CustomBondForce("scaling*r^2")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addBond(0, 1, [])
+    lam = DynamicalVariable(
+        "lam",
+        mmunit.dimensionless,
+        1 * mmunit.dalton * mmunit.nanometer**2,
+        ReflectiveBounds(0, 1, mmunit.dimensionless),
+    )
+    coupling = InnerProductCoupling([force], [lam], functions={"scaling": "lam^2"})
+    system = mm.System()
+    system.addParticle(1.0)
+    system.addParticle(1.0)
+    context = ExtendedSpaceContext(
+        ExtendedSpaceSystem(system, coupling),
+        LockstepIntegrator(mm.VerletIntegrator(0.001)),
+        mm.Platform.getPlatformByName("Reference"),
+    )
+    context.setPositions([mm.Vec3(0, 0, 0), mm.Vec3(0.5, 0, 0)])
+    context.setDynamicalVariableValues([0.7])
+    (value,) = context.getDynamicalVariableValues()
+    assert value.value_in_unit(mmunit.dimensionless) == pytest.approx(0.7)
+
+
+def test_set_parameter_updates_extension_context():
+    """Coupling parameters live in both contexts; physical-only ones still work."""
+    model = testsystems.AlanineDipeptideVacuum()
+    model.system.addForce(mm.CustomExternalForce("0*physical_only"))
+    model.system.getForce(model.system.getNumForces() - 1).addGlobalParameter(
+        "physical_only", 1.0
+    )
+    context = create_extended_context(model)
+    context.setPositions(model.positions)
+    context.setParameter("kappa", 2000.0)
+    assert context.getExtensionContext().getParameter("kappa") == pytest.approx(2000.0)
+    context.setParameter("physical_only", 3.0)
+    assert context.getParameter("physical_only") == pytest.approx(3.0)
+
+
+def test_set_state_and_reinitialize_resync():
+    """Operations that bypass setPositions keep the extension in sync."""
+    model = testsystems.AlanineDipeptideVacuum()
+    context = create_extended_context(model)
+    context.setPositions(model.positions)
+    context.setDynamicalVariableValues([0.5, 0.3, -0.2])
+    coupling = context.getSystem().getCoupling()
+    extension = context.getExtensionContext()
+    state = context.getState(getPositions=True, getParameters=True)
+    before = extension.getParameter("phi")
+    moved = state.getPositions(asNumpy=True).value_in_unit(mmunit.nanometer).copy()
+    moved[16] += [0.05, -0.05, 0.05]
+    context.setPositions(moved * mmunit.nanometer)
+    assert extension.getParameter("phi") != pytest.approx(before)
+    context.setDynamicalVariableValues([1.5, 0.3, -0.2])
+    context.setState(state)
+    assert extension.getParameter("phi") == pytest.approx(
+        coupling.getCollectiveVariableValues(context)["phi"]
+    )
+    assert extension.getParameter("phi") == pytest.approx(before)
+    assert context.getParameter("phi0") == pytest.approx(1.5)
+    context.reinitialize()
+    assert context.getParameter("phi0") == pytest.approx(1.5)
+
+
+def test_set_dv_values_wrong_length():
+    """Too many or too few values raise instead of being silently truncated."""
+    model = testsystems.AlanineDipeptideVacuum()
+    context = create_extended_context(model)
+    context.setPositions(model.positions)
+    with pytest.raises(ValueError, match="3 dynamical variables"):
+        context.setDynamicalVariableValues([0.1, 99.0])
+    with pytest.raises(ValueError, match="3 dynamical variables"):
+        context.setDynamicalVariableVelocities([0.1, 0.2, 0.3, 0.4])

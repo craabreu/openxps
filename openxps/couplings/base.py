@@ -16,7 +16,6 @@ import openmm as mm
 from cvpack.serialization import Serializable
 from openmm import XmlSerializer
 from openmm import _openmm as mmswig
-from openmm import unit as mmunit
 
 from ..dynamical_variable import DynamicalVariable
 
@@ -75,7 +74,7 @@ class Coupling(Serializable):
         self._dv_indices = state["dv_indices"]
         self._flipped_force = None
 
-    def _checkGlobalParameters(self) -> dict[str, mmunit.Quantity]:
+    def _checkGlobalParameters(self) -> None:
         parameters = {}
         for force in self._forces:
             force_parameters = {}
@@ -90,7 +89,7 @@ class Coupling(Serializable):
                     )
                 parameters[key] = value
 
-    def _createFlippedForce(self) -> mm.Force | None:
+    def _createFlippedForce(self, dv_indices: t.Mapping[str, int]) -> mm.Force | None:
         return None
 
     @staticmethod
@@ -99,21 +98,6 @@ class Coupling(Serializable):
             force.addToSystem(system)
         else:
             system.addForce(force)
-
-    def _updateDynamicalVariableIndices(
-        self, dynamical_variables: t.Sequence[DynamicalVariable]
-    ) -> None:
-        """Update the indices of the dynamical variables associated with this coupling.
-
-        Parameters
-        ----------
-        dynamical_variables
-            All the dynamical variables in the system, regardless of whether they are
-            associated with this coupling or not.
-        """
-        for index, dv in enumerate(dynamical_variables):
-            if dv.name in self._dv_indices:
-                self._dv_indices[dv.name] = index
 
     def getForces(self) -> list[mm.Force]:
         """Get the list of OpenMM Force objects associated with this coupling.
@@ -197,17 +181,13 @@ class Coupling(Serializable):
         ----------
         system
             The system to which the coupling should be added.
-
-        Raises
-        ------
-        NotImplementedError
-            This method must be implemented by subclasses.
-
         """
         for force in self._forces:
             self._addForceToSystem(force, system)
 
-    def addToExtensionSystem(self, system: mm.System) -> None:
+    def addToExtensionSystem(
+        self, system: mm.System, dv_indices: t.Mapping[str, int] | None = None
+    ) -> None:
         """
         Add the flipped version of this coupling to the extension system.
 
@@ -217,8 +197,12 @@ class Coupling(Serializable):
 
         Parameters
         ----------
-        extension_system
+        system
             The extension system to which the flipped coupling should be added.
+        dv_indices
+            A mapping from dynamical variable names to extension particle indices.
+            If ``None``, the dynamical variables of this coupling are assumed to be
+            the only ones in the system, in their own order.
 
         Examples
         --------
@@ -247,7 +231,11 @@ class Coupling(Serializable):
         >>> extension_system.getNumForces()
         1
         """
-        self._flipped_force = self._createFlippedForce()
+        if dv_indices is None:
+            dv_indices = self._dv_indices
+        else:
+            dv_indices = {name: dv_indices[name] for name in self._dv_indices}
+        self._flipped_force = self._createFlippedForce(dv_indices)
         self._addForceToSystem(self._flipped_force, system)
 
     def updatePhysicalContext(
@@ -362,7 +350,6 @@ class CouplingSum(Coupling):
                         "conflicting definitions in the couplings."
                     )
         super().__init__(forces, sorted(dv_dict.values(), key=lambda dv: dv.name))
-        self._broadcastDynamicalVariableIndices()
         self._checkCollectiveVariables()
 
     def __repr__(self) -> str:
@@ -378,10 +365,6 @@ class CouplingSum(Coupling):
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self.__init__(state["couplings"])
-
-    def _broadcastDynamicalVariableIndices(self) -> None:
-        for coupling in self._couplings:
-            coupling._updateDynamicalVariableIndices(self._dynamical_variables)
 
     def _checkCollectiveVariables(self) -> None:
         cvs = {}
@@ -409,9 +392,17 @@ class CouplingSum(Coupling):
             *[coupling.getProtectedParameters() for coupling in self._couplings]
         )
 
-    def addToExtensionSystem(self, system: mm.System) -> None:
+    def addToPhysicalSystem(self, system: mm.System) -> None:
         for coupling in self._couplings:
-            coupling.addToExtensionSystem(system)
+            coupling.addToPhysicalSystem(system)
+
+    def addToExtensionSystem(
+        self, system: mm.System, dv_indices: t.Mapping[str, int] | None = None
+    ) -> None:
+        if dv_indices is None:
+            dv_indices = self._dv_indices
+        for coupling in self._couplings:
+            coupling.addToExtensionSystem(system, dv_indices)
 
     def updatePhysicalContext(
         self,

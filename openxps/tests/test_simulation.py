@@ -456,3 +456,79 @@ def test_loadcheckpoint_comprehensive(tmp_path):
     assert current_step_after == current_step_before
 
     # Clean up
+
+
+def _simulation():
+    model, _, coupling, integrator = create_test_system()
+    simulation = xps.ExtendedSpaceSimulation(
+        model.topology,
+        xps.ExtendedSpaceSystem(model.system, coupling),
+        xps.LockstepIntegrator(integrator),
+        mm.Platform.getPlatformByName("Reference"),
+    )
+    simulation.context.setPositions(model.positions)
+    return simulation, coupling
+
+
+def test_minimize_energy_resyncs_extension():
+    """After minimization the extension context sees the new CV values."""
+    simulation, coupling = _simulation()
+    simulation.context.setDynamicalVariableValues([3.0])
+    before = simulation.context.getExtensionContext().getParameter("phi")
+    simulation.minimizeEnergy(maxIterations=50)
+    expected = coupling.getCollectiveVariableValues(simulation.context)["phi"]
+    actual = simulation.context.getExtensionContext().getParameter("phi")
+    assert expected != pytest.approx(before)
+    assert actual == pytest.approx(expected)
+
+
+def test_save_and_load_state_roundtrip_dvs(tmp_path):
+    """saveState/loadState carry the dynamical variables."""
+    simulation, _ = _simulation()
+    simulation.context.setDynamicalVariableValues([2.5])
+    simulation.context.setDynamicalVariableVelocities([0.4])
+    path = str(tmp_path / "state.xml")
+    simulation.saveState(path)
+    simulation.context.setDynamicalVariableValues([-1.0])
+    simulation.context.setDynamicalVariableVelocities([0.0])
+    simulation.loadState(path)
+    (value,) = simulation.context.getDynamicalVariableValues()
+    (rate,) = simulation.context.getDynamicalVariableVelocities()
+    assert value.value_in_unit(mmunit.radian) == pytest.approx(2.5)
+    assert rate.value_in_unit(mmunit.radian / mmunit.picosecond) == pytest.approx(0.4)
+    assert simulation.context.getParameter("phi0") == pytest.approx(2.5)
+
+
+def test_state_argument_accepts_filename(tmp_path):
+    """Like OpenMM's Simulation, state= may be a file name."""
+    simulation, _ = _simulation()
+    simulation.context.setDynamicalVariableValues([1.0])
+    path = str(tmp_path / "state.xml")
+    simulation.saveState(path)
+    model, _, coupling, integrator = create_test_system()
+    restored = xps.ExtendedSpaceSimulation(
+        model.topology,
+        xps.ExtendedSpaceSystem(model.system, coupling),
+        xps.LockstepIntegrator(integrator),
+        mm.Platform.getPlatformByName("Reference"),
+        state=path,
+    )
+    (value,) = restored.context.getDynamicalVariableValues()
+    assert value.value_in_unit(mmunit.radian) == pytest.approx(1.0)
+
+
+def test_state_argument_accepts_state_object():
+    """A State passed at construction leaves both contexts in sync."""
+    simulation, coupling = _simulation()
+    state = simulation.context.getState(getPositions=True)
+    model, _, coupling2, integrator = create_test_system()
+    restored = xps.ExtendedSpaceSimulation(
+        model.topology,
+        xps.ExtendedSpaceSystem(model.system, coupling2),
+        xps.LockstepIntegrator(integrator),
+        mm.Platform.getPlatformByName("Reference"),
+        state=state,
+    )
+    expected = coupling2.getCollectiveVariableValues(restored.context)["phi"]
+    actual = restored.context.getExtensionContext().getParameter("phi")
+    assert actual == pytest.approx(expected)
