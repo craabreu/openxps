@@ -8,6 +8,7 @@
 """
 
 import cvpack
+import numpy as np
 import openmm as mm
 from cvpack.reporting.custom_writer import CustomWriter
 from openmm import _openmm as mmswig
@@ -28,11 +29,11 @@ class ExtensionWriter(CustomWriter):
     Parameters
     ----------
     kinetic : bool, optional, default=False
-        If ``True``, the kinetic energy of the extension context will be reported
+        If ``True``, the kinetic energy of the dynamical variables will be reported
         in units of kJ/mol.
     temperature : bool, optional, default=False
-        If ``True``, the temperature of the extension context will be reported
-        in units of Kelvin.
+        If ``True``, the temperature of the dynamical variables, with one degree of
+        freedom per variable, will be reported in units of Kelvin.
     dynamical_variables : bool, optional, default=False
         If ``True``, the current values of all dynamical variables will be reported.
         Each variable will be reported with its name and unit.
@@ -119,12 +120,13 @@ class ExtensionWriter(CustomWriter):
         self._effective_masses = effective_masses
         self._coupling_functions = coupling_functions
 
-        self._needs_energy = kinetic or temperature
+        self._needs_velocities = kinetic or temperature
         self._needs_positions = dynamical_variables
         self._needs_forces = forces
 
         self._temp_factor = 0.0
         self._dv_objects = []
+        self._masses = np.empty(0)
         self._meta_cvs = []
         self._function_names = []
 
@@ -132,6 +134,7 @@ class ExtensionWriter(CustomWriter):
         context = simulation.extended_space_context
         coupling = context.getSystem().getCoupling()
         self._dv_objects = coupling.getDynamicalVariables()
+        self._masses = np.array([dv.mass / dv.mass.unit for dv in self._dv_objects])
 
         if self._temperature:
             number = len(coupling.getDynamicalVariables())
@@ -227,12 +230,14 @@ class ExtensionWriter(CustomWriter):
         context = simulation.extended_space_context
         extension_context = context.getExtensionContext()
         state = extension_context.getState(
-            getEnergy=self._needs_energy,
+            getVelocities=self._needs_velocities,
             getPositions=self._needs_positions,
             getForces=self._needs_forces,
         )
-        if self._needs_energy:
-            kinetic_energy = mmswig.State_getKineticEnergy(state)
+        if self._needs_velocities:
+            velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
+            rates = np.array([velocity.x for velocity in velocities])
+            kinetic_energy = 0.5 * float(np.dot(self._masses, rates * rates))
         if self._needs_positions:
             positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         if self._forces:

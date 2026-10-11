@@ -7,7 +7,9 @@ import tempfile
 from math import pi
 
 import cvpack
+import numpy as np
 import openmm
+import pytest
 from openmm import unit
 from openmmtools import testsystems
 
@@ -538,3 +540,22 @@ def test_extension_writer_all_parameters():
             assert '"phi0 (rad)"' in line
             assert '"Force on phi0 (kJ/(mol*rad))"' in line
             assert '"phi (rad)"' in line
+
+
+def test_extension_writer_temperature_is_physical():
+    """The reported kinetic energy and temperature use one DOF per variable."""
+    simulation = create_test_simulation()
+    simulation.integrator.getPhysicalIntegrator().setFriction(10 / unit.picosecond)
+    simulation.integrator.getExtensionIntegrator().setFriction(10 / unit.picosecond)
+    writer = xps.ExtensionWriter(kinetic=True, temperature=True)
+    writer.initialize(simulation)
+    simulation.step(500)
+    temperatures = []
+    for _ in range(1000):
+        simulation.step(10)
+        kinetic, temperature = writer.getValues(simulation)
+        temperatures.append(temperature)
+        (rate,) = simulation.context.getDynamicalVariableVelocities()
+        v = rate.value_in_unit(unit.radian / unit.picosecond)
+        assert kinetic == pytest.approx(0.5 * 3 * v * v, rel=1e-6)
+    assert abs(np.mean(temperatures) - 300) < 60
