@@ -44,7 +44,7 @@ jobs:
           export OPENXPS_VERSION=${{ github.ref_name }}
           echo "::group::Building conda package for openxps $OPENXPS_VERSION"
           outdir=$(mktemp -d)
-          conda mambabuild . --no-anaconda-upload -c conda-forge --output-folder $outdir
+          conda build . --no-anaconda-upload -c conda-forge --output-folder $outdir
           echo "::endgroup::"
           echo "::group::Uploading package to mdtools conda channel"
           PACKAGE=$(find $outdir -name *.tar.bz2 | head -1)
