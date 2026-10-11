@@ -132,7 +132,7 @@ class ExtendedSpaceSystem(mm.System):
 
         Returns
         -------
-        t.Optional[mm.CustomExternalForce]
+        mm.CustomExternalForce | None
             The tethering force.
         """
         return self._tethering_force
