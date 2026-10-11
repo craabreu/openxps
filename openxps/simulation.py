@@ -79,8 +79,8 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
     ...     300 * unit.kelvin, 1234
     ... )
     >>> simulation.step(100)
-    >>> simulation.context.getDynamicalVariableValues()
-    (... rad,)
+    >>> print("phi0 =", *simulation.context.getDynamicalVariableValues())
+    phi0 = ... rad
     """
 
     def __init__(  # noqa: PLR0913 pylint: disable=super-init-not-called

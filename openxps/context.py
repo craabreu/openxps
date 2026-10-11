@@ -70,11 +70,11 @@ class ExtendedSpaceContext(mm.Context):
     >>> context.setDynamicalVariableValues([180 * unit.degree])
     >>> context.setDynamicalVariableVelocitiesToTemperature(temp, 1234)
     >>> context.getIntegrator().step(100)
-    >>> context.getDynamicalVariableValues()
-    (... rad,)
+    >>> print("phi0 =", *context.getDynamicalVariableValues())
+    phi0 = ... rad
     >>> state = context.getExtensionContext().getState(getEnergy=True)
-    >>> state.getPotentialEnergy(), state.getKineticEnergy()
-    (... kJ/mol, ... kJ/mol)
+    >>> print("U =", state.getPotentialEnergy(), "K =", state.getKineticEnergy())
+    U = ... kJ/mol K = ... kJ/mol
     """
 
     def __init__(

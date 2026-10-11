@@ -157,8 +157,8 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
     >>> context.setDynamicalVariableValues([180 * unit.degree])
     >>> context.setDynamicalVariableVelocitiesToTemperature(temperature, 1234)
     >>> metadynamics.step(simulation, 100)
-    >>> metadynamics.getFreeEnergy()
-    [... ... ...] kJ/mol
+    >>> print(metadynamics.getFreeEnergy())
+    [...] kJ/mol
     """
 
     def __init__(  # noqa: PLR0913, PLR0917

@@ -234,7 +234,7 @@ class Function(Serializable):
         >>> exp(-x)*cos(2*pi*y)
         0.13533528...
         >>> context.setPositions([mm.Vec3(x, 0.0, 0.0), mm.Vec3(y, 0.0, 0.0)])
-        >>> context.getState(getEnergy=True).getPotentialEnergy()
+        >>> print(context.getState(getEnergy=True).getPotentialEnergy())
         0.1353352... kJ/mol
         """
         return cvpack.AtomicFunction(
