@@ -6,6 +6,7 @@ from copy import copy
 from math import pi
 
 import cvpack
+import numpy as np
 import openmm as mm
 import pytest
 import yaml
@@ -1145,3 +1146,29 @@ def test_inner_product_coupling_serialization():
         deserialized.getForce(0).getNumGlobalParameters()
         == coupling.getForce(0).getNumGlobalParameters()
     )
+
+
+def test_harmonic_coupling_nonperiodic_angstrom_dv_energy():
+    """A non-periodic DV in angstrom couples to a distance CV in nanometers."""
+    model = create_test_system()
+    distance = cvpack.Distance(0, 1, name="d")
+    d0 = DynamicalVariable(
+        "d0",
+        mmunit.angstrom,
+        10 * mmunit.dalton * (mmunit.nanometer / mmunit.angstrom) ** 2,
+        ReflectiveBounds(0, 20, mmunit.angstrom),
+    )
+    kappa = 100 * mmunit.kilojoule_per_mole / mmunit.angstrom**2
+    coupling = HarmonicCoupling(distance, d0, kappa)
+    system = ExtendedSpaceSystem(model.system, coupling)
+    context = mm.Context(
+        system, mm.VerletIntegrator(0.001), mm.Platform.getPlatformByName("Reference")
+    )
+    context.setPositions(model.positions)
+    positions = model.positions.value_in_unit(mmunit.nanometer)
+    actual = np.linalg.norm(np.array(positions[1]) - np.array(positions[0]))
+    context.setParameter("d0", actual + 0.1)
+    energy = (
+        coupling.getForce(0).getValue(context).value_in_unit(mmunit.kilojoule_per_mole)
+    )
+    assert energy == pytest.approx(0.5 * 100 * 1.0**2, rel=1e-6)
