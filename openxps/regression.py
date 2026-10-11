@@ -165,6 +165,36 @@ class GradMatch(pl.LightningModule):
         return loss
 
 
+class _LearningCurveRecorder(pl.Callback):
+    """Collect per-epoch training and validation losses keyed by epoch."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._records: dict[int, dict[str, float]] = {}
+
+    def _record(self, trainer: pl.Trainer, key: str) -> None:
+        value = trainer.callback_metrics.get(key)
+        if value is not None:
+            epoch = trainer.current_epoch
+            record = self._records.setdefault(epoch, {"epoch": epoch})
+            record[key] = float(value)
+
+    def on_train_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ) -> None:
+        self._record(trainer, "train_loss")
+
+    def on_validation_epoch_end(
+        self, trainer: pl.Trainer, pl_module: pl.LightningModule
+    ) -> None:
+        if not trainer.sanity_checking:
+            self._record(trainer, "val_loss")
+
+    def to_frame(self) -> pd.DataFrame:
+        """Return the recorded losses with one row per epoch."""
+        return pd.DataFrame(list(self._records.values()))
+
+
 class ForceMatchingRegressor:
     r"""Potential regressor from sampled position/force pairs.
 

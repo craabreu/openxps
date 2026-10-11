@@ -9,7 +9,12 @@ from openmm import unit as mmunit
 
 import openxps as xps
 from openxps.bounds import NoBounds, PeriodicBounds
-from openxps.regression import ForceMatchingRegressor, GradMatch, RBFPotential
+from openxps.regression import (
+    ForceMatchingRegressor,
+    GradMatch,
+    RBFPotential,
+    _LearningCurveRecorder,
+)
 
 
 def create_test_dynamical_variables():
@@ -421,3 +426,27 @@ class TestForceMatchingRegressor:
         assert regressor._model is not None
         predictions = regressor.predict(positions[:5])
         assert predictions.shape == (5,)
+
+
+class _FakeTrainer:
+    def __init__(self, epoch, metrics, sanity_checking=False):
+        self.current_epoch = epoch
+        self.callback_metrics = metrics
+        self.sanity_checking = sanity_checking
+
+
+def test_learning_curve_recorder_tolerates_nan_validation_loss():
+    """A NaN val_loss must not break the epoch alignment."""
+    recorder = _LearningCurveRecorder()
+    sanity = _FakeTrainer(0, {"val_loss": torch.tensor(9.0)}, sanity_checking=True)
+    recorder.on_validation_epoch_end(sanity, None)
+    for epoch, val in enumerate((0.5, float("nan"), 0.3)):
+        trainer = _FakeTrainer(epoch, {"val_loss": torch.tensor(val)})
+        recorder.on_validation_epoch_end(trainer, None)
+        trainer = _FakeTrainer(epoch, {"train_loss": torch.tensor(1.0 / (epoch + 1))})
+        recorder.on_train_epoch_end(trainer, None)
+    frame = recorder.to_frame()
+    assert list(frame.columns) == ["epoch", "val_loss", "train_loss"]
+    assert list(frame.epoch) == [0, 1, 2]
+    assert np.isnan(frame.val_loss[1])
+    assert frame.train_loss[2] == pytest.approx(1 / 3)
