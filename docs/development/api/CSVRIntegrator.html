@@ -51,6 +51,11 @@ canonical distribution at the specified temperature.</p>
 <p>When used outside OpenXPS, the <a class="reference internal" href="#openxps.integrators.CSVRIntegrator.registerWithSystem" title="openxps.integrators.CSVRIntegrator.registerWithSystem"><code class="xref py py-meth docutils literal notranslate"><span class="pre">registerWithSystem()</span></code></a> method must be called
 with <cite>isExtension=False</cite> before starting a simulation.</p>
 </div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>A system with zero kinetic energy is left at rest. Initialize the velocities
+before starting a simulation.</p>
+</div>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -94,7 +99,7 @@ symmetric operator splitting scheme.</p></li>
 <span class="go">   6: v &lt;- v + (x - x1)/(0.5*dt)</span>
 <span class="go">   7: constrain velocities</span>
 <span class="go">   8: mvv &lt;- sum(m*v*v)</span>
-<span class="go">   9: scaling_factor &lt;- sqrt(A + BC*(R1^2 + sumRsq) + 2*sqrt(A*BC)*R1); R1 = ...</span>
+<span class="go">   9: scaling_factor &lt;- select(mvv, sqrt(A + BC*(R1^2 + ...), 1); R1 = ...</span>
 <span class="go">  10: v &lt;- v*scaling_factor</span>
 <span class="go">  11: x &lt;- x + 0.5*dt*v</span>
 <span class="go">  12: x1 &lt;- x</span>
@@ -194,11 +199,17 @@ symmetric operator splitting scheme.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.integrators.CSVRIntegrator.setRandomNumberSeed">
 <span class="sig-name descname"><span class="pre">setRandomNumberSeed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seed</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/csvr.html#CSVRIntegrator.setRandomNumberSeed"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.CSVRIntegrator.setRandomNumberSeed" title="Link to this definition">¶</a></dt>
-<dd><p>This method overrides the <code class="xref py py-class docutils literal notranslate"><span class="pre">openmm.CustomIntegrator</span></code> method to also set
-the seed of the random number generator used to pick numbers from the gamma
-distribution.
-:param seed: The seed to use for the random number generator.</p>
+<dd><p>This method overrides the <code class="xref py py-class docutils literal notranslate"><span class="pre">openmm.CustomIntegrator</span></code> method to also seed
+the generator used to draw the sum of squared Gaussian variates. As in OpenMM,
+a seed of 0 selects a random, non-reproducible seed.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The state of this generator is not stored in context checkpoints.</p>
+</div>
 <dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seed</strong> (<em>int</em>) – The seed to use for the random number generators.</p>
+</dd>
 </dl>
 </dd></dl>
 
