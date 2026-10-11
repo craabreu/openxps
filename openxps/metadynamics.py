@@ -161,7 +161,7 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
     [... ... ...] kJ/mol
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         system: ExtendedSpaceSystem,
         variables: t.Sequence[ExtendedSpaceBiasVariable],
