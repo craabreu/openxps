@@ -97,8 +97,8 @@ after initialization.</p></li>
 <span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1234</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">simulation</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getDynamicalVariableValues</span><span class="p">()</span>
-<span class="go">(... rad,)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">"phi0 ="</span><span class="p">,</span> <span class="o">*</span><span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getDynamicalVariableValues</span><span class="p">())</span>
+<span class="go">phi0 = ... rad</span>
 </pre></div>
 </div>
 </dd></dl>

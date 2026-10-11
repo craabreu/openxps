@@ -108,8 +108,8 @@ by other processes should be loaded.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setDynamicalVariableValues</span><span class="p">([</span><span class="mi">180</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setDynamicalVariableVelocitiesToTemperature</span><span class="p">(</span><span class="n">temperature</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">metadynamics</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">simulation</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">metadynamics</span><span class="o">.</span><span class="n">getFreeEnergy</span><span class="p">()</span>
-<span class="go">[... ... ...] kJ/mol</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">metadynamics</span><span class="o">.</span><span class="n">getFreeEnergy</span><span class="p">())</span>
+<span class="go">[...] kJ/mol</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>

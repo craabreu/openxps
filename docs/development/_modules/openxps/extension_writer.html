@@ -286,9 +286,9 @@
         <span class="n">context</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">extended_space_context</span>
         <span class="n">extension_context</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span>
         <span class="n">state</span> <span class="o">=</span> <span class="n">extension_context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
-            <span class="n">energy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">,</span>
-            <span class="n">positions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_positions</span><span class="p">,</span>
-            <span class="n">forces</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_forces</span><span class="p">,</span>
+            <span class="n">getEnergy</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">,</span>
+            <span class="n">getPositions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_positions</span><span class="p">,</span>
+            <span class="n">getForces</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_needs_forces</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_energy</span><span class="p">:</span>
             <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State_getKineticEnergy</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>

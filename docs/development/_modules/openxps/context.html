@@ -109,19 +109,19 @@
 <span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableValues([180 * unit.degree])</span>
 <span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableVelocitiesToTemperature(temp, 1234)</span>
 <span class="sd">    &gt;&gt;&gt; context.getIntegrator().step(100)</span>
-<span class="sd">    &gt;&gt;&gt; context.getDynamicalVariableValues()</span>
-<span class="sd">    (... rad,)</span>
+<span class="sd">    &gt;&gt;&gt; print("phi0 =", *context.getDynamicalVariableValues())</span>
+<span class="sd">    phi0 = ... rad</span>
 <span class="sd">    &gt;&gt;&gt; state = context.getExtensionContext().getState(getEnergy=True)</span>
-<span class="sd">    &gt;&gt;&gt; state.getPotentialEnergy(), state.getKineticEnergy()</span>
-<span class="sd">    (... kJ/mol, ... kJ/mol)</span>
+<span class="sd">    &gt;&gt;&gt; print("U =", state.getPotentialEnergy(), "K =", state.getKineticEnergy())</span>
+<span class="sd">    U = ... kJ/mol K = ... kJ/mol</span>
 <span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">system</span><span class="p">:</span> <span class="n">ExtendedSpaceSystem</span><span class="p">,</span>
         <span class="n">integrator</span><span class="p">:</span> <span class="n">ExtendedSpaceIntegrator</span><span class="p">,</span>
-        <span class="n">platform</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="n">mm</span><span class="o">.</span><span class="n">Platform</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">properties</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">platform</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Platform</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">properties</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="p">)</span>
         <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">system</span><span class="p">,</span> <span class="n">integrator</span><span class="o">.</span><span class="n">getPhysicalIntegrator</span><span class="p">()]</span>
@@ -289,7 +289,7 @@
 <div class="viewcode-block" id="ExtendedSpaceContext.setDynamicalVariableVelocitiesToTemperature">
 <a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.setDynamicalVariableVelocitiesToTemperature">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">setDynamicalVariableVelocitiesToTemperature</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">temperature</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span> <span class="n">seed</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Set the velocities of the dynamical variables to a temperature.</span>

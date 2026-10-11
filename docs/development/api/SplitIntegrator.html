@@ -83,7 +83,7 @@ Default is False.</p></li>
 <p>Using symmetric Verlet integrator with half step size</p>
 <div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">SymmetricVerletIntegrator</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtosecond</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xps_integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">SplitIntegrator</span><span class="p">(</span><span class="n">integrator</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">xps_integrator</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">xps_integrator</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">())</span>
 <span class="go">0.004 ps</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xps_integrator</span><span class="o">.</span><span class="n">getNumSubsteps</span><span class="p">()</span>
 <span class="go">1</span>
@@ -97,7 +97,7 @@ Default is False.</p></li>
 <span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span> <span class="mi">1</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtosecond</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xps_integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">SplitIntegrator</span><span class="p">(</span><span class="n">physical</span><span class="p">,</span> <span class="n">extension</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">xps_integrator</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">xps_integrator</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">())</span>
 <span class="go">0.004 ps</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xps_integrator</span><span class="o">.</span><span class="n">getNumSubsteps</span><span class="p">()</span>
 <span class="go">2</span>
@@ -111,7 +111,7 @@ Default is False.</p></li>
 <span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span> <span class="mi">8</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtosecond</span>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xps_integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">SplitIntegrator</span><span class="p">(</span><span class="n">physical</span><span class="p">,</span> <span class="n">extension</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">xps_integrator</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">xps_integrator</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">())</span>
 <span class="go">0.008 ps</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">xps_integrator</span><span class="o">.</span><span class="n">getNumSubsteps</span><span class="p">()</span>
 <span class="go">2</span>

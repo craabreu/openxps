@@ -103,7 +103,7 @@
 
     <span class="n">dynamical_variable</span><span class="p">:</span> <span class="n">DynamicalVariable</span>
     <span class="n">sigma</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span>
-    <span class="n">grid_width</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span>
+    <span class="n">grid_width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sigma</span><span class="p">):</span>
@@ -199,8 +199,8 @@
 <span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableValues([180 * unit.degree])</span>
 <span class="sd">    &gt;&gt;&gt; context.setDynamicalVariableVelocitiesToTemperature(temperature, 1234)</span>
 <span class="sd">    &gt;&gt;&gt; metadynamics.step(simulation, 100)</span>
-<span class="sd">    &gt;&gt;&gt; metadynamics.getFreeEnergy()</span>
-<span class="sd">    [... ... ...] kJ/mol</span>
+<span class="sd">    &gt;&gt;&gt; print(metadynamics.getFreeEnergy())</span>
+<span class="sd">    [...] kJ/mol</span>
 <span class="sd">    """</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>  <span class="c1"># noqa: PLR0913, PLR0917</span>
@@ -211,8 +211,8 @@
         <span class="n">biasFactor</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
         <span class="n">height</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
         <span class="n">frequency</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
-        <span class="n">saveFrequency</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">biasDir</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">saveFrequency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">biasDir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">system_dvs</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()</span>
         <span class="n">bias_variables</span> <span class="o">=</span> <span class="p">[]</span>

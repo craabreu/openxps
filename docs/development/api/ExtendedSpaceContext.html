@@ -90,11 +90,11 @@ even integer ratio.</p></li>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setDynamicalVariableValues</span><span class="p">([</span><span class="mi">180</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">])</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setDynamicalVariableVelocitiesToTemperature</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">getDynamicalVariableValues</span><span class="p">()</span>
-<span class="go">(... rad,)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">"phi0 ="</span><span class="p">,</span> <span class="o">*</span><span class="n">context</span><span class="o">.</span><span class="n">getDynamicalVariableValues</span><span class="p">())</span>
+<span class="go">phi0 = ... rad</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">state</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span><span class="n">getEnergy</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">state</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">(),</span> <span class="n">state</span><span class="o">.</span><span class="n">getKineticEnergy</span><span class="p">()</span>
-<span class="go">(... kJ/mol, ... kJ/mol)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="s2">"U ="</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">getPotentialEnergy</span><span class="p">(),</span> <span class="s2">"K ="</span><span class="p">,</span> <span class="n">state</span><span class="o">.</span><span class="n">getKineticEnergy</span><span class="p">())</span>
+<span class="go">U = ... kJ/mol K = ... kJ/mol</span>
 </pre></div>
 </div>
 <p class="rubric">Methods</p>
