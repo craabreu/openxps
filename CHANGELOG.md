@@ -14,3 +14,10 @@
 - `pandas` and `typing-extensions` are now declared as runtime dependencies.
 - The conda recipe declares every runtime dependency.
 - The Linux CI matrix now installs the OpenMM version it names.
+- `HarmonicCoupling` wraps periodic dynamical variables declared in units other than
+  radians (e.g. degrees) with the correct period; previously such couplings produced
+  wrong energies across the periodic seam.
+- `HarmonicCoupling` accepts non-periodic collective/dynamical variable pairs.
+- `DynamicalVariable` is hashable.
+- Bounds accept NumPy scalars, reject booleans and non-finite values, and are stored as
+  floats.
