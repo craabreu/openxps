@@ -14,6 +14,8 @@ from openmm import unit as mmunit
 from openxps.integrators.utils import IntegratorMixin, add_property
 from openxps.utils import preprocess_args
 
+_COULOMB_STRENGTH = "(2/sqrt(3))*kT^3*invQ2"
+
 
 @add_property("temperature", mmunit.kelvin)
 @add_property("time constant", mmunit.picosecond)
@@ -54,6 +56,19 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     forceFirst
         If True, the integrator will apply a force-first scheme. Otherwise, it will
         apply a symmetric operator splitting scheme.
+    newtonIterations
+        The number of Newton iterations used to solve the time equation of the
+        Coulomb sub-step (see Notes). The default suffices for double precision.
+
+    Notes
+    -----
+    The cubic friction term of the GGMT equations has a finite-time singularity when
+    propagated in isolation, which appears as a negative argument under a square root
+    in Trotter-factorized integrators. This implementation propagates the cubic
+    friction together with the fourth-moment thermostat momentum, whose joint
+    dynamics is Hamiltonian in suitable variables, by splitting that Hamiltonian into
+    an exactly solvable repulsive Coulomb problem and a constant kick. The resulting
+    step is free of the singularity for any step size.
 
     Example
     -------
@@ -70,7 +85,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ... )
     >>> integrator
     Per-dof variables:
-      v1, v2, v2lb
+      v1, v2, z, w, E, s, zmin, th, T1
     Global variables:
       kT = 2.494338...
       invQ = 40.090...
@@ -80,18 +95,14 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
        1: v <- v + 0.5*dt*f/m
        2: x <- x + 0.5*dt*v
        3: v1 <- v1 + 0.5*dt*(m*v^2 - kT)*invQ
-       4: v2lb <- -sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT
-       5: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
-       6: v <- v/sqrt(1 + 0.33...*dt*m*v^2*v2)
-       7: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
-       8: v <- v*exp(-1*dt*(v1 + kT*v2))
-       9: v2lb <- -sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT
-      10: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
-      11: v <- v/sqrt(1 + 0.33...*dt*m*v^2*v2)
-      12: v2 <- select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2); new_v2 = ...
-      13: v1 <- v1 + 0.5*dt*(m*v^2 - kT)*invQ
-      14: x <- x + 0.5*dt*v
-      15: v <- v + 0.5*dt*f/m
+       4: v2 <- v2 - 0.25*dt*kT^2*invQ2
+       5: z <- sqrt(3)*kT/max(m*v*v, 1e-30*kT)
+    ...
+      23: v <- v*exp(-1*dt*(v1 + kT*v2))
+    ...
+      43: v1 <- v1 + 0.5*dt*(m*v^2 - kT)*invQ
+      44: x <- x + 0.5*dt*v
+      45: v <- v + 0.5*dt*f/m
 
     Force-first scheme
 
@@ -110,7 +121,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """
 
     @preprocess_args
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         temperature: mmunit.Quantity,
         timeConstant: mmunit.Quantity,
@@ -118,9 +129,13 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         *,
         stochastic: bool = False,
         forceFirst: bool = False,
+        newtonIterations: int = 5,
     ) -> None:
+        if newtonIterations < 1:
+            raise ValueError("The number of Newton iterations must be at least 1.")
         super().__init__(stepSize)
         self._forceFirst = forceFirst
+        self._newton_iterations = newtonIterations
         self._init_temperature(temperature)
         self._init_time_constant(timeConstant)
         self._init_friction_coefficient(1 / timeConstant if stochastic else 0.0)
@@ -140,7 +155,8 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addGlobalVariable("invQ2", 0)
         self.addPerDofVariable("v1", 0)
         self.addPerDofVariable("v2", 0)
-        self.addPerDofVariable("v2lb", 0)
+        for name in ("z", "w", "E", "s", "zmin", "th", "T1"):
+            self.addPerDofVariable(name, 0)
         if self._stochastic:
             self.addGlobalVariable("a", 0)
             self.addGlobalVariable("b1", 0)
@@ -173,17 +189,28 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addComputePerDof("v1", f"v1 + {fraction}*dt*(m*v^2 - kT)*invQ")
 
     def _add_v2_boost(self, fraction: float) -> None:
-        self.addComputePerDof(
-            "v2lb",
-            "-sqrt(v2*v2 + (mvv + e*e/mvv - 2*e)*invQ2); mvv = m*v*v; e=sqrt(3)*kT",
+        c = _COULOMB_STRENGTH
+        constant_kick = f"v2 - {fraction / 2}*dt*kT^2*invQ2"
+        add = self.addComputePerDof
+        add("v2", constant_kick)
+        add("z", "sqrt(3)*kT/max(m*v*v, 1e-30*kT)")
+        add("w", "(2/sqrt(3))*kT*v2")
+        add("E", f"0.5*w*w + c/z; c={c}")
+        add("zmin", f"c/E; c={c}")
+        add("s", "sqrt(2*E)")
+        add(
+            "th",
+            f"(2*step(q) - 1)*log(abs(q) + sqrt(q*q + 1)); q=w*sqrt(z/(2*c)); c={c}",
         )
-        expression = (
-            "select(step(new_v2 - v2lb), new_v2, 2*v2lb - new_v2)"
-            f"; new_v2 = v2 + {fraction / 2}*dt*((m*v^2)^2/3 - kT^2)*invQ2"
-        )
-        self.addComputePerDof("v2", expression)
-        self.addComputePerDof("v", f"v/sqrt(1 + {(2 * fraction) / 3}*dt*m*v^2*v2)")
-        self.addComputePerDof("v2", expression)
+        add("T1", f"th + 0.5*sinh(2*th) + s*{fraction}*dt/zmin")
+        add("th", "0.5*log(q + sqrt(q*q + 1)); q=2*abs(T1)")
+        for _ in range(self._newton_iterations):
+            add("th", "th - (th + 0.5*sinh(2*th) - abs(T1))/(1 + cosh(2*th))")
+        add("th", "(2*step(T1) - 1)*th")
+        add("v", "v*sqrt(z/znew); znew=zmin*cosh(th)^2")
+        add("w", "s*tanh(th)")
+        add("v2", "(sqrt(3)/2)*w/kT")
+        add("v2", constant_kick)
 
     def _add_v_scaling(self, fraction: float) -> None:
         self.addComputePerDof("v", f"v*exp(-{fraction}*dt*(v1 + kT*v2))")
