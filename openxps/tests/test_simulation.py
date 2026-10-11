@@ -3,8 +3,6 @@ Unit tests for the openxps.simulation module.
 """
 
 import io
-import os
-import tempfile
 from copy import deepcopy
 
 import cvpack
@@ -219,7 +217,7 @@ def test_reporters():
     assert "Extension Kinetic Energy" in output
 
 
-def test_save_and_load_checkpoint():
+def test_save_and_load_checkpoint(tmp_path):
     """Test saveCheckpoint and loadCheckpoint methods."""
     model, dvs, coupling, integrator = create_test_system()
 
@@ -242,9 +240,8 @@ def test_save_and_load_checkpoint():
     simulation.step(10)
 
     # Save state
-    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".xml") as f:
-        checkpoint_file = f.name
-        simulation.saveCheckpoint(checkpoint_file)
+    checkpoint_file = str(tmp_path / "checkpoint.chk")
+    simulation.saveCheckpoint(checkpoint_file)
 
     # Get current DV values
     dv_values_before = simulation.context.getDynamicalVariableValues()
@@ -268,7 +265,6 @@ def test_save_and_load_checkpoint():
     )
 
     # Clean up
-    os.unlink(checkpoint_file)
 
 
 def test_missing_dv_in_coupling():
@@ -344,7 +340,7 @@ def test_simulation_with_state():
         assert p1.z == pytest.approx(p2.z)
 
 
-def test_loadcheckpoint_comprehensive():
+def test_loadcheckpoint_comprehensive(tmp_path):
     """Test loadCheckpoint method comprehensively restores all state components."""
     model, dvs, coupling, integrator = create_test_system()
 
@@ -382,9 +378,8 @@ def test_loadcheckpoint_comprehensive():
     current_step_before = simulation.currentStep
 
     # Save checkpoint
-    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".xml") as f:
-        checkpoint_file = f.name
-        simulation.saveCheckpoint(checkpoint_file)
+    checkpoint_file = str(tmp_path / "checkpoint.chk")
+    simulation.saveCheckpoint(checkpoint_file)
 
     # Significantly modify the state
     simulation.step(100)
@@ -461,4 +456,3 @@ def test_loadcheckpoint_comprehensive():
     assert current_step_after == current_step_before
 
     # Clean up
-    os.unlink(checkpoint_file)
