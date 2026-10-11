@@ -445,6 +445,12 @@ class TestFitBehavior:
         assert {"train_loss", "val_loss"} <= set(curve.columns)
         assert np.all(np.isfinite(regressor.predict(positions)))
 
+    def test_rejects_validation_fraction_without_training_data(self):
+        with pytest.raises(ValueError, match="validation_fraction"):
+            ForceMatchingRegressor(
+                create_test_dynamical_variables(), 5, validation_fraction=1.0
+            )
+
     def test_devices_default_to_one(self):
         regressor = ForceMatchingRegressor(
             create_test_dynamical_variables(), num_kernels=5

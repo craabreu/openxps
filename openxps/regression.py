@@ -271,6 +271,8 @@ class ForceMatchingRegressor:
         devices: int | str = 1,
         num_workers: int = 0,
     ):
+        if not 0 <= validation_fraction < 1:
+            raise ValueError("validation_fraction must be in the interval [0, 1).")
         self._dynamical_variables = tuple(
             dv.in_md_units() for dv in dynamical_variables
         )
@@ -357,7 +359,8 @@ class ForceMatchingRegressor:
         -----------------
         seed
             The seed used to split the data and initialize the kernels. If None, a
-            random seed is used. NumPy's global random state is left untouched.
+            random seed is used. NumPy's global random state is left untouched,
+            while PyTorch's global seed is set.
         """
         rng = np.random.default_rng(seed)
         torch.manual_seed(int(rng.integers(0, 2**31 - 1)))

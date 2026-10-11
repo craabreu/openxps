@@ -19,7 +19,6 @@
   singularity-free Coulomb splitting instead of a reflective bound on `v2`, so its
   thermostat step no longer fails with a negative square-root argument at large step
   sizes; the per-DOF variable `v2lb` is gone.
-
 - `ForceMatchingRegressor` takes a `devices` keyword, defaulting to 1, so it no longer
   launches distributed training on multi-GPU hosts; `get_learning_curve()` returns a
   copy, with one row per epoch, and raises before the first fit; positions and forces
