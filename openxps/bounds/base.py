@@ -10,6 +10,7 @@ Base class for boundary conditions.
 """
 
 import math
+import numbers
 import typing as t
 from dataclasses import dataclass
 
@@ -45,8 +46,12 @@ class Bounds(Serializable):
 
     def __post_init__(self) -> None:
         for kind in ("lower", "upper"):
-            if not isinstance(getattr(self, kind), (int, float)):
+            value = getattr(self, kind)
+            if isinstance(value, bool) or not isinstance(value, numbers.Real):
                 raise TypeError(f"The {kind} bound must be a real number.")
+            if not math.isfinite(value):
+                raise ValueError(f"The {kind} bound must be finite.")
+            object.__setattr__(self, kind, float(value))
         if self.lower >= self.upper:
             raise ValueError("The upper bound must be greater than the lower bound.")
         if not mmunit.is_unit(self.unit):
@@ -142,7 +147,7 @@ class Bounds(Serializable):
         >>> from openmm import unit
         >>> bounds = xps.bounds.PeriodicBounds(-180, 180, unit.degree)
         >>> bounds.asQuantity()
-        (-180, 180) deg
+        (-180.0, 180.0) deg
         """
         return Quantity((self.lower, self.upper), self.unit)
 
@@ -166,13 +171,13 @@ class Bounds(Serializable):
         >>> from openmm import unit
         >>> periodic = xps.bounds.PeriodicBounds(-180, 180, unit.degree)
         >>> print(periodic.leptonExpression("x"))
-        (scaled_x-floor(scaled_x))*360-180;
-        scaled_x=(x+180)/360
+        (scaled_x-floor(scaled_x))*360.0-180.0;
+        scaled_x=(x+180.0)/360.0
         >>> reflective = xps.bounds.ReflectiveBounds(1, 10, unit.angstrom)
         >>> print(reflective.leptonExpression("y"))
-        min(wrapped_y,1-wrapped_y)*18+1;
+        min(wrapped_y,1-wrapped_y)*18.0+1.0;
         wrapped_y=scaled_y-floor(scaled_y);
-        scaled_y=(y-1)/18
+        scaled_y=(y-1.0)/18.0
         """
         raise NotImplementedError(
             "The method transformation must be implemented in subclasses."

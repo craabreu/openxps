@@ -151,3 +151,12 @@ def test_bounds_equality_is_symmetric_across_units():
     assert ReflectiveBounds(3, 10, mmunit.angstrom) == ReflectiveBounds(
         0.3, 1, mmunit.nanometer
     )
+
+
+def test_bounds_accept_numpy_scalars_and_reject_non_finite():
+    """numpy scalars are real numbers; bools, NaN and inf are not valid bounds."""
+    bounds = PeriodicBounds(np.int64(0), np.float32(1), mmunit.nanometer)
+    assert bounds.lower == 0 and bounds.upper == pytest.approx(1)
+    for lower, upper in ((True, 2), (np.nan, 1), (0, np.inf)):
+        with pytest.raises((TypeError, ValueError)):
+            PeriodicBounds(lower, upper, mmunit.nanometer)

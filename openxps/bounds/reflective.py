@@ -37,7 +37,7 @@ class ReflectiveBounds(Bounds):
     >>> bounds == xps.ReflectiveBounds(0.1, 1, unit.nanometer)
     True
     >>> print(bounds)
-    ReflectiveBounds(lower=1, upper=10, unit=A)
+    ReflectiveBounds(lower=1.0, upper=10.0, unit=A)
     """
 
     kind: t.ClassVar[str] = "reflective"
