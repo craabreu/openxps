@@ -60,6 +60,12 @@ def _restore_integrator(cls: type, xml: str, attributes: dict) -> mm.Integrator:
     return integrator
 
 
+def _decorrelate_random_seed(physical: mm.Integrator, extension: mm.Integrator) -> None:
+    if hasattr(physical, "getRandomNumberSeed"):
+        seed = physical.getRandomNumberSeed()
+        extension.setRandomNumberSeed(0 if seed == 0 else seed + 1)
+
+
 class ExtendedSpaceIntegrator(mm.Integrator, ABC):
     """Base class for integrators that advance extended phase-space simulations.
 
@@ -288,6 +294,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
         self._assume_valid = assume_force_first
         if extension_integrator is None:
             extension_integrator = deepcopy(physical_integrator)
+            _decorrelate_random_seed(physical_integrator, extension_integrator)
         elif not np.isclose(
             mmswig.Integrator_getStepSize(physical_integrator),
             mmswig.Integrator_getStepSize(extension_integrator),
@@ -429,6 +436,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         physical_step_size = mmswig.Integrator_getStepSize(physical_integrator)
         if extension_integrator is None:
             extension_integrator = deepcopy(physical_integrator)
+            _decorrelate_random_seed(physical_integrator, extension_integrator)
             extension_step_size = physical_step_size / 2
             extension_integrator.setStepSize(extension_step_size)
         else:

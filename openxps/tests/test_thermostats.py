@@ -106,3 +106,40 @@ def test_deepcopy_keeps_assume_flags():
         mm.LangevinIntegrator(300 * KELVIN, 1 / PS, 2 * FS), assume_symmetric=True
     )
     assert isinstance(copy.copy(split), SplitIntegrator)
+
+
+def test_default_extension_integrator_uses_a_different_seed():
+    """A copied extension integrator must not replay the physical noise."""
+    langevin = mm.LangevinMiddleIntegrator(300 * KELVIN, 1 / PS, 1 * FS)
+    langevin.setRandomNumberSeed(42)
+    lockstep = LockstepIntegrator(langevin)
+    assert lockstep.getExtensionIntegrator().getRandomNumberSeed() == 43
+    csvr = integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 1 * FS, forceFirst=True)
+    lockstep = LockstepIntegrator(csvr)
+    assert csvr._rng.random() != lockstep.getExtensionIntegrator()._rng.random()
+
+
+def test_csvr_seed_follows_openmm_conventions():
+    """getRandomNumberSeed returns what was set; 0 means random."""
+    a = integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 1 * FS)
+    b = integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 1 * FS)
+    for integrator in (a, b):
+        integrator.registerWithSystem(_ideal_gas(), False)
+        integrator.setRandomNumberSeed(5)
+    assert a.getRandomNumberSeed() == 5
+    np.testing.assert_allclose(
+        a._sums_of_squared_gaussians(3), b._sums_of_squared_gaussians(3)
+    )
+    a.setRandomNumberSeed(0)
+    b.setRandomNumberSeed(0)
+    assert not np.allclose(
+        a._sums_of_squared_gaussians(3), b._sums_of_squared_gaussians(3)
+    )
+
+
+def test_csvr_step_before_register_raises_clear_error():
+    integrator = integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 1 * FS)
+    context = _context(_ideal_gas(2), integrator)
+    with pytest.raises(ValueError, match="registerWithSystem"):
+        integrator.step(1)
+    assert context.getStepCount() == 0
