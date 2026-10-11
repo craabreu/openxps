@@ -176,8 +176,7 @@ def test_validation():
         ExtendedSpaceContext(
             *system_integrator_platform(create_coupling(phi0=None), model),
         )
-    message = str(e.value).lower()
-    assert "different default values" in message or "no particles" in message
+    assert "different default values" in str(e.value).lower()
 
 
 def test_consistency():

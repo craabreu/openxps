@@ -27,7 +27,7 @@ dependencies = [
     "cvpack",
     "lightning",
     "numpy",
-    "openmm",
+    "openmm>=8.4",
     "pandas",
     "pyyaml",
     "torch",

@@ -4,6 +4,7 @@ Unit and regression test for the openxps package.
 """
 
 # Import package, test suite, and other packages as needed
+import re
 import sys
 from importlib import metadata
 
@@ -16,7 +17,8 @@ def test_openxps_imported():
 def test_declared_runtime_dependencies():
     """Every third-party package imported at import time is declared."""
     requires = [
-        r.split(";")[0].split(" ")[0].lower() for r in metadata.requires("openxps")
+        re.match(r"[A-Za-z0-9_.-]+", r).group(0).lower()
+        for r in metadata.requires("openxps")
     ]
     for package in (
         "cvpack",

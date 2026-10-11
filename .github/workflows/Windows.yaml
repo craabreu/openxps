@@ -24,7 +24,7 @@ jobs:
         include:
           - os: windows-latest
             python-version: "3.13"
-            openmm-version: "8.3"
+            openmm-version: "8.6"
 
     steps:
       - uses: actions/checkout@v4

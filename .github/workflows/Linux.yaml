@@ -25,24 +25,19 @@ jobs:
         include:
           - os: ubuntu-latest
             python-version: "3.13"
-            openmm-version: "8.3"
+            openmm-version: "8.6"
 
           - os: ubuntu-latest
             python-version: "3.12"
-            openmm-version: "8.2"
+            openmm-version: "8.5"
 
           - os: ubuntu-latest
             python-version: "3.11"
-            openmm-version: "8.1"
-
-          - os: ubuntu-latest
-            python-version: "3.11"
-            openmm-version: "8.0"
+            openmm-version: "8.4"
 
           - os: ubuntu-latest
             python-version: "3.10"
-            openmm-version: "7.7"
-            extra-specs: "numpy<2 scipy<1.13"
+            openmm-version: "8.4"
 
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +56,6 @@ jobs:
           create-args: >-
             python=${{ matrix.python-version }}
             openmm=${{ matrix.openmm-version }}
-            ${{ matrix.extra-specs }}
 
       - name: Install package
         # conda setup requires this special shell

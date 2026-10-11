@@ -32,7 +32,7 @@ jobs:
           environment-file: devtools/conda-envs/docs_env.yaml
           environment-name: docs
           create-args: >-
-            python=3.13 openmm=8.3
+            python=3.13 openmm=8.6
 
       - name: Install package
         # conda setup requires this special shell
