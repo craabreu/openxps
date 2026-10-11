@@ -81,8 +81,8 @@ class ExtendedSpaceContext(mm.Context):
         self,
         system: ExtendedSpaceSystem,
         integrator: ExtendedSpaceIntegrator,
-        platform: t.Optional[mm.Platform] = None,
-        properties: t.Optional[dict] = None,
+        platform: mm.Platform | None = None,
+        properties: dict | None = None,
     ) -> None:
         self._validate(system, integrator)
         args = [system, integrator.getPhysicalIntegrator()]
@@ -227,7 +227,7 @@ class ExtendedSpaceContext(mm.Context):
         self._extension_context.setVelocities(velocities)
 
     def setDynamicalVariableVelocitiesToTemperature(
-        self, temperature: mmunit.Quantity, seed: t.Optional[int] = None
+        self, temperature: mmunit.Quantity, seed: int | None = None
     ) -> None:
         """
         Set the velocities of the dynamical variables to a temperature.

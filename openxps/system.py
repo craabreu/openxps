@@ -7,8 +7,6 @@
 
 """
 
-import typing as t
-
 import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
@@ -64,7 +62,7 @@ class ExtendedSpaceSystem(mm.System):
         system: mm.System,
         coupling: Coupling,
         *,
-        tether_period: t.Optional[mmunit.Quantity] = None,
+        tether_period: mmunit.Quantity | None = None,
     ) -> None:
         self._coupling = coupling
         coupling.addToPhysicalSystem(system)
@@ -126,7 +124,7 @@ class ExtendedSpaceSystem(mm.System):
         """
         return self._extension_system
 
-    def getTetheringForce(self) -> t.Optional[mm.CustomExternalForce]:
+    def getTetheringForce(self) -> mm.CustomExternalForce | None:
         """
         Get the tethering force included in the extended phase-space system.
 
