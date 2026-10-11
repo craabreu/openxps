@@ -17,7 +17,7 @@ from cvpack.serialization import Serializable
 from cvpack.units import Quantity
 from openmm import unit as mmunit
 
-from .bounds import Bounds, NoBounds, PeriodicBounds
+from .bounds import Bounds, PeriodicBounds
 from .utils import preprocess_args
 
 
@@ -40,9 +40,9 @@ class DynamicalVariable(Serializable):
     bounds
         The boundary condition to be applied to this dynamical variable. It must
         be an instance of :class:`PeriodicBounds`, :class:`ReflectiveBounds`, or
-        :class:`NoBounds` (for unbounded variables). If it is not
-        :class:`~openxps.NoBounds`, its unit of measurement must be compatible with
-        the dynamical variable's own unit.
+        :class:`NoBounds` (for unbounded variables, whose bounds are then typical
+        values rather than actual limits). Its unit of measurement must be
+        compatible with the dynamical variable's own unit.
 
     Example
     -------
@@ -76,9 +76,6 @@ class DynamicalVariable(Serializable):
         if not self.mass.unit.is_compatible(mass_unit):
             raise TypeError(f"Mass units must be compatible with {mass_unit}.")
         object.__setattr__(self, "mass", Quantity(self.mass.in_units_of(mass_unit)))
-
-        if isinstance(self.bounds, NoBounds):
-            return
 
         if isinstance(self.bounds, Bounds):
             if not self.bounds.unit.is_compatible(self.unit):
