@@ -95,7 +95,3 @@ class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.setGlobalVariableByName("kT", kt)
         self.setGlobalVariableByName("a", a)
         self.setGlobalVariableByName("b", b)
-
-    def setStepSize(self, size: mmunit.Quantity) -> None:
-        super().setStepSize(size)
-        self._update_global_variables()

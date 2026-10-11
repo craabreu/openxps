@@ -31,13 +31,16 @@ class IntegratorMixin:
         """Return a human-readable version of each integrator step."""
         readable_lines = []
 
-        self.getNumPerDofVariables() > 0 and readable_lines.append("Per-dof variables:")
-        per_dof = []
-        for index in range(self.getNumPerDofVariables()):
-            per_dof.append(self.getPerDofVariableName(index))
-        readable_lines.append("  " + ", ".join(per_dof))
+        if self.getNumPerDofVariables() > 0:
+            readable_lines.append("Per-dof variables:")
+            per_dof = [
+                self.getPerDofVariableName(index)
+                for index in range(self.getNumPerDofVariables())
+            ]
+            readable_lines.append("  " + ", ".join(per_dof))
 
-        self.getNumGlobalVariables() > 0 and readable_lines.append("Global variables:")
+        if self.getNumGlobalVariables() > 0:
+            readable_lines.append("Global variables:")
         for index in range(self.getNumGlobalVariables()):
             name = self.getGlobalVariableName(index)
             value = self.getGlobalVariable(index)
@@ -68,6 +71,12 @@ class IntegratorMixin:
                 indent_level += 1
             readable_lines.append(line)
         return "\n".join(readable_lines)
+
+    def setStepSize(self, size: mmunit.Quantity | float) -> None:
+        """Set the step size and refresh any step-size-dependent global variables."""
+        super().setStepSize(size)
+        if hasattr(self, "_update_global_variables"):
+            self._update_global_variables()
 
     def registerWithSystem(self, system: mm.System, isExtension: bool) -> None:
         """Register the integrator with the system."""
@@ -144,7 +153,7 @@ def add_property(property: str, unit: mmunit.Unit) -> t.Callable[[type[T]], type
 
     @preprocess_args
     def set_and_update(self, value: mmunit.Quantity | float) -> None:
-        set_value(value)
+        set_value(self, value)
         if hasattr(self, "_update_global_variables"):
             self._update_global_variables()
 
