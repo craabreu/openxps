@@ -7,7 +7,13 @@ import pytest
 import yaml
 from openmm import unit as mmunit
 
-from openxps.bounds import Bounds, CircularBounds, PeriodicBounds, ReflectiveBounds
+from openxps.bounds import (
+    Bounds,
+    CircularBounds,
+    NoBounds,
+    PeriodicBounds,
+    ReflectiveBounds,
+)
 
 
 def test_bounds_initialization():
@@ -132,8 +138,6 @@ def test_bounds_transformation_not_implemented():
 
 def test_bounds_equality_requires_same_kind():
     """NoBounds and PeriodicBounds with the same range are not equal."""
-    from openxps.bounds import NoBounds
-
     assert NoBounds(-np.pi, np.pi, mmunit.radian) != CircularBounds()
     assert PeriodicBounds(-np.pi, np.pi, mmunit.radian) == CircularBounds()
     assert ReflectiveBounds(0, 1, mmunit.nanometer) != PeriodicBounds(
