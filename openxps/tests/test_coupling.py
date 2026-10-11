@@ -16,9 +16,11 @@ from openmmtools import testsystems
 from openxps import (
     CollectiveVariableCoupling,
     DynamicalVariable,
+    ExtendedSpaceContext,
     ExtendedSpaceSystem,
     HarmonicCoupling,
     InnerProductCoupling,
+    LockstepIntegrator,
 )
 from openxps.bounds import CircularBounds, NoBounds, ReflectiveBounds
 from openxps.couplings import CouplingSum
@@ -1160,14 +1162,15 @@ def test_harmonic_coupling_nonperiodic_angstrom_dv_energy():
     )
     kappa = 100 * mmunit.kilojoule_per_mole / mmunit.angstrom**2
     coupling = HarmonicCoupling(distance, d0, kappa)
-    system = ExtendedSpaceSystem(model.system, coupling)
-    context = mm.Context(
-        system, mm.VerletIntegrator(0.001), mm.Platform.getPlatformByName("Reference")
+    context = ExtendedSpaceContext(
+        ExtendedSpaceSystem(model.system, coupling),
+        LockstepIntegrator(mm.VerletIntegrator(0.001)),
+        mm.Platform.getPlatformByName("Reference"),
     )
     context.setPositions(model.positions)
-    positions = model.positions.value_in_unit(mmunit.nanometer)
+    positions = model.positions.value_in_unit(mmunit.angstrom)
     actual = np.linalg.norm(np.array(positions[1]) - np.array(positions[0]))
-    context.setParameter("d0", actual + 0.1)
+    context.setDynamicalVariableValues([(actual + 1) * mmunit.angstrom])
     energy = (
         coupling.getForce(0).getValue(context).value_in_unit(mmunit.kilojoule_per_mole)
     )
