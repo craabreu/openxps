@@ -60,6 +60,9 @@
   the step-size-dependent thermostat coefficients.
 - Copying or pickling an extended-space integrator keeps the integrator classes and the
   `assume_force_first`/`assume_symmetric` flags.
+- `ExtendedSpaceSimulation.saveState` stores the extension integrator's variables,
+  such as thermostat states, so `loadState` restarts the extension dynamics
+  continuously.
 - A default extension integrator copied from the physical one gets a different random
   seed, and `CSVRIntegrator` follows OpenMM's seed conventions.
 - `CSVRIntegrator` leaves a system with zero kinetic energy at rest instead of producing

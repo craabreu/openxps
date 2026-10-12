@@ -146,7 +146,10 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
             enforcePeriodicBox=self._usesPBC,
         )
         extension = self.context.getExtensionContext().getState(
-            getPositions=True, getVelocities=True, getParameters=True
+            getPositions=True,
+            getVelocities=True,
+            getParameters=True,
+            getIntegratorParameters=True,
         )
         content = (
             mm.XmlSerializer.serialize(physical)
