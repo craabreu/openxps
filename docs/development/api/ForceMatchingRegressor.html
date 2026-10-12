@@ -101,11 +101,14 @@ default of 1 avoids launching distributed training on multi-GPU hosts.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>seed</strong> – The seed used to split the data and initialize the kernels. If None, a
-random seed is used. NumPy’s global random state is left untouched,
-while PyTorch’s global seed is set.</p>
+<dd class="field-even"><p><strong>seed</strong> – The seed used to split the data, shuffle the batches and initialize the
+kernels. If None, a random seed is used. The global random states of
+NumPy and PyTorch are left untouched.</p>
 </dd>
 </dl>
+<p class="rubric">Notes</p>
+<p>The fitted model and learning curve replace the previous ones only if
+training completes, so a failed fit leaves the regressor unchanged.</p>
 </dd></dl>
 
 <dl class="py method">
