@@ -2,10 +2,14 @@
 Unit tests for openxps.utils.Function.
 """
 
+from collections import namedtuple
+
 import openmm as mm
 import pytest
+from cvpack import units
+from openmm import unit as mmunit
 
-from openxps.utils import Function
+from openxps.utils import Function, preprocess_args
 
 
 def test_function_ignores_lepton_definitions():
@@ -70,3 +74,26 @@ def test_function_variables_named_like_coordinates(expression, mapping, expected
     """Variables named like Lepton coordinates still read their own particle."""
     xs = [1.0, 2.0, 3.0][: len(mapping)]
     assert _energy(Function("f", expression), mapping, xs) == pytest.approx(expected)
+
+
+def test_preprocess_args_handles_named_tuples_and_other_sequences():
+    @preprocess_args
+    def identity(data):
+        return data
+
+    vec = mm.Vec3(1.0, 2.0, 3.0)
+    assert identity(vec) is vec
+    assert identity(range(3)) == range(3)
+    assert identity("abc") == "abc"
+
+    Pair = namedtuple("Pair", ["a", "b"])
+    converted = identity(Pair(1 * mmunit.angstrom, 2))
+    assert type(converted) is Pair
+    assert isinstance(converted.a, units.Quantity)
+    assert converted.b == 2
+
+    nested = identity([(1 * mmunit.nanometer, mmunit.kelvin), {"t": 2 * mmunit.second}])
+    assert isinstance(nested[0], tuple)
+    assert isinstance(nested[0][0], units.Quantity)
+    assert isinstance(nested[0][1], units.Unit)
+    assert isinstance(nested[1]["t"], units.Quantity)

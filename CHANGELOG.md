@@ -125,3 +125,5 @@
 - `InnerProductCoupling` raises a clear error for forces without global parameters,
   and for functions named like dynamical variables, while a dynamical variable may
   now be both a force parameter and a function input.
+- Arguments of decorated constructors and setters may be named tuples (such as
+  `openmm.Vec3`) or other sequences such as `range`, which previously raised errors.
