@@ -43,6 +43,9 @@ class RBFPotential(nn.Module):
         The number of radial basis functions.
     learn_centers
         Whether to learn the centers of the radial basis functions.
+    generator
+        The random number generator used to place the initial centers. If None,
+        PyTorch's global generator is used.
     """
 
     def __init__(
@@ -50,13 +53,16 @@ class RBFPotential(nn.Module):
         dynamical_variables: t.Sequence[DynamicalVariable],
         M: int = 256,
         learn_centers: bool = True,
+        generator: torch.Generator | None = None,
     ) -> None:
         super().__init__()
         lengths, periodic, random_points = [], [], []
         for dv in dynamical_variables:
             lengths.append(dv.bounds.length)
             periodic.append(isinstance(dv.bounds, PeriodicBounds))
-            random_points.append(torch.rand(M) * dv.bounds.length + dv.bounds.lower)
+            random_points.append(
+                torch.rand(M, generator=generator) * dv.bounds.length + dv.bounds.lower
+            )
 
         self.c = nn.Parameter(
             torch.stack(random_points, dim=-1), requires_grad=learn_centers
@@ -123,6 +129,8 @@ class GradMatch(pl.LightningModule):
         The learning rate.
     wd
         The weight decay.
+    generator
+        The random number generator used to place the initial kernel centers.
     """
 
     def __init__(
@@ -131,10 +139,11 @@ class GradMatch(pl.LightningModule):
         M: int = 256,
         lr: float = 2e-3,
         wd: float = 1e-4,
+        generator: torch.Generator | None = None,
     ) -> None:
         super().__init__()
-        self.save_hyperparameters(ignore=["dynamical_variables"])
-        self.f = RBFPotential(dynamical_variables, M)
+        self.save_hyperparameters(ignore=["dynamical_variables", "generator"])
+        self.f = RBFPotential(dynamical_variables, M, generator=generator)
 
     def configure_optimizers(self) -> torch.optim.Optimizer:
         return torch.optim.AdamW(
@@ -297,16 +306,17 @@ class ForceMatchingRegressor:
         return int(round(self._val_frac * num_samples))
 
     def _create_dataloaders(
-        self, X: torch.Tensor, G: torch.Tensor
+        self, X: torch.Tensor, G: torch.Tensor, generator: torch.Generator
     ) -> tuple[DataLoader, DataLoader | None]:
         N = len(X)
-        idx = torch.randperm(N)
+        idx = torch.randperm(N, generator=generator)
         nval = self._num_validation_samples(N)
         val_idx, tr_idx = idx[:nval], idx[nval:]
         train_dl = DataLoader(
             TensorDataset(X[tr_idx], G[tr_idx]),
             batch_size=self._batch_size,
             shuffle=True,
+            generator=generator,
             num_workers=self._num_workers,
             persistent_workers=self._num_workers > 0,
         )
@@ -315,6 +325,7 @@ class ForceMatchingRegressor:
         val_dl = DataLoader(
             TensorDataset(X[val_idx], G[val_idx]),
             batch_size=self._batch_size,
+            generator=generator,
             num_workers=self._num_workers,
             persistent_workers=self._num_workers > 0,
         )
@@ -334,12 +345,16 @@ class ForceMatchingRegressor:
         )
         return checkpoint, early_stopping
 
-    def _validate_shapes(self, X: torch.Tensor, G: torch.Tensor) -> None:
+    def _as_positions(self, positions: ArrayLike) -> torch.Tensor:
+        X = torch.as_tensor(np.asarray(positions, dtype=np.float32))
         d = len(self._dynamical_variables)
-        if X.shape != (*X.shape[:1], d):
+        if X.ndim != 2 or X.shape[1] != d:  # noqa: PLR2004
             raise ValueError(
                 f"positions must have shape (N, {d}), got {tuple(X.shape)}"
             )
+        return X
+
+    def _validate_forces(self, X: torch.Tensor, G: torch.Tensor) -> None:
         if G.shape != X.shape:
             raise ValueError(
                 f"forces must have the same shape as positions {tuple(X.shape)}, "
@@ -361,26 +376,32 @@ class ForceMatchingRegressor:
         Keyword Arguments
         -----------------
         seed
-            The seed used to split the data and initialize the kernels. If None, a
-            random seed is used. NumPy's global random state is left untouched,
-            while PyTorch's global seed is set.
-        """
-        rng = np.random.default_rng(seed)
-        torch.manual_seed(int(rng.integers(0, 2**31 - 1)))
+            The seed used to split the data, shuffle the batches and initialize the
+            kernels. If None, a random seed is used. The global random states of
+            NumPy and PyTorch are left untouched.
 
-        X = torch.as_tensor(np.asarray(positions, dtype=np.float32))
+        Notes
+        -----
+        The fitted model and learning curve replace the previous ones only if
+        training completes, so a failed fit leaves the regressor unchanged.
+        """
+        generator = torch.Generator()
+        generator.manual_seed(int(np.random.default_rng(seed).integers(0, 2**63 - 1)))
+
+        X = self._as_positions(positions)
         G = -torch.as_tensor(np.asarray(forces, dtype=np.float32))
-        self._validate_shapes(X, G)
+        self._validate_forces(X, G)
         num_samples = len(X)
         if num_samples - self._num_validation_samples(num_samples) < 1:
             raise ValueError(
                 f"No training data left: {num_samples} samples with "
                 f"validation_fraction={self._val_frac}."
             )
-        self._metrics = None
-        train_dl, val_dl = self._create_dataloaders(X, G)
+        train_dl, val_dl = self._create_dataloaders(X, G, generator)
 
-        self._model = GradMatch(self._dynamical_variables, self._M, self._lr, self._wd)
+        model = GradMatch(
+            self._dynamical_variables, self._M, self._lr, self._wd, generator
+        )
         recorder = _LearningCurveRecorder()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -396,20 +417,21 @@ class ForceMatchingRegressor:
             if val_dl is None:
                 trainer_kwargs["enable_checkpointing"] = False
                 trainer = pl.Trainer(**trainer_kwargs)
-                trainer.fit(self._model, train_dl)
+                trainer.fit(model, train_dl)
             else:
                 checkpoint, early_stopping = self._create_callbacks(tmp_dir)
                 trainer_kwargs["callbacks"] += [checkpoint, early_stopping]
                 trainer = pl.Trainer(**trainer_kwargs)
-                trainer.fit(self._model, train_dl, val_dl)
+                trainer.fit(model, train_dl, val_dl)
                 if checkpoint.best_model_path:
                     state = torch.load(
                         checkpoint.best_model_path,
                         map_location="cpu",
                         weights_only=True,
                     )
-                    self._model.load_state_dict(state["state_dict"])
+                    model.load_state_dict(state["state_dict"])
 
+        self._model = model
         self._metrics = recorder.to_frame()
 
     def predict(self, positions: ArrayLike) -> np.ndarray:
@@ -429,7 +451,7 @@ class ForceMatchingRegressor:
         if self._model is None:
             raise RuntimeError("The model has not been fitted yet.")
         device = next(self._model.parameters()).device
-        X = torch.as_tensor(positions, dtype=torch.float32).to(device)
+        X = self._as_positions(positions).to(device)
         with torch.no_grad():
             return self._as_numpy(self._model.f(X))
 

@@ -125,3 +125,6 @@
 - `InnerProductCoupling` raises a clear error for forces without global parameters,
   and for functions named like dynamical variables, while a dynamical variable may
   now be both a force parameter and a function input.
+- `ForceMatchingRegressor.fit` draws all its randomness from a local generator and no
+  longer reseeds PyTorch's global generator; a failed fit keeps the previous model and
+  learning curve; `predict` validates the shape of its input like `fit`.
