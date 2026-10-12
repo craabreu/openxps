@@ -532,3 +532,46 @@ def test_state_argument_accepts_state_object():
     expected = coupling2.getCollectiveVariableValues(restored.context)["phi"]
     actual = restored.context.getExtensionContext().getParameter("phi")
     assert actual == pytest.approx(expected)
+
+
+def test_save_and_load_state_keeps_extension_thermostat():
+    """The extension integrator's thermostat variables survive a state file."""
+
+    def build():
+        model, _, coupling, integrator = create_test_system()
+        extension_integrator = xps.integrators.MassiveGGMTIntegrator(
+            300 * mmunit.kelvin,
+            0.1 * mmunit.picosecond,
+            1 * mmunit.femtosecond,
+            forceFirst=True,
+        )
+        simulation = xps.ExtendedSpaceSimulation(
+            model.topology,
+            xps.ExtendedSpaceSystem(model.system, coupling),
+            xps.LockstepIntegrator(integrator, extension_integrator),
+            mm.Platform.getPlatformByName("Reference"),
+        )
+        simulation.context.setPositions(model.positions)
+        simulation.context.setVelocitiesToTemperature(300 * mmunit.kelvin, 1)
+        simulation.context.setDynamicalVariableValues([1.0])
+        simulation.context.setDynamicalVariableVelocitiesToTemperature(
+            300 * mmunit.kelvin, 1
+        )
+        return simulation
+
+    def thermostat(simulation):
+        integrator = simulation.context.getExtensionContext().getIntegrator()
+        return np.array(
+            [integrator.getPerDofVariableByName(name) for name in ("v1", "v2")]
+        )
+
+    original = build()
+    original.step(50)
+    saved = thermostat(original)
+    assert np.any(saved != 0)
+    buffer = io.StringIO()
+    original.saveState(buffer)
+    buffer.seek(0)
+    restored = build()
+    restored.loadState(buffer)
+    np.testing.assert_array_equal(thermostat(restored), saved)
