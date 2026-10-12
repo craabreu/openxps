@@ -101,7 +101,7 @@ step is free of the singularity for any step size.</p>
 <span class="gp">... </span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span>
 <span class="go">Per-dof variables:</span>
-<span class="go">  v1, v2, z, w, E, s, zmin, th, T1</span>
+<span class="go">  v1, v2, active, z, w, E, s, zmin, th, T1</span>
 <span class="go">Global variables:</span>
 <span class="go">  kT = 2.494338...</span>
 <span class="go">  invQ = 40.090...</span>
@@ -110,13 +110,13 @@ step is free of the singularity for any step size.</p>
 <span class="go">   0: allow forces to update the context state</span>
 <span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
 <span class="go">   2: x &lt;- x + 0.5*dt*v</span>
-<span class="go">   3: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)*invQ</span>
-<span class="go">   4: v2 &lt;- v2 - 0.25*dt*kT^2*invQ2</span>
+<span class="go">   3: v1 &lt;- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)</span>
+<span class="go">   4: v2 &lt;- active*(v2 - 0.25*dt*kT^2*invQ2)</span>
 <span class="go">   5: z &lt;- sqrt(3)*kT/max(m*v*v, 1e-30*kT)</span>
 <span class="go">...</span>
 <span class="go">  23: v &lt;- v*exp(-1*dt*(v1 + kT*v2))</span>
 <span class="go">...</span>
-<span class="go">  43: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)*invQ</span>
+<span class="go">  43: v1 &lt;- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)</span>
 <span class="go">  44: x &lt;- x + 0.5*dt*v</span>
 <span class="go">  45: v &lt;- v + 0.5*dt*f/m</span>
 </pre></div>

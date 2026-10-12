@@ -104,7 +104,7 @@
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator</span>
 <span class="sd">    Per-dof variables:</span>
-<span class="sd">      v1</span>
+<span class="sd">      v1, active</span>
 <span class="sd">    Global variables:</span>
 <span class="sd">      kT = 2.494...</span>
 <span class="sd">      invQ = 40.090...</span>
@@ -114,11 +114,11 @@
 <span class="sd">       0: allow forces to update the context state</span>
 <span class="sd">       1: v &lt;- v + 0.5*dt*f/m</span>
 <span class="sd">       2: x &lt;- x + 0.5*dt*c*tanh(v/c); c=sqrt(1*kT/m)</span>
-<span class="sd">       3: v1 &lt;- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c=sqrt(1*kT/m)</span>
+<span class="sd">       3: v1 &lt;- active*(v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ); c=sqrt(1*kT/m)</span>
 <span class="sd">       4: v &lt;- v*exp(-0.5*dt*v1)</span>
-<span class="sd">       5: v1 &lt;- a*v1 + b*gaussian</span>
+<span class="sd">       5: v1 &lt;- active*(a*v1 + b*gaussian)</span>
 <span class="sd">       6: v &lt;- v*exp(-0.5*dt*v1)</span>
-<span class="sd">       7: v1 &lt;- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c=sqrt(1*kT/m)</span>
+<span class="sd">       7: v1 &lt;- active*(v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ); c=sqrt(1*kT/m)</span>
 <span class="sd">       8: x &lt;- x + 0.5*dt*c*tanh(v/c); c=sqrt(1*kT/m)</span>
 <span class="sd">       9: v &lt;- v + 0.5*dt*f/m</span>
 
@@ -172,6 +172,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"b"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_dof_mask</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_global_variables</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_global_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -196,8 +197,10 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_v1_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
             <span class="s2">"v1"</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">"v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(m*v*c*tanh(v/c) - kT)*invQ"</span>
-            <span class="sa">f</span><span class="s2">"; c=sqrt(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_regulation_parameter</span><span class="si">}</span><span class="s2">*kT/m)"</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(m*v*c*tanh(v/c) - kT)*invQ"</span>
+                <span class="sa">f</span><span class="s2">"; c=sqrt(</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_regulation_parameter</span><span class="si">}</span><span class="s2">*kT/m)"</span>
+            <span class="p">),</span>
         <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_v_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
@@ -206,7 +209,7 @@
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_thermostat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_v1_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="s2">"a*v1 + b*gaussian"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="s2">"a*v1 + b*gaussian"</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_v1_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
 
@@ -214,7 +217,8 @@
 <a class="viewcode-back" href="../../../api/RegulatedNHLIntegrator.html#openxps.integrators.RegulatedNHLIntegrator.registerWithSystem">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">registerWithSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">,</span> <span class="n">isExtension</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Regulated NHL integrators do not support constraints."</span><span class="p">)</span></div>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Regulated NHL integrators do not support constraints."</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_dof_mask</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">isExtension</span><span class="p">)</span></div>
 </div>
 
 </pre></div>

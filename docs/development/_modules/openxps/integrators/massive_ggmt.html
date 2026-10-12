@@ -125,7 +125,7 @@
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator</span>
 <span class="sd">    Per-dof variables:</span>
-<span class="sd">      v1, v2, z, w, E, s, zmin, th, T1</span>
+<span class="sd">      v1, v2, active, z, w, E, s, zmin, th, T1</span>
 <span class="sd">    Global variables:</span>
 <span class="sd">      kT = 2.494338...</span>
 <span class="sd">      invQ = 40.090...</span>
@@ -134,13 +134,13 @@
 <span class="sd">       0: allow forces to update the context state</span>
 <span class="sd">       1: v &lt;- v + 0.5*dt*f/m</span>
 <span class="sd">       2: x &lt;- x + 0.5*dt*v</span>
-<span class="sd">       3: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)*invQ</span>
-<span class="sd">       4: v2 &lt;- v2 - 0.25*dt*kT^2*invQ2</span>
+<span class="sd">       3: v1 &lt;- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)</span>
+<span class="sd">       4: v2 &lt;- active*(v2 - 0.25*dt*kT^2*invQ2)</span>
 <span class="sd">       5: z &lt;- sqrt(3)*kT/max(m*v*v, 1e-30*kT)</span>
 <span class="sd">    ...</span>
 <span class="sd">      23: v &lt;- v*exp(-1*dt*(v1 + kT*v2))</span>
 <span class="sd">    ...</span>
-<span class="sd">      43: v1 &lt;- v1 + 0.5*dt*(m*v^2 - kT)*invQ</span>
+<span class="sd">      43: v1 &lt;- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)</span>
 <span class="sd">      44: x &lt;- x + 0.5*dt*v</span>
 <span class="sd">      45: v &lt;- v + 0.5*dt*f/m</span>
 
@@ -222,6 +222,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"invQ2"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_dof_mask</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"z"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="s2">"E"</span><span class="p">,</span> <span class="s2">"s"</span><span class="p">,</span> <span class="s2">"zmin"</span><span class="p">,</span> <span class="s2">"th"</span><span class="p">,</span> <span class="s2">"T1"</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stochastic</span><span class="p">:</span>
@@ -253,11 +254,13 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"v + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*f/m"</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_v1_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(m*v^2 - kT)*invQ"</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span>
+            <span class="s2">"v1"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="sa">f</span><span class="s2">"v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(m*v^2 - kT)*invQ"</span><span class="p">)</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_v2_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">c</span> <span class="o">=</span> <span class="n">_COULOMB_STRENGTH</span>
-        <span class="n">constant_kick</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"v2 - </span><span class="si">{</span><span class="n">fraction</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s2">*dt*kT^2*invQ2"</span>
+        <span class="n">constant_kick</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="sa">f</span><span class="s2">"v2 - </span><span class="si">{</span><span class="n">fraction</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s2">*dt*kT^2*invQ2"</span><span class="p">)</span>
         <span class="n">add</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span>
         <span class="n">add</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="n">constant_kick</span><span class="p">)</span>
         <span class="n">add</span><span class="p">(</span><span class="s2">"z"</span><span class="p">,</span> <span class="s2">"sqrt(3)*kT/max(m*v*v, 1e-30*kT)"</span><span class="p">)</span>
@@ -279,7 +282,7 @@
         <span class="n">add</span><span class="p">(</span><span class="s2">"th"</span><span class="p">,</span> <span class="s2">"(2*step(T1) - 1)*th"</span><span class="p">)</span>
         <span class="n">add</span><span class="p">(</span><span class="s2">"v"</span><span class="p">,</span> <span class="s2">"v*sqrt(z/znew); znew=zmin*cosh(th)^2"</span><span class="p">)</span>
         <span class="n">add</span><span class="p">(</span><span class="s2">"w"</span><span class="p">,</span> <span class="s2">"s*tanh(th)"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="s2">"(sqrt(3)/2)*w/kT"</span><span class="p">)</span>
+        <span class="n">add</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="s2">"(sqrt(3)/2)*w/kT"</span><span class="p">))</span>
         <span class="n">add</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="n">constant_kick</span><span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_v_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -290,8 +293,8 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_v2_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stochastic</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="s2">"a*v1 + b1*gaussian"</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="s2">"a*v2 + b2*gaussian"</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="s2">"a*v1 + b1*gaussian"</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="s2">"a*v2 + b2*gaussian"</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="n">fraction</span><span class="p">)</span>
@@ -302,7 +305,8 @@
 <a class="viewcode-back" href="../../../api/MassiveGGMTIntegrator.html#openxps.integrators.MassiveGGMTIntegrator.registerWithSystem">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">registerWithSystem</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">,</span> <span class="n">isExtension</span><span class="p">:</span> <span class="nb">bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">system</span><span class="o">.</span><span class="n">getNumConstraints</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Massive GGMT integrators do not support constraints."</span><span class="p">)</span></div>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Massive GGMT integrators do not support constraints."</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_set_dof_mask</span><span class="p">(</span><span class="n">system</span><span class="p">,</span> <span class="n">isExtension</span><span class="p">)</span></div>
 </div>
 
 </pre></div>
