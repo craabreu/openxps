@@ -5,8 +5,10 @@ Unit tests for the openxps.regression module.
 import warnings
 
 import numpy as np
+import pandas as pd
 import pytest
 import torch
+from lightning import pytorch as pl
 from openmm import unit as mmunit
 
 import openxps as xps
@@ -551,6 +553,76 @@ class TestFitBehavior:
         np.random.seed(123)
         regressor.fit(np.zeros((20, 2)), np.zeros((20, 2)), seed=None)
         assert np.random.rand() == expected
+
+    @pytest.mark.parametrize("seed", [None, 7])
+    @pytest.mark.parametrize("validation_fraction", [0.0, 0.2])
+    def test_fit_does_not_touch_global_torch_rng(self, seed, validation_fraction):
+        regressor = ForceMatchingRegressor(
+            create_test_dynamical_variables(),
+            num_kernels=5,
+            num_epochs=2,
+            batch_size=4,
+            validation_fraction=validation_fraction,
+        )
+        torch.manual_seed(123)
+        expected = torch.rand(3)
+        torch.manual_seed(123)
+        regressor.fit(np.zeros((20, 2)), np.zeros((20, 2)), seed=seed)
+        torch.testing.assert_close(torch.rand(3), expected)
+
+    def test_same_seed_reproduces_fit(self):
+        rng = np.random.default_rng(0)
+        positions = rng.uniform(-np.pi, np.pi, (40, 2))
+        forces = -np.sin(positions)
+        results = []
+        for global_seed in (1, 2):
+            torch.manual_seed(global_seed)
+            regressor = ForceMatchingRegressor(
+                create_test_dynamical_variables(),
+                num_kernels=5,
+                num_epochs=3,
+                batch_size=8,
+                validation_fraction=0.2,
+            )
+            regressor.fit(positions, forces, seed=11)
+            results.append(regressor.get_parameters())
+        for first, second in zip(*results):
+            np.testing.assert_array_equal(first, second)
+
+    def test_failed_fit_keeps_previous_model(self, monkeypatch):
+        regressor = ForceMatchingRegressor(
+            create_test_dynamical_variables(),
+            num_kernels=5,
+            num_epochs=1,
+            validation_fraction=0.0,
+        )
+        positions = np.random.default_rng(0).uniform(-1, 1, (20, 2))
+        regressor.fit(positions, -positions, seed=1)
+        model = regressor._model
+        curve = regressor.get_learning_curve()
+        before = regressor.predict(positions)
+
+        def fail(*args, **kwargs):
+            raise RuntimeError("training failed")
+
+        monkeypatch.setattr(pl.Trainer, "fit", fail)
+        with pytest.raises(RuntimeError, match="training failed"):
+            regressor.fit(positions, positions, seed=2)
+        assert regressor._model is model
+        pd.testing.assert_frame_equal(regressor.get_learning_curve(), curve)
+        np.testing.assert_array_equal(regressor.predict(positions), before)
+
+    @pytest.mark.parametrize("shape", [(10,), (10, 3), (2, 5, 2)])
+    def test_predict_validates_shape(self, shape):
+        regressor = ForceMatchingRegressor(
+            create_test_dynamical_variables(),
+            num_kernels=5,
+            num_epochs=1,
+            validation_fraction=0.0,
+        )
+        regressor.fit(np.zeros((20, 2)), np.zeros((20, 2)), seed=1)
+        with pytest.raises(ValueError, match=r"shape \(N, 2\)"):
+            regressor.predict(np.zeros(shape))
 
     def test_fit_emits_no_checkpoint_directory_warning(self):
         dvs = create_test_dynamical_variables()
