@@ -41,3 +41,32 @@ def test_function_recognizes_lepton_builtins(name):
     fn = Function("g", f"{name}(x)")
     assert fn.getVariables() == {"x"}
     fn.createCollectiveVariable({"x": 0})
+
+
+def _energy(fn, mapping, xs):
+    cv = fn.createCollectiveVariable(mapping)
+    system = mm.System()
+    for _ in xs:
+        system.addParticle(1.0)
+    cv.addToSystem(system)
+    context = mm.Context(
+        system, mm.VerletIntegrator(0.0), mm.Platform.getPlatformByName("Reference")
+    )
+    context.setPositions([mm.Vec3(x, 0, 0) for x in xs])
+    return context.getState(getEnergy=True).getPotentialEnergy()._value
+
+
+@pytest.mark.parametrize(
+    ("expression", "mapping", "expected"),
+    [
+        ("1000*s + x1", {"s": 0, "x1": 1}, 1000 * 1.0 + 2.0),
+        ("x2 + 10*x1", {"x1": 0, "x2": 1}, 2.0 + 10 * 1.0),
+        ("x1 + 10*x2 + 100*x3", {"x1": 2, "x2": 0, "x3": 1}, 3.0 + 10 + 200),
+        ("10*u + s; u=3*x1", {"s": 0, "x1": 1}, 10 * 6.0 + 1.0),
+        ("openxps_var0*s", {"s": 0, "openxps_var0": 1}, 2.0),
+    ],
+)
+def test_function_variables_named_like_coordinates(expression, mapping, expected):
+    """Variables named like Lepton coordinates still read their own particle."""
+    xs = [1.0, 2.0, 3.0][: len(mapping)]
+    assert _energy(Function("f", expression), mapping, xs) == pytest.approx(expected)

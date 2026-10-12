@@ -111,6 +111,9 @@ def preprocess_args(func: t.Callable) -> t.Callable:
     return wrapper
 
 
+IDENTIFIER_PATTERN = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
+
+
 class Function(Serializable):
     """A function of dynamical variables and global parameters.
 
@@ -178,7 +181,7 @@ class Function(Serializable):
         given_parameters = set(given_parameters.keys())
         _, *definitions = self._expression.split(";")
         defined = {definition.partition("=")[0].strip() for definition in definitions}
-        identifiers = set(re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", self._expression))
+        identifiers = set(IDENTIFIER_PATTERN.findall(self._expression))
         dependencies = identifiers - LEPTON_FUNCTIONS - defined
         return dependencies - given_parameters, dependencies & given_parameters
 
@@ -241,10 +244,24 @@ class Function(Serializable):
                 f"Function {self._name} depends on unknown variables: "
                 + ", ".join(sorted(unknown))
             )
+        # Variables get private names, because a Lepton definition such as "x1=x2"
+        # would shadow a coordinate that another definition refers to.
+        identifiers = set(IDENTIFIER_PATTERN.findall(self._expression))
+        aliases = {}
+        index = 0
+        for variable in variables:
+            while (alias := f"openxps_var{index}") in identifiers:
+                index += 1
+            aliases[variable] = alias
+            index += 1
+        expression = IDENTIFIER_PATTERN.sub(
+            lambda match: aliases.get(match.group(0), match.group(0)),
+            self._expression,
+        )
         return cvpack.AtomicFunction(
             function=";".join(
-                [self._expression]
-                + [f"{variable}=x{i + 1}" for i, variable in enumerate(variables)]
+                [expression]
+                + [f"{aliases[v]}=x{i + 1}" for i, v in enumerate(variables)]
             ),
             unit=mmunit.kilojoule_per_mole,
             groups=[[variable_indices[variable] for variable in variables]],
