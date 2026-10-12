@@ -910,8 +910,8 @@ def test_inner_product_coupling_function_missing_dvs():
         )
 
 
-def test_inner_product_coupling_dv_in_both():
-    """Verify error when DV is both in function variables and force parameters."""
+def test_inner_product_coupling_function_named_as_dv():
+    """Verify error when a function has the same name as a dynamical variable."""
     force = mm.CustomBondForce("lambda*energy/r")
     force.addGlobalParameter("lambda", 1.0)
     force.addEnergyParameterDerivative("lambda")
@@ -925,8 +925,7 @@ def test_inner_product_coupling_dv_in_both():
         bounds=ReflectiveBounds(0.0, 1.0, mmunit.dimensionless),
     )
 
-    # lambda is both a global parameter (force) and in function
-    with pytest.raises(ValueError, match="both function variables and global"):
+    with pytest.raises(ValueError, match="same names as dynamical variables"):
         InnerProductCoupling(
             [force],
             [lambda_dv],

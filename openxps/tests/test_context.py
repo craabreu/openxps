@@ -165,17 +165,14 @@ def test_validation():
         ExtendedSpaceContext(*system_integrator_platform(bad_coupling, model))
 
     # Test invalid coupling (None)
-    with pytest.raises(AttributeError) as e:
+    with pytest.raises(TypeError, match="must be an instance of Coupling"):
         ExtendedSpaceContext(*system_integrator_platform(None, model))
-    assert "'NoneType' object has no attribute 'addToPhysicalSystem'" in str(e.value)
 
-    # Test coupling with no DVs (will raise error about conflicting parameters
-    # since x0 and y0 are parameters but not DVs)
-    with pytest.raises(Exception) as e:
+    # A coupling with no DVs leaves the extension system without particles
+    with pytest.raises(mm.OpenMMException, match="no particles"):
         ExtendedSpaceContext(
             *system_integrator_platform(create_coupling(phi0=None), model),
         )
-    assert "different default values" in str(e.value).lower()
 
 
 def test_consistency():

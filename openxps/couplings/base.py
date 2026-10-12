@@ -334,14 +334,16 @@ class CouplingSum(Coupling):
     """
 
     def __init__(self, couplings: t.Iterable[Coupling]) -> None:
-        self._couplings = []
-        forces = []
-        dv_dict = {}
+        flattened = []
         for coupling in couplings:
             if isinstance(coupling, CouplingSum):
-                self._couplings.extend(coupling.getCouplings())
+                flattened.extend(coupling.getCouplings())
             else:
-                self._couplings.append(coupling)
+                flattened.append(coupling)
+        self._couplings = self._mergeInnerProductCouplings(flattened)
+        forces = []
+        dv_dict = {}
+        for coupling in self._couplings:
             forces.extend(coupling.getForces())
             for dv in coupling.getDynamicalVariables():
                 if dv.name not in dv_dict:
@@ -353,6 +355,28 @@ class CouplingSum(Coupling):
                     )
         super().__init__(forces, sorted(dv_dict.values(), key=lambda dv: dv.name))
         self._checkCollectiveVariables()
+
+    @staticmethod
+    def _mergeInnerProductCouplings(couplings: list[Coupling]) -> list[Coupling]:
+        """Replace all inner product couplings with a single merged one.
+
+        Inner product couplings handled separately would each declare and update
+        the same parameter derivatives in the extension context, so that only the
+        last update would survive.
+        """
+        from .inner_product_coupling import InnerProductCoupling  # noqa: PLC0415
+
+        inner = [c for c in couplings if isinstance(c, InnerProductCoupling)]
+        if len(inner) <= 1:
+            return list(couplings)
+        merged = InnerProductCoupling.merge(inner)
+        result = []
+        for coupling in couplings:
+            if coupling is inner[0]:
+                result.append(merged)
+            elif not isinstance(coupling, InnerProductCoupling):
+                result.append(coupling)
+        return result
 
     def __repr__(self) -> str:
         return "+".join(f"({repr(coupling)})" for coupling in self._couplings)
