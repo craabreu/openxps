@@ -196,11 +196,11 @@
             <span class="k">for</span> <span class="n">cv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_inner_cvs</span>
         <span class="p">]</span>
         <span class="n">dv_names</span> <span class="o">=</span> <span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
             <span class="n">parameter</span>
             <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getProtectedParameters</span><span class="p">()</span>
             <span class="k">if</span> <span class="n">parameter</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">dv_names</span>
-        <span class="p">]</span>
+        <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span> <span class="o">=</span> <span class="kc">True</span></div>
 
 

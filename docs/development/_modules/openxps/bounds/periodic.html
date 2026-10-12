@@ -106,7 +106,11 @@
 <div class="viewcode-block" id="PeriodicBounds.wrap">
 <a class="viewcode-back" href="../../../api/PeriodicBounds.html#openxps.bounds.PeriodicBounds.wrap">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">wrap</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">rate</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
-        <span class="k">return</span> <span class="p">(</span><span class="n">value</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">,</span> <span class="n">rate</span></div>
+        <span class="n">wrapped</span> <span class="o">=</span> <span class="p">(</span><span class="n">value</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span><span class="p">)</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">period</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span>
+        <span class="c1"># Floating-point modulo can round up to a full period, giving the upper bound</span>
+        <span class="k">if</span> <span class="n">wrapped</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">upper</span><span class="p">:</span>
+            <span class="n">wrapped</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">lower</span>
+        <span class="k">return</span> <span class="n">wrapped</span><span class="p">,</span> <span class="n">rate</span></div>
 </div>
 
 

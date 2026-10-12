@@ -53,7 +53,8 @@ distribution.</p>
 <p class="admonition-title">Note</p>
 <p>If stochasticity is enabled, the friction coefficient is initially set to the
 inverse of the time constant, but this value can be customized via
-<a class="reference internal" href="#openxps.integrators.MassiveGGMTIntegrator.setFrictionCoefficient" title="openxps.integrators.MassiveGGMTIntegrator.setFrictionCoefficient"><code class="xref py py-meth docutils literal notranslate"><span class="pre">setFrictionCoefficient()</span></code></a>.</p>
+<a class="reference internal" href="#openxps.integrators.MassiveGGMTIntegrator.setFrictionCoefficient" title="openxps.integrators.MassiveGGMTIntegrator.setFrictionCoefficient"><code class="xref py py-meth docutils literal notranslate"><span class="pre">setFrictionCoefficient()</span></code></a>. Otherwise, the friction coefficient is zero
+and cannot be changed.</p>
 </div>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -188,11 +189,14 @@ step is free of the singularity for any step size.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="openxps.integrators.MassiveGGMTIntegrator.setFrictionCoefficient">
-<span class="sig-name descname"><span class="pre">setFrictionCoefficient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.setFrictionCoefficient" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">setFrictionCoefficient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/massive_ggmt.html#MassiveGGMTIntegrator.setFrictionCoefficient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.MassiveGGMTIntegrator.setFrictionCoefficient" title="Link to this definition">¶</a></dt>
 <dd><p>Set the friction coefficient.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>value</strong> (<em>Quantity</em><em> | </em><em>float</em>) – The friction coefficient.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If the integrator is deterministic and the value is not zero.</p>
 </dd>
 </dl>
 </dd></dl>

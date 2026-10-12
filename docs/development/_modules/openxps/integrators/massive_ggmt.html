@@ -73,7 +73,8 @@
 <span class="sd">    .. note::</span>
 <span class="sd">        If stochasticity is enabled, the friction coefficient is initially set to the</span>
 <span class="sd">        inverse of the time constant, but this value can be customized via</span>
-<span class="sd">        :meth:`setFrictionCoefficient`.</span>
+<span class="sd">        :meth:`setFrictionCoefficient`. Otherwise, the friction coefficient is zero</span>
+<span class="sd">        and cannot be changed.</span>
 
 <span class="sd">    .. warning::</span>
 <span class="sd">        This integrator is incompatible with systems subject to constraints.</span>
@@ -187,6 +188,33 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">forceFirst</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+
+<div class="viewcode-block" id="MassiveGGMTIntegrator.setFrictionCoefficient">
+<a class="viewcode-back" href="../../../api/MassiveGGMTIntegrator.html#openxps.integrators.MassiveGGMTIntegrator.setFrictionCoefficient">[docs]</a>
+    <span class="nd">@preprocess_args</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">setFrictionCoefficient</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span> <span class="o">|</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Set the friction coefficient.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        value</span>
+<span class="sd">            The friction coefficient.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the integrator is deterministic and the value is not zero.</span>
+<span class="sd">        """</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_init_friction_coefficient</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="n">friction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFrictionCoefficient</span><span class="p">()</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">picosecond</span><span class="o">**-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stochastic</span> <span class="ow">and</span> <span class="n">friction</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_init_friction_coefficient</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"The friction coefficient of a deterministic integrator must be zero."</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_global_variables</span><span class="p">()</span></div>
+
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"kT"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
