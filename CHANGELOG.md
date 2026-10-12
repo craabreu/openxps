@@ -87,6 +87,9 @@
   variables, so the returned parameters reproduce `predict()` for reflective and
   unbounded variables, and it raises before the first fit. `fit` raises when the
   validation split leaves no training data instead of returning an untrained model.
+- `ForceMatchingRegressor.fit` draws all its randomness from a local generator and no
+  longer reseeds PyTorch's global generator; a failed fit keeps the previous model and
+  learning curve; `predict` validates the shape of its input like `fit`.
 - `Function` recognizes the Lepton built-ins `square`, `cube` and `recip` instead of
   treating them as variables.
 - `ExtensionWriter` reports coupling-function columns in sorted order, so the column
@@ -125,6 +128,3 @@
 - `InnerProductCoupling` raises a clear error for forces without global parameters,
   and for functions named like dynamical variables, while a dynamical variable may
   now be both a force parameter and a function input.
-- `ForceMatchingRegressor.fit` draws all its randomness from a local generator and no
-  longer reseeds PyTorch's global generator; a failed fit keeps the previous model and
-  learning curve; `predict` validates the shape of its input like `fit`.
