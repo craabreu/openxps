@@ -82,6 +82,29 @@ class IntegratorMixin:
         """Register the integrator with the system."""
         pass
 
+    def _add_dof_mask(self) -> None:
+        """Add the per-DOF variable that gates thermostat updates.
+
+        It is 1 for every degree of freedom unless :meth:`_set_dof_mask` restricts it.
+        """
+        self.addPerDofVariable("active", 1)
+
+    @staticmethod
+    def _masked(expression: str) -> str:
+        """Multiply the main part of a Lepton expression by the DOF mask."""
+        head, separator, definitions = expression.partition(";")
+        return f"active*({head}){separator}{definitions}"
+
+    def _set_dof_mask(self, system: mm.System, isExtension: bool) -> None:
+        """Restrict thermostat updates to the x components of an extension system.
+
+        Each extension particle represents one dynamical variable along x, while its
+        y and z components are inert and have zero velocity. Thermostatting them
+        would make their thermostat variables drift without bound.
+        """
+        mask = mm.Vec3(1, 0, 0) if isExtension else mm.Vec3(1, 1, 1)
+        self.setPerDofVariableByName("active", [mask] * system.getNumParticles())
+
     @staticmethod
     def _countDegreesOfFreedom(system: mm.System) -> int:
         """Count the degrees of freedom in a system.

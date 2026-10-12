@@ -65,7 +65,7 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ... )
     >>> integrator
     Per-dof variables:
-      v1
+      v1, active
     Global variables:
       kT = 2.494...
       invQ = 40.090...
@@ -75,11 +75,11 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m
        2: x <- x + 0.5*dt*c*tanh(v/c); c=sqrt(1*kT/m)
-       3: v1 <- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c=sqrt(1*kT/m)
+       3: v1 <- active*(v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ); c=sqrt(1*kT/m)
        4: v <- v*exp(-0.5*dt*v1)
-       5: v1 <- a*v1 + b*gaussian
+       5: v1 <- active*(a*v1 + b*gaussian)
        6: v <- v*exp(-0.5*dt*v1)
-       7: v1 <- v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ; c=sqrt(1*kT/m)
+       7: v1 <- active*(v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ); c=sqrt(1*kT/m)
        8: x <- x + 0.5*dt*c*tanh(v/c); c=sqrt(1*kT/m)
        9: v <- v + 0.5*dt*f/m
 
@@ -133,6 +133,7 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addGlobalVariable("a", 0)
         self.addGlobalVariable("b", 0)
         self.addPerDofVariable("v1", 0)
+        self._add_dof_mask()
         self._update_global_variables()
 
     def _update_global_variables(self) -> None:
@@ -157,8 +158,10 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def _add_v1_boost(self, fraction: float) -> str:
         self.addComputePerDof(
             "v1",
-            f"v1 + {fraction}*dt*(m*v*c*tanh(v/c) - kT)*invQ"
-            f"; c=sqrt({self._regulation_parameter}*kT/m)",
+            self._masked(
+                f"v1 + {fraction}*dt*(m*v*c*tanh(v/c) - kT)*invQ"
+                f"; c=sqrt({self._regulation_parameter}*kT/m)"
+            ),
         )
 
     def _add_v_scaling(self, fraction: float) -> str:
@@ -167,10 +170,11 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def _add_thermostat(self, fraction: float) -> None:
         self._add_v1_boost(0.5 * fraction)
         self._add_v_scaling(0.5 * fraction)
-        self.addComputePerDof("v1", "a*v1 + b*gaussian")
+        self.addComputePerDof("v1", self._masked("a*v1 + b*gaussian"))
         self._add_v_scaling(0.5 * fraction)
         self._add_v1_boost(0.5 * fraction)
 
     def registerWithSystem(self, system: mm.System, isExtension: bool) -> None:
         if system.getNumConstraints() > 0:
             raise ValueError("Regulated NHL integrators do not support constraints.")
+        self._set_dof_mask(system, isExtension)

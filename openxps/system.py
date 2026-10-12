@@ -7,9 +7,7 @@
 
 """
 
-import numpy as np
 import openmm as mm
-from openmm import unit as mmunit
 
 from .couplings import Coupling
 from .dynamical_variable import DynamicalVariable
@@ -26,13 +24,6 @@ class ExtendedSpaceSystem(mm.System):
     coupling
         A :class:`Coupling` object, required to couple the physical and extended
         phase-space systems. The dynamical variables are obtained from this coupling.
-
-    Keyword Arguments
-    ------------------
-    tether_period
-        The period of oscillation of a harmonic potential that tethers the y and z
-        coordinates of the extension system particles to the origin in the yz-plane.
-        This is not necessary in typical XPS simulations.
 
     Example
     -------
@@ -61,8 +52,6 @@ class ExtendedSpaceSystem(mm.System):
         self,
         system: mm.System,
         coupling: Coupling,
-        *,
-        tether_period: mmunit.Quantity | None = None,
     ) -> None:
         self._coupling = coupling
         coupling.addToPhysicalSystem(system)
@@ -71,25 +60,6 @@ class ExtendedSpaceSystem(mm.System):
         for dv in coupling.getDynamicalVariables():
             self._extension_system.addParticle(dv.mass / dv.mass.unit)
         coupling.addToExtensionSystem(self._extension_system)
-        if tether_period is not None:
-            self._tethering_force = self._create_tethering_force(tether_period)
-            self._extension_system.addForce(self._tethering_force)
-        else:
-            self._tethering_force = None
-
-    def _create_tethering_force(
-        self, tether_period: mmunit.Quantity
-    ) -> mm.CustomExternalForce:
-        """Create a force tethering all particles to the origin in the yz-plane."""
-        tethering_force = mm.CustomExternalForce(
-            "0.5*kappa*(y^2 + z^2); kappa=mass_4_pi_sq/tether_period^2"
-        )
-        tethering_force.setName("Tethering")
-        tethering_force.addGlobalParameter("tether_period", tether_period)
-        tethering_force.addPerParticleParameter("mass_4_pi_sq")
-        for index, dv in enumerate(self._coupling.getDynamicalVariables()):
-            tethering_force.addParticle(index, [4 * np.pi**2 * dv.mass / dv.mass.unit])
-        return tethering_force
 
     def getDynamicalVariables(self) -> tuple[DynamicalVariable]:
         """
@@ -123,16 +93,3 @@ class ExtendedSpaceSystem(mm.System):
             The extension system.
         """
         return self._extension_system
-
-    def getTetheringForce(self) -> mm.CustomExternalForce | None:
-        """
-        Get the tethering force included in the extended phase-space system.
-
-        If no tethering force has been added, returns None.
-
-        Returns
-        -------
-        mm.CustomExternalForce | None
-            The tethering force.
-        """
-        return self._tethering_force

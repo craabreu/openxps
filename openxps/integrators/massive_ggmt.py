@@ -86,7 +86,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ... )
     >>> integrator
     Per-dof variables:
-      v1, v2, z, w, E, s, zmin, th, T1
+      v1, v2, active, z, w, E, s, zmin, th, T1
     Global variables:
       kT = 2.494338...
       invQ = 40.090...
@@ -95,13 +95,13 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
        0: allow forces to update the context state
        1: v <- v + 0.5*dt*f/m
        2: x <- x + 0.5*dt*v
-       3: v1 <- v1 + 0.5*dt*(m*v^2 - kT)*invQ
-       4: v2 <- v2 - 0.25*dt*kT^2*invQ2
+       3: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
+       4: v2 <- active*(v2 - 0.25*dt*kT^2*invQ2)
        5: z <- sqrt(3)*kT/max(m*v*v, 1e-30*kT)
     ...
       23: v <- v*exp(-1*dt*(v1 + kT*v2))
     ...
-      43: v1 <- v1 + 0.5*dt*(m*v^2 - kT)*invQ
+      43: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
       44: x <- x + 0.5*dt*v
       45: v <- v + 0.5*dt*f/m
 
@@ -180,6 +180,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addGlobalVariable("invQ2", 0)
         self.addPerDofVariable("v1", 0)
         self.addPerDofVariable("v2", 0)
+        self._add_dof_mask()
         for name in ("z", "w", "E", "s", "zmin", "th", "T1"):
             self.addPerDofVariable(name, 0)
         if self._stochastic:
@@ -211,11 +212,13 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addComputePerDof("v", f"v + {fraction}*dt*f/m")
 
     def _add_v1_boost(self, fraction: float) -> None:
-        self.addComputePerDof("v1", f"v1 + {fraction}*dt*(m*v^2 - kT)*invQ")
+        self.addComputePerDof(
+            "v1", self._masked(f"v1 + {fraction}*dt*(m*v^2 - kT)*invQ")
+        )
 
     def _add_v2_boost(self, fraction: float) -> None:
         c = _COULOMB_STRENGTH
-        constant_kick = f"v2 - {fraction / 2}*dt*kT^2*invQ2"
+        constant_kick = self._masked(f"v2 - {fraction / 2}*dt*kT^2*invQ2")
         add = self.addComputePerDof
         add("v2", constant_kick)
         add("z", "sqrt(3)*kT/max(m*v*v, 1e-30*kT)")
@@ -237,7 +240,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         add("th", "(2*step(T1) - 1)*th")
         add("v", "v*sqrt(z/znew); znew=zmin*cosh(th)^2")
         add("w", "s*tanh(th)")
-        add("v2", "(sqrt(3)/2)*w/kT")
+        add("v2", self._masked("(sqrt(3)/2)*w/kT"))
         add("v2", constant_kick)
 
     def _add_v_scaling(self, fraction: float) -> None:
@@ -248,8 +251,8 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self._add_v2_boost(0.5 * fraction)
         if self._stochastic:
             self._add_v_scaling(0.5 * fraction)
-            self.addComputePerDof("v1", "a*v1 + b1*gaussian")
-            self.addComputePerDof("v2", "a*v2 + b2*gaussian")
+            self.addComputePerDof("v1", self._masked("a*v1 + b1*gaussian"))
+            self.addComputePerDof("v2", self._masked("a*v2 + b2*gaussian"))
             self._add_v_scaling(0.5 * fraction)
         else:
             self._add_v_scaling(fraction)
@@ -259,3 +262,4 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def registerWithSystem(self, system: mm.System, isExtension: bool) -> None:
         if system.getNumConstraints() > 0:
             raise ValueError("Massive GGMT integrators do not support constraints.")
+        self._set_dof_mask(system, isExtension)
