@@ -89,3 +89,12 @@
   collective and dynamical variables.
 - `MassiveGGMTIntegrator.setFrictionCoefficient` raises for a nonzero value when the
   integrator is deterministic, instead of silently ignoring it.
+- `ExtendedSpaceContext.setState`, and therefore `loadState` with a plain OpenMM state
+  file, copies restored parameters shared with the extension context (e.g. coupling
+  constants) to it, and `reinitialize()` resets them in both contexts.
+- `ExtendedSpaceContext.setParameter` and `getParameter` accept parameters that exist
+  only in the extension context, such as parameters of coupling functions, and
+  `setParameter` synchronizes both contexts afterwards.
+- A coupling force placed in a nonzero force group by the user keeps that group when
+  the coupling is added to a system; only forces left in group 0 are moved to a
+  dedicated group.

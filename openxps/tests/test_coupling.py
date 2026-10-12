@@ -1293,3 +1293,32 @@ def test_custom_coupling_accepts_generators():
     assert list(coupling.getDynamicalVariables()) == [phi0]
     assert "phi0" in coupling.getForce(0).getParameterDefaultValues()
     assert coupling.getForce(0).getNumCollectiveVariables() == 1
+
+
+def test_coupling_keeps_user_force_group():
+    """A force group chosen by the user survives adding the coupling to a system."""
+    model = create_test_system()
+    phi0 = create_test_dv("phi0")
+    coupling = CollectiveVariableCoupling(
+        "0.5*kappa*(phi-phi0)^2",
+        [create_test_cv()],
+        [phi0],
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+    )
+    coupling.getForce(0).setForceGroup(7)
+    system = ExtendedSpaceSystem(model.system, coupling)
+    assert system.getForce(system.getNumForces() - 1).getForceGroup() == 7
+
+
+def test_coupling_default_force_group_is_dedicated():
+    """A force left in group 0 is moved to a group no other force uses."""
+    model = create_test_system()
+    groups_before = {f.getForceGroup() for f in model.system.getForces()}
+    coupling = CollectiveVariableCoupling(
+        "0.5*kappa*(phi-phi0)^2",
+        [create_test_cv()],
+        [create_test_dv("phi0")],
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+    )
+    ExtendedSpaceSystem(model.system, coupling)
+    assert coupling.getForce(0).getForceGroup() not in groups_before
