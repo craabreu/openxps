@@ -204,6 +204,7 @@ class Function(Serializable):
     def createCollectiveVariable(
         self,
         variable_indices: t.Mapping[str, int],
+        bounds: t.Mapping[str, t.Any] | None = None,
     ) -> cvpack.AtomicFunction:
         """
         Create a collective variable from the function.
@@ -213,6 +214,11 @@ class Function(Serializable):
         variable_indices
             A mapping from the name of each variable of the function to the index of
             the particle whose x coordinate represents it.
+        bounds
+            An optional mapping from variable names to :class:`~openxps.bounds.Bounds`
+            objects. The x coordinate of a variable listed here is wrapped into its
+            bounds before the function is evaluated, so that periodic and reflective
+            variables enter the function with their wrapped values.
 
         Returns
         -------
@@ -237,6 +243,21 @@ class Function(Serializable):
         >>> context.setPositions([mm.Vec3(x, 0.0, 0.0), mm.Vec3(y, 0.0, 0.0)])
         >>> print(context.getState(getEnergy=True).getPotentialEnergy())
         0.1353352... kJ/mol
+
+        With reflective bounds, a coordinate beyond the upper bound is mirrored:
+
+        >>> from openmm import unit
+        >>> from openxps.bounds import ReflectiveBounds
+        >>> fn = Function("h", "u^2")
+        >>> bounds = {"u": ReflectiveBounds(0, 1, unit.dimensionless)}
+        >>> cv = fn.createCollectiveVariable({"u": 0}, bounds)
+        >>> system = mm.System()
+        >>> _ = system.addParticle(1.0)
+        >>> cv.addToSystem(system)
+        >>> context = mm.Context(system, mm.VerletIntegrator(0.0))
+        >>> context.setPositions([mm.Vec3(1.2, 0.0, 0.0)])
+        >>> print(context.getState(getEnergy=True).getPotentialEnergy())
+        0.64... kJ/mol
         """
         variables = sorted(self._variables)
         if unknown := set(variables) - set(variable_indices):
@@ -244,25 +265,41 @@ class Function(Serializable):
                 f"Function {self._name} depends on unknown variables: "
                 + ", ".join(sorted(unknown))
             )
+        bounds = bounds or {}
         # Variables get private names, because a Lepton definition such as "x1=x2"
-        # would shadow a coordinate that another definition refers to.
-        identifiers = set(IDENTIFIER_PATTERN.findall(self._expression))
-        aliases = {}
-        index = 0
-        for variable in variables:
-            while (alias := f"openxps_var{index}") in identifiers:
-                index += 1
-            aliases[variable] = alias
-            index += 1
+        # would shadow a coordinate that another definition refers to. Wrapped
+        # variables also need a private raw name, from which the bounds expression
+        # derives helper names such as "scaled_<raw>".
+        taken = set(IDENTIFIER_PATTERN.findall(self._expression))
+        counter = 0
+
+        def fresh(prefix: str, *derived: str) -> str:
+            nonlocal counter
+            while True:
+                name = f"{prefix}{counter}"
+                counter += 1
+                names = {name} | {f"{d}_{name}" for d in derived}
+                if not names & taken:
+                    taken.update(names)
+                    return name
+
+        aliases = {variable: fresh("openxps_var") for variable in variables}
         expression = IDENTIFIER_PATTERN.sub(
             lambda match: aliases.get(match.group(0), match.group(0)),
             self._expression,
         )
+        definitions = []
+        for index, variable in enumerate(variables):
+            coordinate = f"x{index + 1}"
+            if variable in bounds:
+                raw = fresh("openxps_raw", "scaled", "wrapped")
+                wrapped = bounds[variable].leptonExpression(raw).replace("\n", "")
+                definitions.append(f"{aliases[variable]}={wrapped}")
+                definitions.append(f"{raw}={coordinate}")
+            else:
+                definitions.append(f"{aliases[variable]}={coordinate}")
         return cvpack.AtomicFunction(
-            function=";".join(
-                [expression]
-                + [f"{aliases[v]}=x{i + 1}" for i, v in enumerate(variables)]
-            ),
+            function=";".join([expression] + definitions),
             unit=mmunit.kilojoule_per_mole,
             groups=[[variable_indices[variable] for variable in variables]],
             name=self._name,

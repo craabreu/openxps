@@ -53,13 +53,39 @@ class ExtendedSpaceSystem(mm.System):
         system: mm.System,
         coupling: Coupling,
     ) -> None:
+        if not isinstance(coupling, Coupling):
+            raise TypeError("The coupling must be an instance of Coupling.")
         self._coupling = coupling
-        coupling.addToPhysicalSystem(system)
-        self.this = system.this
         self._extension_system = mm.System()
         for dv in coupling.getDynamicalVariables():
             self._extension_system.addParticle(dv.mass / dv.mass.unit)
         coupling.addToExtensionSystem(self._extension_system)
+        self._checkOtherForces(system)
+        coupling.addToPhysicalSystem(system)
+        self.this = system.this
+
+    def _checkOtherForces(self, system: mm.System) -> None:
+        """Reject forces outside the coupling that depend on its parameters.
+
+        The coupling sets these parameters from the dynamical variables, but the
+        extension system only feels the forces of the coupling itself, so a force
+        outside it would act on the physical system without a counterpart.
+        """
+        protected = self._coupling.getProtectedParameters()
+        for force in system.getForces():
+            if not hasattr(force, "getNumGlobalParameters"):
+                continue
+            names = {
+                force.getGlobalParameterName(i)
+                for i in range(force.getNumGlobalParameters())
+            }
+            if shared := names & protected:
+                raise ValueError(
+                    f"Force {force.getName()} is not part of the coupling but depends "
+                    "on parameters controlled by it: "
+                    + ", ".join(sorted(shared))
+                    + ". Include this force in the coupling."
+                )
 
     def getDynamicalVariables(self) -> tuple[DynamicalVariable]:
         """

@@ -151,10 +151,7 @@ def test_invalid_coupling_type():
     """Test that invalid coupling type raises TypeError."""
     model = testsystems.AlanineDipeptideVacuum()
 
-    with pytest.raises(
-        AttributeError,
-        match="'NoneType' object has no attribute 'addToPhysicalSystem'",
-    ):
+    with pytest.raises(TypeError, match="must be an instance of Coupling"):
         ExtendedSpaceSystem(model.system, None)
 
 

@@ -37,6 +37,23 @@ class InnerProductCoupling(Coupling):
 
     where :math:`n` is the dimensionality of the vector-valued functions.
 
+    The extension system receives the parameter derivatives
+    :math:`u_i = \partial U / \partial \lambda_i` evaluated in the physical context,
+    so the forces on the dynamical variables follow the chain rule exactly. The
+    extension potential energy equals the coupling energy only if :math:`U` is linear in
+    each :math:`\lambda_i`, which is also required for multiple time-step schemes
+    such as :class:`SplitIntegrator`, where the derivatives are held fixed during the
+    extension substeps.
+
+    Functions receive the dynamical variables wrapped into their bounds, so periodic
+    and reflective variables enter them with the same values reported by
+    :meth:`ExtendedSpaceContext.getDynamicalVariableValues`.
+
+    Inner product couplings combined in a sum are merged into a single coupling, so
+    forces from different couplings may share global parameters. Shared functions
+    must have identical definitions. Forces outside the coupling must not depend on
+    its parameters.
+
     Parameters
     ----------
     forces
@@ -133,6 +150,20 @@ class InnerProductCoupling(Coupling):
         functions: dict[str, str] | None = None,
         **parameters: mmunit.Quantity,
     ) -> None:
+        forces = list(forces)
+        for force in forces:
+            if not all(
+                hasattr(force, method)
+                for method in (
+                    "getNumGlobalParameters",
+                    "getEnergyParameterDerivativeName",
+                )
+            ):
+                raise TypeError(
+                    f"Force {force.getName()} ({type(force).__name__}) does not "
+                    "support global parameters with energy derivatives, which an "
+                    "InnerProductCoupling requires."
+                )
         forces = [
             cvpack.OpenMMForceWrapper(
                 force,
@@ -207,10 +238,10 @@ class InnerProductCoupling(Coupling):
         dvs_in_force_parameters = all_dvs & all_force_parameters
         dvs_in_function_variables = all_dvs & function_variables
 
-        if dvs_in_both := dvs_in_function_variables & dvs_in_force_parameters:
+        if same_names := function_names & all_dvs:
             raise ValueError(
-                "These dynamical variables are both function variables and global "
-                f"context parameters: {', '.join(dvs_in_both)}"
+                "These functions have the same names as dynamical variables: "
+                + ", ".join(sorted(same_names))
             )
         if dvs_in_neither := all_dvs - (
             dvs_in_function_variables | dvs_in_force_parameters
@@ -238,6 +269,53 @@ class InnerProductCoupling(Coupling):
                 )
         return dynamic_parameters
 
+    @classmethod
+    def merge(
+        cls, couplings: t.Sequence["InnerProductCoupling"]
+    ) -> "InnerProductCoupling":
+        """Merge inner product couplings into a single one.
+
+        A sum of inner product couplings whose forces share global parameters must
+        be handled as a single coupling, so that the parameter derivatives of all
+        forces are accumulated before reaching the extension system.
+
+        Parameters
+        ----------
+        couplings
+            The inner product couplings to merge.
+
+        Returns
+        -------
+        InnerProductCoupling
+            A coupling with all forces, dynamical variables, functions and
+            parameters of the merged couplings.
+
+        Raises
+        ------
+        ValueError
+            If two couplings define the same function or parameter differently.
+        """
+        forces, dvs, functions, parameters = [], {}, {}, {}
+        for coupling in couplings:
+            forces.extend(coupling.getForces())
+            for dv in coupling.getDynamicalVariables():
+                dvs.setdefault(dv.name, dv)
+            for fn in coupling._functions:
+                name, expression = fn.getName(), fn.getExpression()
+                if functions.setdefault(name, expression) != expression:
+                    raise ValueError(
+                        f'The function "{name}" has conflicting definitions in the '
+                        f"couplings: {functions[name]} != {expression}"
+                    )
+            for name, value in coupling._parameters.items():
+                if name in parameters and parameters[name] != value:
+                    raise ValueError(
+                        f'The parameter "{name}" has conflicting values in the '
+                        f"couplings: {parameters[name]} != {value}"
+                    )
+                parameters[name] = value
+        return cls(forces, list(dvs.values()), functions, **parameters)
+
     @staticmethod
     def _derivativeName(parameter: str) -> str:
         return "derivative_with_respect_to_" + parameter
@@ -248,9 +326,10 @@ class InnerProductCoupling(Coupling):
         )
         for parameter in self._dynamic_parameters:
             flipped_force.addGlobalParameter(self._derivativeName(parameter), 0.0)
+        bounds = {dv.name: dv.bounds for dv in self._dynamical_variables}
         for fn in self._functions:
             flipped_force.addCollectiveVariable(
-                fn.getName(), fn.createCollectiveVariable(dv_indices)
+                fn.getName(), fn.createCollectiveVariable(dv_indices, bounds)
             )
         for dv in self._dynamical_variables:
             if dv.name in self._dynamic_parameters:

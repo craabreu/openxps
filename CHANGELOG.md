@@ -115,3 +115,13 @@
   produce NaN in the extension context after long runs. As extension integrators, they
   thermostat only the x component of each particle, leaving the inert y and z
   components untouched.
+- `InnerProductCoupling` functions receive dynamical variables wrapped into their
+  bounds; periodic and reflective variables previously entered functions unwrapped.
+- Inner product couplings combined in a sum are merged into one, so couplings that
+  share a global parameter get the correct extension force; conflicting function
+  definitions or parameter values raise an error.
+- `ExtendedSpaceSystem` raises when a force outside the coupling depends on a
+  parameter controlled by it, and when the coupling is not a `Coupling`.
+- `InnerProductCoupling` raises a clear error for forces without global parameters,
+  and for functions named like dynamical variables, while a dynamical variable may
+  now be both a force parameter and a function input.
