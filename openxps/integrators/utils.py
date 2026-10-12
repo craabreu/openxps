@@ -132,7 +132,8 @@ def add_property(property: str, unit: mmunit.Unit) -> t.Callable[[type[T]], type
 
     * `_init_{snake_case_name}(value)`: Initializes the property.
     * `set{PascalCaseName}(value)`: Sets the property and updates the global variables
-        if the integrator has a `_update_global_variables` method.
+        if the integrator has a `_update_global_variables` method. A setter defined
+        in the class body takes precedence and is left untouched.
     * `get{PascalCaseName}()`: Gets the property.
 
     Parameters
@@ -185,7 +186,8 @@ def add_property(property: str, unit: mmunit.Unit) -> t.Callable[[type[T]], type
     def decorator(cls: type[T]) -> type[T]:
         setattr(cls, f"_{snake_case_name}", None)
         setattr(cls, f"_init_{snake_case_name}", set_value)
-        setattr(cls, f"set{PascalCaseName}", set_and_update)
+        if f"set{PascalCaseName}" not in vars(cls):
+            setattr(cls, f"set{PascalCaseName}", set_and_update)
         setattr(cls, f"get{PascalCaseName}", get_value)
         return cls
 

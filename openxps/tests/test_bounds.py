@@ -164,3 +164,34 @@ def test_bounds_accept_numpy_scalars_and_reject_non_finite():
     for lower, upper in ((True, 2), (np.nan, 1), (0, np.inf)):
         with pytest.raises((TypeError, ValueError)):
             PeriodicBounds(lower, upper, mmunit.nanometer)
+
+
+def test_circular_bounds_convert_keeps_unit():
+    """Converting circular bounds honors the target unit."""
+    bounds = CircularBounds().convert(mmunit.degree)
+    assert isinstance(bounds, CircularBounds)
+    assert bounds.unit == mmunit.degree
+    assert bounds.lower == pytest.approx(-180.0)
+    assert bounds.upper == pytest.approx(180.0)
+    assert bounds == CircularBounds()
+    assert bounds.in_md_units().unit == mmunit.radians
+    assert bounds.wrap(190.0, 1.0) == (pytest.approx(-170.0), 1.0)
+    assert yaml.safe_load(yaml.safe_dump(bounds)) == bounds
+
+
+def test_circular_bounds_reject_non_circle():
+    with pytest.raises(ValueError, match="angle unit"):
+        CircularBounds(-1.0, 1.0, mmunit.nanometers)
+    with pytest.raises(ValueError, match="-π to π"):
+        CircularBounds(0.0, 360.0, mmunit.degree)
+
+
+def test_periodic_wrap_never_returns_upper_bound():
+    """A tiny negative offset must wrap to the lower bound, not the upper."""
+    bounds = PeriodicBounds(0.0, 360.0, mmunit.degree)
+    assert -1e-17 % 360.0 == 360.0  # the floating-point case being guarded
+    value, rate = bounds.wrap(-1e-17, 2.0)
+    assert value == 0.0
+    assert rate == 2.0
+    value, _ = PeriodicBounds(-180.0, 180.0, mmunit.degree).wrap(-180.0 - 1e-15, 0.0)
+    assert -180.0 <= value < 180.0

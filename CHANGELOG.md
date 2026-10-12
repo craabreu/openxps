@@ -76,3 +76,16 @@
   shapes of positions and forces, and no longer reseeds NumPy's global generator;
   `get_parameters()` no longer alters the fitted model; kernel centers start inside
   the variables' ranges; weight decay applies only to kernel weights.
+- `Function` recognizes the Lepton built-ins `square`, `cube` and `recip` instead of
+  treating them as variables.
+- `ExtensionWriter` reports coupling-function columns in sorted order, so the column
+  order no longer changes between processes.
+- `CircularBounds` honors the unit it is converted to, so `convert()` and
+  `DynamicalVariable` with degree units keep degrees; it rejects bounds that are not a
+  full circle from -π to π.
+- `PeriodicBounds.wrap` returns the lower bound instead of the upper bound when
+  floating-point rounding yields a full period.
+- `CollectiveVariableCoupling` accepts one-shot iterables, such as generators, for its
+  collective and dynamical variables.
+- `MassiveGGMTIntegrator.setFrictionCoefficient` raises for a nonzero value when the
+  integrator is deterministic, instead of silently ignoring it.

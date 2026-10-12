@@ -34,7 +34,8 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     .. note::
         If stochasticity is enabled, the friction coefficient is initially set to the
         inverse of the time constant, but this value can be customized via
-        :meth:`setFrictionCoefficient`.
+        :meth:`setFrictionCoefficient`. Otherwise, the friction coefficient is zero
+        and cannot be changed.
 
     .. warning::
         This integrator is incompatible with systems subject to constraints.
@@ -148,6 +149,30 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self._add_translation(0.5)
         if not forceFirst:
             self._add_boost(0.5)
+
+    @preprocess_args
+    def setFrictionCoefficient(self, value: mmunit.Quantity | float) -> None:
+        """
+        Set the friction coefficient.
+
+        Parameters
+        ----------
+        value
+            The friction coefficient.
+
+        Raises
+        ------
+        ValueError
+            If the integrator is deterministic and the value is not zero.
+        """
+        self._init_friction_coefficient(value)
+        friction = self.getFrictionCoefficient().value_in_unit(mmunit.picosecond**-1)
+        if not self._stochastic and friction != 0:
+            self._init_friction_coefficient(0.0)
+            raise ValueError(
+                "The friction coefficient of a deterministic integrator must be zero."
+            )
+        self._update_global_variables()
 
     def _add_variables(self) -> None:
         self.addGlobalVariable("kT", 0)

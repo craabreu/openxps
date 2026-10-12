@@ -33,3 +33,11 @@ def test_function_collective_variable_unknown_variable():
     fn = Function("g", "x*typo")
     with pytest.raises(ValueError, match="unknown variables"):
         fn.createCollectiveVariable({"x": 0})
+
+
+@pytest.mark.parametrize("name", ["square", "cube", "recip"])
+def test_function_recognizes_lepton_builtins(name):
+    """Lepton built-ins are not mistaken for variables."""
+    fn = Function("g", f"{name}(x)")
+    assert fn.getVariables() == {"x"}
+    fn.createCollectiveVariable({"x": 0})

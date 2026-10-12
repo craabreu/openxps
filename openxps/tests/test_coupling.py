@@ -1279,3 +1279,17 @@ def test_inner_product_coupling_in_sum_records_force_groups():
     scaling = _scaling_coupling()
     ExtendedSpaceSystem(_two_particle_system(), _distance_coupling() + scaling)
     assert scaling.getForceGroups()
+
+
+def test_custom_coupling_accepts_generators():
+    """One-shot iterables are materialized before being used twice."""
+    phi0 = create_test_dv("phi0")
+    coupling = CollectiveVariableCoupling(
+        "0.5*kappa*(phi-phi0)^2",
+        (cv for cv in [create_test_cv()]),
+        (dv for dv in [phi0]),
+        kappa=1000 * mmunit.kilojoule_per_mole / mmunit.radian**2,
+    )
+    assert list(coupling.getDynamicalVariables()) == [phi0]
+    assert "phi0" in coupling.getForce(0).getParameterDefaultValues()
+    assert coupling.getForce(0).getNumCollectiveVariables() == 1
