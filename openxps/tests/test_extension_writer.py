@@ -572,3 +572,33 @@ def test_extension_writer_headers_independent_of_flags():
     assert writer.getCollectiveVariableHeaders() == ["phi (rad)"]
     assert writer.getEffectiveMassHeaders() == ["emass[phi] (nm**2 Da/(rad**2))"]
     assert writer.getHeaders() == ["phi0 (rad)"]
+
+
+def test_extension_writer_coupling_function_order_is_deterministic():
+    """Function columns are sorted, not taken in arbitrary set order."""
+
+    class _Coupling:
+        def getDynamicalVariables(self):
+            return [
+                xps.DynamicalVariable(
+                    "lambda",
+                    unit.dimensionless,
+                    1.0 * unit.dalton * unit.nanometer**2,
+                    xps.ReflectiveBounds(0.0, 1.0, unit.dimensionless),
+                )
+            ]
+
+        def getForces(self):
+            return []
+
+        def getProtectedParameters(self):
+            return ["zeta", "lambda", "alpha", "mu"]
+
+    class _Context:
+        def getSystem(self):
+            return type("System", (), {"getCoupling": lambda _: _Coupling()})()
+
+    simulation = type("Simulation", (), {"extended_space_context": _Context()})()
+    writer = xps.ExtensionWriter(kinetic=False, coupling_functions=True)
+    writer.initialize(simulation)
+    assert writer.getHeaders() == ["alpha", "mu", "zeta"]

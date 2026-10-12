@@ -155,11 +155,11 @@ class ExtensionWriter(CustomWriter):
             for cv in self._inner_cvs
         ]
         dv_names = {dv.name for dv in self._dv_objects}
-        self._function_names = [
+        self._function_names = sorted(
             parameter
             for parameter in coupling.getProtectedParameters()
             if parameter not in dv_names
-        ]
+        )
         self._initialized = True
 
     def _checkInitialized(self) -> None:

@@ -9,6 +9,8 @@ Circular boundary condition.
 
 """
 
+import math
+
 import numpy as np
 from openmm import unit as mmunit
 
@@ -38,10 +40,26 @@ class CircularBounds(PeriodicBounds):
     True
     >>> bounds.unit == xps.bounds.CircularBounds().unit
     True
+    >>> from openmm import unit
+    >>> bounds.convert(unit.degree)
+    CircularBounds(lower=-180.0, upper=180.0, unit=deg)
     """
 
-    def __init__(self, *_) -> None:
-        super().__init__(-np.pi, np.pi, mmunit.radians)
+    def __init__(
+        self,
+        lower: float = -np.pi,
+        upper: float = np.pi,
+        unit: mmunit.Unit = mmunit.radians,
+    ) -> None:
+        super().__init__(lower, upper, unit)
+        if not self.unit.is_compatible(mmunit.radians):
+            raise ValueError("Circular bounds must have an angle unit.")
+        factor = self.unit.conversion_factor_to(mmunit.radians)
+        if not (
+            math.isclose(self.lower * factor, -np.pi, rel_tol=1e-9)
+            and math.isclose(self.upper * factor, np.pi, rel_tol=1e-9)
+        ):
+            raise ValueError("Circular bounds must span from -π to π radians.")
 
 
 CircularBounds.registerTag("!openxps.bounds.CircularBounds")

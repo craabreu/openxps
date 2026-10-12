@@ -67,6 +67,8 @@ class CollectiveVariableCoupling(Coupling):
         dynamical_variables: t.Iterable[DynamicalVariable],
         **parameters: mmunit.Quantity,
     ) -> None:
+        collective_variables = list(collective_variables)
+        dynamical_variables = list(dynamical_variables)
         dv_names = {dv.name for dv in dynamical_variables}
         filtered_params = {k: v for k, v in parameters.items() if k not in dv_names}
 

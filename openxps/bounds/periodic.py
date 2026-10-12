@@ -62,7 +62,11 @@ class PeriodicBounds(Bounds):
         )
 
     def wrap(self, value: float, rate: float) -> tuple[float, float]:
-        return (value - self.lower) % self.period + self.lower, rate
+        wrapped = (value - self.lower) % self.period + self.lower
+        # Floating-point modulo can round up to a full period, giving the upper bound
+        if wrapped >= self.upper:
+            wrapped = self.lower
+        return wrapped, rate
 
 
 PeriodicBounds.registerTag("!openxps.bounds.PeriodicBounds")

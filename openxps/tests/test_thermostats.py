@@ -357,3 +357,21 @@ def test_ggmt_step_matches_reference_sub_dynamics():
         )
         assert v[component] == pytest.approx(v_ref, rel=1e-6)
         assert v2[component] == pytest.approx(v2_ref, rel=1e-6)
+
+
+def test_ggmt_deterministic_rejects_nonzero_friction():
+    integrator = integrators.MassiveGGMTIntegrator(300 * KELVIN, 0.1 * PS, 1 * FS)
+    integrator.setFrictionCoefficient(0.0)
+    with pytest.raises(ValueError, match="deterministic"):
+        integrator.setFrictionCoefficient(10 / PS)
+    assert integrator.getFrictionCoefficient() == 0.0 / PS
+
+
+def test_ggmt_stochastic_accepts_friction():
+    integrator = integrators.MassiveGGMTIntegrator(
+        300 * KELVIN, 0.1 * PS, 1 * FS, stochastic=True
+    )
+    integrator.setFrictionCoefficient(20 / PS)
+    assert integrator.getFrictionCoefficient() == 20 / PS
+    expected = np.exp(-20 * 0.001)
+    assert integrator.getGlobalVariableByName("a") == pytest.approx(expected)
