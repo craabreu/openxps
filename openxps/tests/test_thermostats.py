@@ -388,22 +388,27 @@ def test_ggmt_stochastic_accepts_friction():
 
 
 def _ggmt_fast():
-    return integrators.MassiveGGMTIntegrator(300 * KELVIN, 2 * FS, 1 * FS)
+    return integrators.MassiveGGMTIntegrator(300 * KELVIN, 20 * FS, 1 * FS)
 
 
 def _nhl_frictionless_fast():
-    integrator = integrators.RegulatedNHLIntegrator(300 * KELVIN, 2 * FS, 1 * FS)
+    integrator = integrators.RegulatedNHLIntegrator(300 * KELVIN, 10 * FS, 1 * FS)
     integrator.setFrictionCoefficient(0.0)
     return integrator
 
 
-@pytest.mark.parametrize("factory", [_ggmt_fast, _nhl_frictionless_fast])
-def test_extension_thermostat_ignores_inert_components(factory):
+@pytest.mark.parametrize(
+    ("factory", "num_steps"),
+    [(_ggmt_fast, 250_000), (_nhl_frictionless_fast, 150_000)],
+)
+def test_extension_thermostat_ignores_inert_components(factory, num_steps):
     """y and z of extension particles stay inert instead of overflowing to NaN.
 
     Without masking, these components have zero velocity and their thermostat
     variables drift until exp() overflows, giving 0*inf = NaN after roughly
-    500-1400 (tau/dt)^2 steps, i.e. a few thousand steps here.
+    500 (GGMT) or 1400 (NHL) times (tau/dt)^2 steps. The time constants are short
+    enough for that to happen within this run, yet long enough to integrate the
+    x components stably on every platform.
     """
     system = _ideal_gas(num_particles=2, mass=3.0)
     integrator = factory()
@@ -411,13 +416,12 @@ def test_extension_thermostat_ignores_inert_components(factory):
     context = mm.Context(system, integrator, mm.Platform.getPlatformByName("Reference"))
     context.setPositions(np.zeros((2, 3)))
     context.setVelocities([mm.Vec3(1.0, 0, 0), mm.Vec3(-0.5, 0, 0)])
-    integrator.step(10000)
+    integrator.step(num_steps)
     state = context.getState(getPositions=True, getVelocities=True)
     positions = state.getPositions(asNumpy=True)._value
     velocities = state.getVelocities(asNumpy=True)._value
     assert np.all(np.isfinite(positions)) and np.all(np.isfinite(velocities))
     assert np.all(positions[:, 1:] == 0) and np.all(velocities[:, 1:] == 0)
-    assert np.all(velocities[:, 0] != 0)
     for name in ("v1", "v2"):
         if name in [
             integrator.getPerDofVariableName(i)
@@ -426,6 +430,7 @@ def test_extension_thermostat_ignores_inert_components(factory):
             values = np.array(integrator.getPerDofVariableByName(name))
             assert np.all(values[:, 1:] == 0)
             assert np.all(np.isfinite(values[:, 0]))
+            assert np.all(values[:, 0] != 0)
 
 
 @pytest.mark.parametrize("factory", [_ggmt_fast, _nhl_frictionless_fast])
@@ -455,7 +460,7 @@ def test_lockstep_extension_ggmt_is_masked():
         k=1000 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
     )
     extension = integrators.MassiveGGMTIntegrator(
-        300 * KELVIN, 2 * FS, 1 * FS, forceFirst=True
+        300 * KELVIN, 20 * FS, 1 * FS, forceFirst=True
     )
     context = ExtendedSpaceContext(
         ExtendedSpaceSystem(system, coupling),
