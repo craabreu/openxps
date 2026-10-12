@@ -152,6 +152,36 @@ class ExtendedSpaceContext(mm.Context):
         self._coupling.updatePhysicalContext(self, self._extension_context)
         self._coupling.updateExtensionContext(self, self._extension_context)
 
+    def _pushSharedParameters(self) -> None:
+        """Copy parameters present in both contexts from the physical one."""
+        protected = self._coupling.getProtectedParameters()
+        extension_parameters = self._extension_context.getParameters()
+        for name, value in self.getParameters().items():
+            if name in extension_parameters and name not in protected:
+                self._extension_context.setParameter(name, value)
+
+    def getParameter(self, name: str) -> float:
+        """
+        Get the value of a global parameter of the physical or extension system.
+
+        Parameters
+        ----------
+        name
+            The name of the parameter. A parameter that exists only in the extension
+            system (e.g. a parameter of a coupling function) is read from the
+            extension context.
+
+        Returns
+        -------
+        float
+            The value of the parameter.
+        """
+        if name not in self.getParameters() and (
+            name in self._extension_context.getParameters()
+        ):
+            return self._extension_context.getParameter(name)
+        return super().getParameter(name)
+
     def setParameter(self, name: str, value: mmunit.Quantity) -> None:
         """
         Set the value of a global parameter defined by a Force object in the System.
@@ -160,8 +190,10 @@ class ExtendedSpaceContext(mm.Context):
         -----
         Parameters that represent dynamical variables are protected and cannot be set
         through this method; use :meth:`setDynamicalVariableValues` instead. A
-        parameter that also exists in the extension system (e.g. a coupling constant)
-        is updated in both contexts.
+        parameter that exists in both systems (e.g. a coupling constant) is updated
+        in both contexts, and one that exists only in the extension system (e.g. a
+        parameter of a coupling function) is updated in the extension context. Both
+        contexts are then synchronized.
 
         Parameters
         ----------
@@ -175,14 +207,21 @@ class ExtendedSpaceContext(mm.Context):
                 f'Cannot manually set the parameter "{name}". This parameter is '
                 "set automatically via setDynamicalVariableValues."
             )
-        super().setParameter(name, value)
-        if name in self._extension_context.getParameters():
+        in_extension = name in self._extension_context.getParameters()
+        if name in self.getParameters() or not in_extension:
+            super().setParameter(name, value)
+        if in_extension:
             self._extension_context.setParameter(name, value)
+        self.synchronize()
 
     def reinitialize(self, preserveState: bool = False) -> None:
         """
         Reinitialize the physical context and restore the dynamical variable
         parameters from the extension context, whose state is always preserved.
+
+        Parameters shared by both contexts take their values from the physical
+        context, so they are reset to their defaults when the physical state is not
+        preserved.
 
         Parameters
         ----------
@@ -191,6 +230,7 @@ class ExtendedSpaceContext(mm.Context):
         """
         super().reinitialize(preserveState)
         self._extension_context.reinitialize(True)
+        self._pushSharedParameters()
         self._coupling.updatePhysicalContext(self, self._extension_context)
         if preserveState:
             self._coupling.updateExtensionContext(self, self._extension_context)
@@ -199,12 +239,16 @@ class ExtendedSpaceContext(mm.Context):
         """
         Set the state of the physical context and synchronize both contexts.
 
+        Parameters restored from the state that also exist in the extension system
+        (e.g. a coupling constant) are copied to the extension context.
+
         Parameters
         ----------
         state
             The :OpenMM:`State` to apply to the physical context.
         """
         super().setState(state)
+        self._pushSharedParameters()
         self.synchronize()
 
     def setPositions(self, positions: mmunit.Quantity) -> None:

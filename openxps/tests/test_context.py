@@ -498,3 +498,70 @@ def test_set_dv_values_wrong_length():
         context.setDynamicalVariableValues([0.1, 99.0])
     with pytest.raises(ValueError, match="3 dynamical variables"):
         context.setDynamicalVariableVelocities([0.1, 0.2, 0.3, 0.4])
+
+
+def test_set_state_restores_shared_parameters_in_both_contexts():
+    """A coupling constant restored by setState reaches the extension context."""
+    model = testsystems.AlanineDipeptideVacuum()
+    context = create_extended_context(model)
+    context.setPositions(model.positions)
+    context.setParameter("kappa", 500.0)
+    state = context.getState(getPositions=True, getParameters=True)
+    context.setParameter("kappa", 1000.0)
+    context.setState(state)
+    assert context.getParameter("kappa") == pytest.approx(500.0)
+    assert context.getExtensionContext().getParameter("kappa") == pytest.approx(500.0)
+
+
+def test_reinitialize_resets_shared_parameters_in_both_contexts():
+    """Without preserving state, shared parameters return to their defaults."""
+    model = testsystems.AlanineDipeptideVacuum()
+    context = create_extended_context(model)
+    context.setPositions(model.positions)
+    context.setParameter("kappa", 500.0)
+    context.reinitialize(preserveState=True)
+    assert context.getExtensionContext().getParameter("kappa") == pytest.approx(500.0)
+    context.reinitialize()
+    assert context.getParameter("kappa") == pytest.approx(1000.0)
+    assert context.getExtensionContext().getParameter("kappa") == pytest.approx(1000.0)
+
+
+def test_extension_only_parameter_can_be_set_and_read():
+    """A coupling-function parameter lives only in the extension context."""
+    force = mm.CustomBondForce("scaling*r^2")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addBond(0, 1, [])
+    lam = DynamicalVariable(
+        "lam",
+        mmunit.dimensionless,
+        1 * mmunit.dalton * mmunit.nanometer**2,
+        ReflectiveBounds(0, 1, mmunit.dimensionless),
+    )
+    coupling = InnerProductCoupling(
+        [force],
+        [lam],
+        functions={"scaling": "(1-cos(alpha*lam))/2"},
+        alpha=np.pi,
+    )
+    system = mm.System()
+    system.addParticle(1.0)
+    system.addParticle(1.0)
+    context = ExtendedSpaceContext(
+        ExtendedSpaceSystem(system, coupling),
+        LockstepIntegrator(mm.VerletIntegrator(0.001)),
+        mm.Platform.getPlatformByName("Reference"),
+    )
+    context.setPositions([mm.Vec3(0, 0, 0), mm.Vec3(0.5, 0, 0)])
+    context.setDynamicalVariableValues([0.5])
+    assert "alpha" not in context.getParameters()
+    context.setParameter("alpha", np.pi / 2)
+    assert context.getParameter("alpha") == pytest.approx(np.pi / 2)
+    assert context.getExtensionContext().getParameter("alpha") == pytest.approx(
+        np.pi / 2
+    )
+    # The physical function value follows the new parameter immediately
+    expected = (1 - np.cos(np.pi / 4)) / 2
+    assert context.getParameter("scaling") == pytest.approx(expected)
+    with pytest.raises(mm.OpenMMException, match="invalid parameter name"):
+        context.setParameter("not_a_parameter", 1.0)

@@ -95,7 +95,9 @@ class Coupling(Serializable):
     @staticmethod
     def _addForceToSystem(force: mm.Force, system: mm.System) -> None:
         if isinstance(force, cvpack.CollectiveVariable):
-            force.addToSystem(system)
+            # A force left in the default group 0 gets a dedicated unused group, but
+            # a group chosen by the user (e.g. for multiple time stepping) is kept.
+            force.addToSystem(system, setUnusedForceGroup=force.getForceGroup() == 0)
         else:
             system.addForce(force)
 
