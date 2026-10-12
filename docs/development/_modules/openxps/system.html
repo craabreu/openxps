@@ -92,13 +92,39 @@
         <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">,</span>
         <span class="n">coupling</span><span class="p">:</span> <span class="n">Coupling</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coupling</span><span class="p">,</span> <span class="n">Coupling</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"The coupling must be an instance of Coupling."</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span> <span class="o">=</span> <span class="n">coupling</span>
-        <span class="n">coupling</span><span class="o">.</span><span class="n">addToPhysicalSystem</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">this</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">():</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span><span class="o">.</span><span class="n">addParticle</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span>
         <span class="n">coupling</span><span class="o">.</span><span class="n">addToExtensionSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_checkOtherForces</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
+        <span class="n">coupling</span><span class="o">.</span><span class="n">addToPhysicalSystem</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">this</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_checkOtherForces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Reject forces outside the coupling that depend on its parameters.</span>
+
+<span class="sd">        The coupling sets these parameters from the dynamical variables, but the</span>
+<span class="sd">        extension system only feels the forces of the coupling itself, so a force</span>
+<span class="sd">        outside it would act on the physical system without a counterpart.</span>
+<span class="sd">        """</span>
+        <span class="n">protected</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">getProtectedParameters</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">system</span><span class="o">.</span><span class="n">getForces</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="s2">"getNumGlobalParameters"</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">force</span><span class="o">.</span><span class="n">getGlobalParameterName</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumGlobalParameters</span><span class="p">())</span>
+            <span class="p">}</span>
+            <span class="k">if</span> <span class="n">shared</span> <span class="o">:=</span> <span class="n">names</span> <span class="o">&amp;</span> <span class="n">protected</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Force </span><span class="si">{</span><span class="n">force</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2"> is not part of the coupling but depends "</span>
+                    <span class="s2">"on parameters controlled by it: "</span>
+                    <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">shared</span><span class="p">))</span>
+                    <span class="o">+</span> <span class="s2">". Include this force in the coupling."</span>
+                <span class="p">)</span>
 
 <div class="viewcode-block" id="ExtendedSpaceSystem.getDynamicalVariables">
 <a class="viewcode-back" href="../../api/ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem.getDynamicalVariables">[docs]</a>

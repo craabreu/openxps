@@ -52,6 +52,20 @@ coordinates <span class="math notranslate nohighlight">\({\bf r}\)</span>, i.e.,
 \[U = {\boldsymbol \lambda}({\bf s}) \cdot {\bf u}({\bf r})
   = \sum_{i=1}^n \lambda_i({\bf s}) u_i({\bf r})\]</div>
 <p>where <span class="math notranslate nohighlight">\(n\)</span> is the dimensionality of the vector-valued functions.</p>
+<p>The extension system receives the parameter derivatives
+<span class="math notranslate nohighlight">\(u_i = \partial U / \partial \lambda_i\)</span> evaluated in the physical context,
+so the forces on the dynamical variables follow the chain rule exactly. The
+extension potential energy equals the coupling energy only if <span class="math notranslate nohighlight">\(U\)</span> is linear in
+each <span class="math notranslate nohighlight">\(\lambda_i\)</span>, which is also required for multiple time-step schemes
+such as <code class="xref py py-class docutils literal notranslate"><span class="pre">SplitIntegrator</span></code>, where the derivatives are held fixed during the
+extension substeps.</p>
+<p>Functions receive the dynamical variables wrapped into their bounds, so periodic
+and reflective variables enter them with the same values reported by
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">ExtendedSpaceContext.getDynamicalVariableValues()</span></code>.</p>
+<p>Inner product couplings combined in a sum are merged into a single coupling, so
+forces from different couplings may share global parameters. Shared functions
+must have identical definitions. Forces outside the coupling must not depend on
+its parameters.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -158,6 +172,30 @@ coupling is added to a physical system.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>set[int]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.couplings.InnerProductCoupling.merge">
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">merge</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">couplings</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/couplings/inner_product_coupling.html#InnerProductCoupling.merge"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.couplings.InnerProductCoupling.merge" title="Link to this definition">¶</a></dt>
+<dd><p>Merge inner product couplings into a single one.</p>
+<p>A sum of inner product couplings whose forces share global parameters must
+be handled as a single coupling, so that the parameter derivatives of all
+forces are accumulated before reaching the extension system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>couplings</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="#openxps.couplings.InnerProductCoupling" title="openxps.couplings.inner_product_coupling.InnerProductCoupling"><em>InnerProductCoupling</em></a><em>]</em>) – The inner product couplings to merge.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A coupling with all forces, dynamical variables, functions and
+parameters of the merged couplings.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#openxps.couplings.InnerProductCoupling" title="openxps.couplings.InnerProductCoupling">InnerProductCoupling</a></p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If two couplings define the same function or parameter differently.</p>
 </dd>
 </dl>
 </dd></dl>

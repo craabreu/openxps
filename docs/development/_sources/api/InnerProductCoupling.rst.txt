@@ -9,4 +9,5 @@ InnerProductCoupling
 
     .. automethod:: addToPhysicalSystem
     .. automethod:: getForceGroups
+    .. automethod:: merge
     .. automethod:: updateExtensionContext

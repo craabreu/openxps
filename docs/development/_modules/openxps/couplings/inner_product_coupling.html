@@ -76,6 +76,23 @@
 
 <span class="sd">    where :math:`n` is the dimensionality of the vector-valued functions.</span>
 
+<span class="sd">    The extension system receives the parameter derivatives</span>
+<span class="sd">    :math:`u_i = \partial U / \partial \lambda_i` evaluated in the physical context,</span>
+<span class="sd">    so the forces on the dynamical variables follow the chain rule exactly. The</span>
+<span class="sd">    extension potential energy equals the coupling energy only if :math:`U` is linear in</span>
+<span class="sd">    each :math:`\lambda_i`, which is also required for multiple time-step schemes</span>
+<span class="sd">    such as :class:`SplitIntegrator`, where the derivatives are held fixed during the</span>
+<span class="sd">    extension substeps.</span>
+
+<span class="sd">    Functions receive the dynamical variables wrapped into their bounds, so periodic</span>
+<span class="sd">    and reflective variables enter them with the same values reported by</span>
+<span class="sd">    :meth:`ExtendedSpaceContext.getDynamicalVariableValues`.</span>
+
+<span class="sd">    Inner product couplings combined in a sum are merged into a single coupling, so</span>
+<span class="sd">    forces from different couplings may share global parameters. Shared functions</span>
+<span class="sd">    must have identical definitions. Forces outside the coupling must not depend on</span>
+<span class="sd">    its parameters.</span>
+
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    forces</span>
@@ -172,6 +189,20 @@
         <span class="n">functions</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="o">**</span><span class="n">parameters</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">forces</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">forces</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">forces</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span>
+                <span class="nb">hasattr</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">method</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="p">(</span>
+                    <span class="s2">"getNumGlobalParameters"</span><span class="p">,</span>
+                    <span class="s2">"getEnergyParameterDerivativeName"</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Force </span><span class="si">{</span><span class="n">force</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="nb">type</span><span class="p">(</span><span class="n">force</span><span class="p">)</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">) does not "</span>
+                    <span class="s2">"support global parameters with energy derivatives, which an "</span>
+                    <span class="s2">"InnerProductCoupling requires."</span>
+                <span class="p">)</span>
         <span class="n">forces</span> <span class="o">=</span> <span class="p">[</span>
             <span class="n">cvpack</span><span class="o">.</span><span class="n">OpenMMForceWrapper</span><span class="p">(</span>
                 <span class="n">force</span><span class="p">,</span>
@@ -246,10 +277,10 @@
         <span class="n">dvs_in_force_parameters</span> <span class="o">=</span> <span class="n">all_dvs</span> <span class="o">&amp;</span> <span class="n">all_force_parameters</span>
         <span class="n">dvs_in_function_variables</span> <span class="o">=</span> <span class="n">all_dvs</span> <span class="o">&amp;</span> <span class="n">function_variables</span>
 
-        <span class="k">if</span> <span class="n">dvs_in_both</span> <span class="o">:=</span> <span class="n">dvs_in_function_variables</span> <span class="o">&amp;</span> <span class="n">dvs_in_force_parameters</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">same_names</span> <span class="o">:=</span> <span class="n">function_names</span> <span class="o">&amp;</span> <span class="n">all_dvs</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">"These dynamical variables are both function variables and global "</span>
-                <span class="sa">f</span><span class="s2">"context parameters: </span><span class="si">{</span><span class="s1">', '</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dvs_in_both</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span>
+                <span class="s2">"These functions have the same names as dynamical variables: "</span>
+                <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">same_names</span><span class="p">))</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">dvs_in_neither</span> <span class="o">:=</span> <span class="n">all_dvs</span> <span class="o">-</span> <span class="p">(</span>
             <span class="n">dvs_in_function_variables</span> <span class="o">|</span> <span class="n">dvs_in_force_parameters</span>
@@ -277,6 +308,56 @@
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">dynamic_parameters</span>
 
+<div class="viewcode-block" id="InnerProductCoupling.merge">
+<a class="viewcode-back" href="../../../api/InnerProductCoupling.html#openxps.couplings.InnerProductCoupling.merge">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">merge</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span> <span class="n">couplings</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">Sequence</span><span class="p">[</span><span class="s2">"InnerProductCoupling"</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">"InnerProductCoupling"</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Merge inner product couplings into a single one.</span>
+
+<span class="sd">        A sum of inner product couplings whose forces share global parameters must</span>
+<span class="sd">        be handled as a single coupling, so that the parameter derivatives of all</span>
+<span class="sd">        forces are accumulated before reaching the extension system.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        couplings</span>
+<span class="sd">            The inner product couplings to merge.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        InnerProductCoupling</span>
+<span class="sd">            A coupling with all forces, dynamical variables, functions and</span>
+<span class="sd">            parameters of the merged couplings.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If two couplings define the same function or parameter differently.</span>
+<span class="sd">        """</span>
+        <span class="n">forces</span><span class="p">,</span> <span class="n">dvs</span><span class="p">,</span> <span class="n">functions</span><span class="p">,</span> <span class="n">parameters</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">{},</span> <span class="p">{},</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">coupling</span> <span class="ow">in</span> <span class="n">couplings</span><span class="p">:</span>
+            <span class="n">forces</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">coupling</span><span class="o">.</span><span class="n">getForces</span><span class="p">())</span>
+            <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">():</span>
+                <span class="n">dvs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">dv</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">_functions</span><span class="p">:</span>
+                <span class="n">name</span><span class="p">,</span> <span class="n">expression</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span> <span class="n">fn</span><span class="o">.</span><span class="n">getExpression</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">functions</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">expression</span><span class="p">)</span> <span class="o">!=</span> <span class="n">expression</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">'The function "</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">" has conflicting definitions in the '</span>
+                        <span class="sa">f</span><span class="s2">"couplings: </span><span class="si">{</span><span class="n">functions</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="si">}</span><span class="s2"> != </span><span class="si">{</span><span class="n">expression</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="p">)</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">_parameters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">parameters</span> <span class="ow">and</span> <span class="n">parameters</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">'The parameter "</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">" has conflicting values in the '</span>
+                        <span class="sa">f</span><span class="s2">"couplings: </span><span class="si">{</span><span class="n">parameters</span><span class="p">[</span><span class="n">name</span><span class="p">]</span><span class="si">}</span><span class="s2"> != </span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="s2">"</span>
+                    <span class="p">)</span>
+                <span class="n">parameters</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">dvs</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span> <span class="n">functions</span><span class="p">,</span> <span class="o">**</span><span class="n">parameters</span><span class="p">)</span></div>
+
+
     <span class="nd">@staticmethod</span>
     <span class="k">def</span><span class="w"> </span><span class="nf">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">return</span> <span class="s2">"derivative_with_respect_to_"</span> <span class="o">+</span> <span class="n">parameter</span>
@@ -287,9 +368,10 @@
         <span class="p">)</span>
         <span class="k">for</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
             <span class="n">flipped_force</span><span class="o">.</span><span class="n">addGlobalParameter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">parameter</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">)</span>
+        <span class="n">bounds</span> <span class="o">=</span> <span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">}</span>
         <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span><span class="p">:</span>
             <span class="n">flipped_force</span><span class="o">.</span><span class="n">addCollectiveVariable</span><span class="p">(</span>
-                <span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span> <span class="n">fn</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">dv_indices</span><span class="p">)</span>
+                <span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span> <span class="n">fn</span><span class="o">.</span><span class="n">createCollectiveVariable</span><span class="p">(</span><span class="n">dv_indices</span><span class="p">,</span> <span class="n">bounds</span><span class="p">)</span>
             <span class="p">)</span>
         <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
