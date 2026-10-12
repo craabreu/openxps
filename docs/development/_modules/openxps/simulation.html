@@ -190,7 +190,10 @@
             <span class="n">enforcePeriodicBox</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">_usesPBC</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">extension</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
-            <span class="n">getPositions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">getVelocities</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">getParameters</span><span class="o">=</span><span class="kc">True</span>
+            <span class="n">getPositions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">getVelocities</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">getParameters</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">getIntegratorParameters</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">content</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">mm</span><span class="o">.</span><span class="n">XmlSerializer</span><span class="o">.</span><span class="n">serialize</span><span class="p">(</span><span class="n">physical</span><span class="p">)</span>
