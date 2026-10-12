@@ -144,6 +144,18 @@ shape (M, d).</p></li>
 <dd class="field-even"><p>tuple[<em>ndarray</em>, <em>ndarray</em>, <em>ndarray</em>]</p>
 </dd>
 </dl>
+<p class="rubric">Notes</p>
+<p>Centers of periodic variables are wrapped into their bounds. Centers of
+non-periodic variables are returned as fitted, even if they lie outside the
+bounds, because the kernels use plain displacements for those variables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>RuntimeError</strong> – If <a class="reference internal" href="#openxps.ForceMatchingRegressor.fit" title="openxps.ForceMatchingRegressor.fit"><code class="xref py py-meth docutils literal notranslate"><span class="pre">fit()</span></code></a> has not been called.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tuple[<em>ndarray</em>, <em>ndarray</em>, <em>ndarray</em>]</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
