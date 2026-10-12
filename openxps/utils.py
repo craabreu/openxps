@@ -87,18 +87,37 @@ def preprocess_args(func: t.Callable) -> t.Callable:
     >>> dct = {"length": 3 * mmunit.angstrom, "time": 2 * mmunit.picosecond}
     >>> assert isinstance(function(dct), dict)
     >>> assert all(isinstance(item, units.Quantity) for item in function(dct).values())
+
+    Named tuples keep their type, and other sequences pass through unchanged:
+
+    >>> import openmm as mm
+    >>> function(mm.Vec3(1, 2, 3))
+    Vec3(x=1, y=2, z=3)
+    >>> function(range(3))
+    range(0, 3)
     """
     signature = inspect.signature(func)
+
+    def convert_container(data: list | tuple | dict) -> t.Any:
+        if isinstance(data, dict):
+            items = {key: convert(value) for key, value in data.items()}
+            if all(items[key] is value for key, value in data.items()):
+                return data
+            return type(data)(items)
+        items = [convert(item) for item in data]
+        if all(new is old for new, old in zip(items, data)):
+            return data
+        if hasattr(data, "_fields"):  # named tuple, e.g. openmm.Vec3
+            return type(data)(*items)
+        return type(data)(items)
 
     def convert(data: t.Any) -> t.Any:
         if isinstance(data, mmunit.Quantity):
             return Quantity(data)
         if isinstance(data, mmunit.Unit):
             return Unit(data)
-        if isinstance(data, t.Sequence) and not isinstance(data, str):
-            return type(data)(map(convert, data))
-        if isinstance(data, dict):
-            return type(data)((key, convert(value)) for key, value in data.items())
+        if isinstance(data, (list, tuple, dict)):
+            return convert_container(data)
         return data
 
     @functools.wraps(func)
