@@ -5,12 +5,22 @@ Unit tests for the integrators in openxps.integrators.
 import copy
 import pickle
 
+import cvpack
 import numpy as np
 import openmm as mm
 import pytest
 from openmm import unit as mmunit
 
-from openxps import LockstepIntegrator, SplitIntegrator, integrators
+from openxps import (
+    CollectiveVariableCoupling,
+    DynamicalVariable,
+    ExtendedSpaceContext,
+    ExtendedSpaceSystem,
+    LockstepIntegrator,
+    SplitIntegrator,
+    integrators,
+)
+from openxps.bounds import NoBounds
 from openxps.tests.test_integrator import create_non_force_first_integrator
 
 KELVIN = mmunit.kelvin
@@ -375,3 +385,97 @@ def test_ggmt_stochastic_accepts_friction():
     assert integrator.getFrictionCoefficient() == 20 / PS
     expected = np.exp(-20 * 0.001)
     assert integrator.getGlobalVariableByName("a") == pytest.approx(expected)
+
+
+def _ggmt_fast():
+    return integrators.MassiveGGMTIntegrator(300 * KELVIN, 20 * FS, 1 * FS)
+
+
+def _nhl_frictionless_fast():
+    integrator = integrators.RegulatedNHLIntegrator(300 * KELVIN, 10 * FS, 1 * FS)
+    integrator.setFrictionCoefficient(0.0)
+    return integrator
+
+
+@pytest.mark.parametrize(
+    ("factory", "num_steps"),
+    [(_ggmt_fast, 250_000), (_nhl_frictionless_fast, 150_000)],
+)
+def test_extension_thermostat_ignores_inert_components(factory, num_steps):
+    """y and z of extension particles stay inert instead of overflowing to NaN.
+
+    Without masking, these components have zero velocity and their thermostat
+    variables drift until exp() overflows, giving 0*inf = NaN after roughly
+    500 (GGMT) or 1400 (NHL) times (tau/dt)^2 steps. The time constants are short
+    enough for that to happen within this run, yet long enough to integrate the
+    x components stably on every platform.
+    """
+    system = _ideal_gas(num_particles=2, mass=3.0)
+    integrator = factory()
+    integrator.registerWithSystem(system, True)
+    context = mm.Context(system, integrator, mm.Platform.getPlatformByName("Reference"))
+    context.setPositions(np.zeros((2, 3)))
+    context.setVelocities([mm.Vec3(1.0, 0, 0), mm.Vec3(-0.5, 0, 0)])
+    integrator.step(num_steps)
+    state = context.getState(getPositions=True, getVelocities=True)
+    positions = state.getPositions(asNumpy=True)._value
+    velocities = state.getVelocities(asNumpy=True)._value
+    assert np.all(np.isfinite(positions)) and np.all(np.isfinite(velocities))
+    assert np.all(positions[:, 1:] == 0) and np.all(velocities[:, 1:] == 0)
+    for name in ("v1", "v2"):
+        if name in [
+            integrator.getPerDofVariableName(i)
+            for i in range(integrator.getNumPerDofVariables())
+        ]:
+            values = np.array(integrator.getPerDofVariableByName(name))
+            assert np.all(values[:, 1:] == 0)
+            assert np.all(np.isfinite(values[:, 0]))
+            assert np.all(values[:, 0] != 0)
+
+
+@pytest.mark.parametrize("factory", [_ggmt_fast, _nhl_frictionless_fast])
+def test_physical_thermostat_acts_on_all_components(factory):
+    """Outside the extension system, every component is thermostatted."""
+    system = _ideal_gas(num_particles=2, mass=3.0)
+    integrator = factory()
+    integrator.registerWithSystem(system, False)
+    context = _context(system, integrator)
+    integrator.step(10)
+    assert context.getStepCount() == 10
+    mask = np.array(integrator.getPerDofVariableByName("active"))
+    assert np.all(mask == 1)
+    assert np.all(np.array(integrator.getPerDofVariableByName("v1")) != 0)
+
+
+def test_lockstep_extension_ggmt_is_masked():
+    """The extended-space integrator registers its extension integrator as such."""
+    system = _ideal_gas(num_particles=2, mass=10.0)
+    dv = DynamicalVariable(
+        "s", mmunit.nanometer, 10 * mmunit.dalton, NoBounds(0, 1, mmunit.nanometer)
+    )
+    coupling = CollectiveVariableCoupling(
+        "0.5*k*(d-s)^2",
+        [cvpack.Distance(0, 1, name="d")],
+        [dv],
+        k=1000 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
+    )
+    extension = integrators.MassiveGGMTIntegrator(
+        300 * KELVIN, 20 * FS, 1 * FS, forceFirst=True
+    )
+    context = ExtendedSpaceContext(
+        ExtendedSpaceSystem(system, coupling),
+        LockstepIntegrator(mm.VerletIntegrator(1 * FS), extension),
+        mm.Platform.getPlatformByName("Reference"),
+    )
+    context.setPositions([mm.Vec3(0, 0, 0), mm.Vec3(0.5, 0, 0)])
+    context.setVelocitiesToTemperature(300 * KELVIN, 1)
+    context.setDynamicalVariableValues([0.5])
+    context.setDynamicalVariableVelocitiesToTemperature(300 * KELVIN, 1)
+    mask = (
+        context.getExtensionContext().getIntegrator().getPerDofVariableByName("active")
+    )
+    assert list(mask) == [mm.Vec3(1, 0, 0)]
+    context.getIntegrator().step(5000)
+    state = context.getExtensionContext().getState(getEnergy=True)
+    assert np.isfinite(state.getKineticEnergy()._value)
+    assert np.isfinite(state.getPotentialEnergy()._value)

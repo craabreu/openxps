@@ -24,6 +24,10 @@
   copy, with one row per epoch, and raises before the first fit; positions and forces
   must be given in MD units.
 
+- `ExtendedSpaceSystem` no longer takes `tether_period`, and
+  `getTetheringForce()` is gone. The tether never engaged, because the y and z
+  components of extension particles rest at the origin with zero velocity.
+
 ### Added
 - `MassiveGGMTIntegrator` accepts `newtonIterations`.
 - `ExtendedSpaceContext.synchronize()` re-synchronizes the physical and extension
@@ -107,3 +111,7 @@
   dedicated group.
 - A function variable named like a Lepton coordinate (`x1`, `x2`, ...) no longer
   redirects other variables of the same function to the wrong dynamical variable.
+- `MassiveGGMTIntegrator` and `RegulatedNHLIntegrator` (with zero friction) no longer
+  produce NaN in the extension context after long runs. As extension integrators, they
+  thermostat only the x component of each particle, leaving the inert y and z
+  components untouched.
