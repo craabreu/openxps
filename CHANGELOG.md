@@ -76,6 +76,10 @@
   shapes of positions and forces, and no longer reseeds NumPy's global generator;
   `get_parameters()` no longer alters the fitted model; kernel centers start inside
   the variables' ranges; weight decay applies only to kernel weights.
+- `ForceMatchingRegressor.get_parameters()` wraps only the centers of periodic
+  variables, so the returned parameters reproduce `predict()` for reflective and
+  unbounded variables, and it raises before the first fit. `fit` raises when the
+  validation split leaves no training data instead of returning an untrained model.
 - `Function` recognizes the Lepton built-ins `square`, `cube` and `recip` instead of
   treating them as variables.
 - `ExtensionWriter` reports coupling-function columns in sorted order, so the column

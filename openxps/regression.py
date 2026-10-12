@@ -293,12 +293,15 @@ class ForceMatchingRegressor:
     def _as_numpy(x: torch.Tensor) -> np.ndarray:
         return x.detach().cpu().clone().numpy()
 
+    def _num_validation_samples(self, num_samples: int) -> int:
+        return int(round(self._val_frac * num_samples))
+
     def _create_dataloaders(
         self, X: torch.Tensor, G: torch.Tensor
     ) -> tuple[DataLoader, DataLoader | None]:
         N = len(X)
         idx = torch.randperm(N)
-        nval = int(round(self._val_frac * N))
+        nval = self._num_validation_samples(N)
         val_idx, tr_idx = idx[:nval], idx[nval:]
         train_dl = DataLoader(
             TensorDataset(X[tr_idx], G[tr_idx]),
@@ -368,6 +371,12 @@ class ForceMatchingRegressor:
         X = torch.as_tensor(np.asarray(positions, dtype=np.float32))
         G = -torch.as_tensor(np.asarray(forces, dtype=np.float32))
         self._validate_shapes(X, G)
+        num_samples = len(X)
+        if num_samples - self._num_validation_samples(num_samples) < 1:
+            raise ValueError(
+                f"No training data left: {num_samples} samples with "
+                f"validation_fraction={self._val_frac}."
+            )
         self._metrics = None
         train_dl, val_dl = self._create_dataloaders(X, G)
 
@@ -436,10 +445,24 @@ class ForceMatchingRegressor:
             shape (M, d).
         weights
             The weights of the radial basis functions, shape (M,).
+
+        Notes
+        -----
+        Centers of periodic variables are wrapped into their bounds. Centers of
+        non-periodic variables are returned as fitted, even if they lie outside the
+        bounds, because the kernels use plain displacements for those variables.
+
+        Raises
+        ------
+        RuntimeError
+            If :meth:`fit` has not been called.
         """
+        if self._model is None:
+            raise RuntimeError("The model has not been fitted yet.")
         centers = self._as_numpy(self._model.f.c)
         for dv, column in zip(self._dynamical_variables, centers.T):
-            column[:], _ = np.vectorize(dv.bounds.wrap)(column, 0)
+            if isinstance(dv.bounds, PeriodicBounds):
+                column[:], _ = np.vectorize(dv.bounds.wrap)(column, 0)
         return (
             centers,
             self._as_numpy(self._model.f.logsig.exp()),

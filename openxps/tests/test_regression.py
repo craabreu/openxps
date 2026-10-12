@@ -391,8 +391,7 @@ class TestForceMatchingRegressor:
         dvs = create_test_dynamical_variables()
         regressor = ForceMatchingRegressor(dvs, num_kernels=5)
 
-        # _model is None before fit, so accessing _model.f will raise AttributeError
-        with pytest.raises((AttributeError, RuntimeError)):
+        with pytest.raises(RuntimeError, match="not been fitted"):
             regressor.get_parameters()
 
     def test_early_stopping_with_validation(self):
@@ -445,6 +444,19 @@ class TestFitBehavior:
         assert {"train_loss", "val_loss"} <= set(curve.columns)
         assert np.all(np.isfinite(regressor.predict(positions)))
 
+    @pytest.mark.parametrize(
+        ("num_samples", "fraction"), [(2, 0.75), (3, 0.9), (0, 0.0)]
+    )
+    def test_fit_rejects_split_without_training_data(self, num_samples, fraction):
+        regressor = ForceMatchingRegressor(
+            create_test_dynamical_variables(), 5, validation_fraction=fraction
+        )
+        positions = np.zeros((num_samples, 2))
+        with pytest.raises(ValueError, match="No training data"):
+            regressor.fit(positions, positions)
+        with pytest.raises(RuntimeError, match="not been fitted"):
+            regressor.get_learning_curve()
+
     def test_rejects_validation_fraction_without_training_data(self):
         with pytest.raises(ValueError, match="validation_fraction"):
             ForceMatchingRegressor(
@@ -486,24 +498,48 @@ class TestFitBehavior:
         assert not np.allclose(first_centers, second_centers)
 
     def test_get_parameters_does_not_change_predictions(self):
-        dv = xps.DynamicalVariable(
-            "r",
-            mmunit.nanometer,
-            3 * mmunit.dalton,
-            xps.ReflectiveBounds(0, 1, mmunit.nanometer),
-        )
+        mass = 3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2
+        dvs = [
+            xps.DynamicalVariable(
+                "phi", mmunit.radian, mass, PeriodicBounds(-np.pi, np.pi, mmunit.radian)
+            ),
+            xps.DynamicalVariable(
+                "r",
+                mmunit.nanometer,
+                3 * mmunit.dalton,
+                xps.ReflectiveBounds(0, 1, mmunit.nanometer),
+            ),
+        ]
         regressor = ForceMatchingRegressor(
-            [dv], num_kernels=20, num_epochs=1, validation_fraction=0.0
+            dvs, num_kernels=20, num_epochs=1, validation_fraction=0.0
         )
         rng = np.random.default_rng(0)
-        positions = rng.uniform(0, 1, (50, 1))
+        positions = np.column_stack(
+            [rng.uniform(-np.pi, np.pi, 50), rng.uniform(0, 1, 50)]
+        )
         regressor.fit(positions, -positions, seed=1)
         with torch.no_grad():
             regressor._model.f.c += 1.5
         before = regressor.predict(positions)
-        centers, _, _ = regressor.get_parameters()
-        assert np.all((centers >= 0) & (centers <= 1))
+        centers, sigmas, weights = regressor.get_parameters()
         np.testing.assert_allclose(regressor.predict(positions), before)
+
+        # Periodic centers are wrapped; reflective ones are returned as fitted
+        assert np.all((centers[:, 0] >= -np.pi) & (centers[:, 0] < np.pi))
+        np.testing.assert_allclose(
+            centers[:, 1], regressor._model.f.c[:, 1].detach().numpy()
+        )
+        assert np.any(centers[:, 1] > 1)
+
+        # The returned parameters reproduce the fitted potential
+        disp = positions[:, None, :] - centers[None, :, :]
+        period = 2 * np.pi
+        delta = np.stack(
+            [period / np.pi * np.sin(np.pi * disp[..., 0] / period), disp[..., 1]],
+            axis=-1,
+        )
+        rebuilt = np.exp(-0.5 * (delta**2 / sigmas[None] ** 2).sum(-1)) @ weights
+        np.testing.assert_allclose(rebuilt, before, rtol=1e-4, atol=1e-6)
 
     def test_fit_does_not_touch_global_numpy_rng(self):
         dvs = create_test_dynamical_variables()
