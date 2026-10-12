@@ -200,6 +200,39 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updateExtensionContext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span></div>
 
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_pushSharedParameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Copy parameters present in both contexts from the physical one."""</span>
+        <span class="n">protected</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">getProtectedParameters</span><span class="p">()</span>
+        <span class="n">extension_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">getParameters</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getParameters</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">extension_parameters</span> <span class="ow">and</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">protected</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+<div class="viewcode-block" id="ExtendedSpaceContext.getParameter">
+<a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.getParameter">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">getParameter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""</span>
+<span class="sd">        Get the value of a global parameter of the physical or extension system.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        name</span>
+<span class="sd">            The name of the parameter. A parameter that exists only in the extension</span>
+<span class="sd">            system (e.g. a parameter of a coupling function) is read from the</span>
+<span class="sd">            extension context.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The value of the parameter.</span>
+<span class="sd">        """</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getParameters</span><span class="p">()</span> <span class="ow">and</span> <span class="p">(</span>
+            <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">getParameters</span><span class="p">()</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">getParameter</span><span class="p">(</span><span class="n">name</span><span class="p">)</span></div>
+
+
 <div class="viewcode-block" id="ExtendedSpaceContext.setParameter">
 <a class="viewcode-back" href="../../api/ExtendedSpaceContext.html#openxps.ExtendedSpaceContext.setParameter">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">setParameter</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">Quantity</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -210,8 +243,10 @@
 <span class="sd">        -----</span>
 <span class="sd">        Parameters that represent dynamical variables are protected and cannot be set</span>
 <span class="sd">        through this method; use :meth:`setDynamicalVariableValues` instead. A</span>
-<span class="sd">        parameter that also exists in the extension system (e.g. a coupling constant)</span>
-<span class="sd">        is updated in both contexts.</span>
+<span class="sd">        parameter that exists in both systems (e.g. a coupling constant) is updated</span>
+<span class="sd">        in both contexts, and one that exists only in the extension system (e.g. a</span>
+<span class="sd">        parameter of a coupling function) is updated in the extension context. Both</span>
+<span class="sd">        contexts are then synchronized.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -225,9 +260,12 @@
                 <span class="sa">f</span><span class="s1">'Cannot manually set the parameter "</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s1">". This parameter is '</span>
                 <span class="s2">"set automatically via setDynamicalVariableValues."</span>
             <span class="p">)</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">getParameters</span><span class="p">():</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span></div>
+        <span class="n">in_extension</span> <span class="o">=</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">getParameters</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">getParameters</span><span class="p">()</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">in_extension</span><span class="p">:</span>
+            <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">in_extension</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">setParameter</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">synchronize</span><span class="p">()</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceContext.reinitialize">
@@ -237,6 +275,10 @@
 <span class="sd">        Reinitialize the physical context and restore the dynamical variable</span>
 <span class="sd">        parameters from the extension context, whose state is always preserved.</span>
 
+<span class="sd">        Parameters shared by both contexts take their values from the physical</span>
+<span class="sd">        context, so they are reset to their defaults when the physical state is not</span>
+<span class="sd">        preserved.</span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        preserveState</span>
@@ -244,6 +286,7 @@
 <span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">(</span><span class="n">preserveState</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pushSharedParameters</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updatePhysicalContext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">preserveState</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">updateExtensionContext</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span></div>
@@ -255,12 +298,16 @@
 <span class="w">        </span><span class="sd">"""</span>
 <span class="sd">        Set the state of the physical context and synchronize both contexts.</span>
 
+<span class="sd">        Parameters restored from the state that also exist in the extension system</span>
+<span class="sd">        (e.g. a coupling constant) are copied to the extension context.</span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        state</span>
 <span class="sd">            The :OpenMM:`State` to apply to the physical context.</span>
 <span class="sd">        """</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">setState</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_pushSharedParameters</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">synchronize</span><span class="p">()</span></div>
 
 

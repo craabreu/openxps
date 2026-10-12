@@ -12,6 +12,7 @@ ExtendedSpaceContext
     .. automethod:: getDynamicalVariableVelocities
     .. automethod:: getExtensionContext
     .. automethod:: getIntegrator
+    .. automethod:: getParameter
     .. automethod:: getSystem
     .. automethod:: loadCheckpoint
     .. automethod:: reinitialize

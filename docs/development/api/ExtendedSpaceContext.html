@@ -171,6 +171,25 @@ even integer ratio.</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getParameter">
+<span class="sig-name descname"><span class="pre">getParameter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getParameter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getParameter" title="Link to this definition">¶</a></dt>
+<dd><p>Get the value of a global parameter of the physical or extension system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>name</strong> (<em>str</em>) – The name of the parameter. A parameter that exists only in the extension
+system (e.g. a parameter of a coupling function) is read from the
+extension context.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The value of the parameter.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.getSystem">
 <span class="sig-name descname"><span class="pre">getSystem</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.getSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.getSystem" title="Link to this definition">¶</a></dt>
 <dd><p>Get the system included in the extended phase-space context.</p>
@@ -201,6 +220,9 @@ even integer ratio.</p></li>
 <span class="sig-name descname"><span class="pre">reinitialize</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">preserveState</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.reinitialize"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.reinitialize" title="Link to this definition">¶</a></dt>
 <dd><p>Reinitialize the physical context and restore the dynamical variable
 parameters from the extension context, whose state is always preserved.</p>
+<p>Parameters shared by both contexts take their values from the physical
+context, so they are reset to their defaults when the physical state is not
+preserved.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>preserveState</strong> (<em>bool</em>) – Whether to preserve the state of the physical context.</p>
@@ -250,8 +272,10 @@ variables.</p>
 <p class="rubric">Notes</p>
 <p>Parameters that represent dynamical variables are protected and cannot be set
 through this method; use <a class="reference internal" href="#openxps.ExtendedSpaceContext.setDynamicalVariableValues" title="openxps.ExtendedSpaceContext.setDynamicalVariableValues"><code class="xref py py-meth docutils literal notranslate"><span class="pre">setDynamicalVariableValues()</span></code></a> instead. A
-parameter that also exists in the extension system (e.g. a coupling constant)
-is updated in both contexts.</p>
+parameter that exists in both systems (e.g. a coupling constant) is updated
+in both contexts, and one that exists only in the extension system (e.g. a
+parameter of a coupling function) is updated in the extension context. Both
+contexts are then synchronized.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
@@ -277,6 +301,8 @@ is updated in both contexts.</p>
 <dt class="sig sig-object py" id="openxps.ExtendedSpaceContext.setState">
 <span class="sig-name descname"><span class="pre">setState</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">state</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/context.html#ExtendedSpaceContext.setState"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceContext.setState" title="Link to this definition">¶</a></dt>
 <dd><p>Set the state of the physical context and synchronize both contexts.</p>
+<p>Parameters restored from the state that also exist in the extension system
+(e.g. a coupling constant) are copied to the extension context.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>state</strong> (<em>State</em>) – The <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">openmm.State</a> to apply to the physical context.</p>
