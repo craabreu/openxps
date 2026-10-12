@@ -1322,3 +1322,29 @@ def test_coupling_default_force_group_is_dedicated():
     )
     ExtendedSpaceSystem(model.system, coupling)
     assert coupling.getForce(0).getForceGroup() not in groups_before
+
+
+def test_inner_product_function_with_coordinate_like_dv_names():
+    """A DV named like a Lepton coordinate (x1) does not hijack another DV."""
+    force = mm.CustomBondForce("scaling*r^2")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addBond(0, 1, [])
+    dvs = [
+        DynamicalVariable(
+            name,
+            mmunit.dimensionless,
+            1 * mmunit.dalton * mmunit.nanometer**2,
+            ReflectiveBounds(0, 1, mmunit.dimensionless),
+        )
+        for name in ("a", "x1")
+    ]
+    coupling = InnerProductCoupling([force], dvs, functions={"scaling": "10*a + x1"})
+    context = ExtendedSpaceContext(
+        ExtendedSpaceSystem(_two_particle_system(), coupling),
+        LockstepIntegrator(mm.VerletIntegrator(0.001)),
+        mm.Platform.getPlatformByName("Reference"),
+    )
+    context.setPositions([mm.Vec3(0, 0, 0), mm.Vec3(0.5, 0, 0)])
+    context.setDynamicalVariableValues([0.2, 0.7])
+    assert context.getParameter("scaling") == pytest.approx(10 * 0.2 + 0.7)

@@ -102,3 +102,5 @@
 - A coupling force placed in a nonzero force group by the user keeps that group when
   the coupling is added to a system; only forces left in group 0 are moved to a
   dedicated group.
+- A function variable named like a Lepton coordinate (`x1`, `x2`, ...) no longer
+  redirects other variables of the same function to the wrong dynamical variable.
