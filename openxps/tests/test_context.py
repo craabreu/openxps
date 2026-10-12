@@ -184,11 +184,15 @@ def test_consistency():
     coupling = create_coupling()
     context = create_extended_context(model, coupling)
     context.setPositions(model.positions)
-    context.setVelocitiesToTemperature(300 * mmunit.kelvin)
+    context.setVelocitiesToTemperature(300 * mmunit.kelvin, 1234)
+    # 900 degrees is equivalent to the initial phi (180 degrees) but exercises the
+    # periodic wrapping. A phi0 far from phi would dump about 1500 kJ/mol of coupling
+    # energy into this NVE system, heating it to thousands of kelvin, where Verlet
+    # occasionally diverges on force-field torsions.
     context.setDynamicalVariableValues(
-        [1000 * mmunit.degrees, 1 * mmunit.nanometer, 1 * mmunit.nanometer]
+        [900 * mmunit.degrees, 1 * mmunit.nanometer, 1 * mmunit.nanometer]
     )
-    context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin)
+    context.setDynamicalVariableVelocitiesToTemperature(300 * mmunit.kelvin, 1234)
 
     for _ in range(10):
         context.getIntegrator().step(1000)
