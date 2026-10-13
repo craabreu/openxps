@@ -168,6 +168,12 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         it does, the coupling turns them into soft walls on the physical system.
 
     .. note::
+        Periodic and reflective variables can be mixed. A reflective variable is
+        tabulated as a periodic one of twice its range, holding the bias and its
+        mirror image, which makes the interpolated bias exactly flat at the walls.
+        This doubles the table along each reflective axis.
+
+    .. note::
         The bias force is added to the extension system of ``system`` when this
         object is created, so it must be created before the
         :class:`~openxps.ExtendedSpaceSimulation` or
@@ -249,10 +255,12 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
                     dv.bounds.lower * dv.bounds.unit,
                     dv.bounds.upper * dv.bounds.unit,
                     variable.sigma,
-                    dv.isPeriodic(),
+                    True,
                     variable.grid_width,
                 )
             )
+        # Every table axis is periodic, so OpenMM must not reject the mix of periodic
+        # and reflective variables. Their true periodicity is restored afterwards.
         super().__init__(
             system.getExtensionSystem(),
             bias_variables,
@@ -266,6 +274,16 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         self._bounds_kinds = [
             variable.dynamical_variable.bounds.kind for variable in variables
         ]
+        for v, kind in zip(self.variables, self._bounds_kinds):
+            v.periodic = kind == PeriodicBounds.kind
+        self._widths = [
+            v.gridWidth if v.periodic else 2 * v.gridWidth - 1 for v in self.variables
+        ]
+        self._limits = []
+        for v in self.variables:
+            upper = v.maxValue if v.periodic else 2 * v.maxValue - v.minValue
+            self._limits += [v.minValue, upper]
+        self._updateTable()
 
     def step(self, simulation, steps):
         super().step(_SimulationWrapper(simulation), steps)
@@ -289,10 +307,26 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         height = height.value_in_unit(mmunit.kilojoules_per_mole)
         self._selfBias += height * kernel
         self._totalBias += height * kernel
+        self._updateTable()
+        self._force.updateParametersInContext(context)
+
+    def _updateTable(self):
+        """Copy the total bias into the periodic table.
+
+        A reflective variable on ``[lower, upper]`` behaves as a periodic one of period
+        ``2*(upper - lower)`` whose bias is mirrored about ``upper``. Its table axis
+        holds the bias followed by its mirror image, so the periodic spline that
+        OpenMM fits is symmetric about both walls and has zero slope there.
+        """
+        bias = self._totalBias
+        # The bias array stores the last variable along its first axis.
+        for axis, v in enumerate(reversed(self.variables)):
+            if not v.periodic:
+                mirror = np.flip(np.take(bias, range(v.gridWidth - 1), axis=axis), axis)
+                bias = np.concatenate((bias, mirror), axis=axis)
         if len(self.variables) == 1:
-            self._table.setFunctionParameters(self._totalBias.flatten(), *self._limits)
+            self._table.setFunctionParameters(bias.flatten(), *self._limits)
         else:
             self._table.setFunctionParameters(
-                *self._widths, self._totalBias.flatten(), *self._limits
+                *self._widths, bias.flatten(), *self._limits
             )
-        self._force.updateParametersInContext(context)

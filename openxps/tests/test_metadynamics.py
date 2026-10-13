@@ -204,3 +204,88 @@ def test_periodic_kernel_is_periodic():
     shifted = _axis_kernel(grid + 2 * np.pi, 3.0, 0.5, "periodic", -np.pi, np.pi)
     np.testing.assert_allclose(kernel, shifted, atol=1e-12)
     assert kernel[0] == pytest.approx(kernel[-1])
+
+
+@pytest.mark.parametrize("center", [0.1, 0.12, 0.2])
+def test_reflective_bias_has_zero_slope_at_walls(center):
+    """The interpolated bias is flat at both walls, not only its grid values."""
+    dv = _reflective_dv("s", 0.1, 1.0)
+    _, system = _system_with(dv, cvpack.Distance(0, 1, name="d"))
+    meta = _metadynamics(
+        system, xps.ExtendedSpaceBiasVariable(dv, 0.05 * unit.nanometer)
+    )
+    context = openmm.Context(
+        system.getExtensionSystem(),
+        openmm.VerletIntegrator(0.001),
+        openmm.Platform.getPlatformByName("Reference"),
+    )
+    meta._addGaussian([center], 1 * unit.kilojoule_per_mole, context)
+    group = {meta._force.getForceGroup()}
+
+    def bias_force(x):
+        context.setPositions([openmm.Vec3(x, 0, 0)])
+        state = context.getState(getForces=True, groups=group)
+        return state.getForces(asNumpy=True)[0, 0]._value
+
+    peak = max(abs(bias_force(x)) for x in np.linspace(0.1, 0.4, 61))
+    assert abs(bias_force(0.1)) < 1e-9 * peak
+    assert abs(bias_force(1.0)) < 1e-9 * peak
+
+
+def test_mixed_periodic_and_reflective_bias():
+    """A periodic and a reflective variable share one table, each with its own grid."""
+    mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
+    d0 = _reflective_dv("d0", 0.1, 1.0)
+    model = testsystems.AlanineDipeptideVacuum()
+    coupling = xps.HarmonicCoupling(
+        cvpack.Torsion(6, 8, 14, 16, name="phi"),
+        phi0,
+        1000 * unit.kilojoules_per_mole / unit.radian**2,
+    ) + xps.HarmonicCoupling(
+        cvpack.Distance(0, 1, name="d"),
+        d0,
+        1000 * unit.kilojoules_per_mole / unit.nanometer**2,
+    )
+    system = xps.ExtendedSpaceSystem(model.system, coupling)
+    meta = xps.ExtendedSpaceMetadynamics(
+        system,
+        [
+            xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degree),
+            xps.ExtendedSpaceBiasVariable(d0, 0.05 * unit.nanometer),
+        ],
+        300 * unit.kelvin,
+        5,
+        1 * unit.kilojoule_per_mole,
+        10,
+    )
+    assert [v.periodic for v in meta.variables] == [True, False]
+    context = openmm.Context(
+        system.getExtensionSystem(),
+        openmm.VerletIntegrator(0.001),
+        openmm.Platform.getPlatformByName("Reference"),
+    )
+    meta._addGaussian([3.0, 0.12], 1 * unit.kilojoule_per_mole, context)
+    group = {meta._force.getForceGroup()}
+
+    order = [dv.name for dv in system.getDynamicalVariables()]
+
+    def bias(phi, d):
+        values = {"phi0": phi, "d0": d}
+        context.setPositions([openmm.Vec3(values[name], 0, 0) for name in order])
+        state = context.getState(getEnergy=True, getForces=True, groups=group)
+        forces = state.getForces(asNumpy=True)[:, 0]._value
+        return state.getPotentialEnergy()._value, dict(zip(order, forces))
+
+    peak = max(abs(force) for force in bias(2.95, 0.15)[1].values())
+    assert abs(bias(2.95, 0.1)[1]["d0"]) < 1e-9 * peak
+    assert abs(bias(2.95, 1.0)[1]["d0"]) < 1e-9 * peak
+    assert abs(bias(2.95, 0.15)[1]["d0"]) > 0.1 * peak
+    # The periodic axis is continuous across its seam.
+    for d in (0.1, 0.12, 0.3):
+        below, _ = bias(np.pi - 1e-9, d)
+        above, _ = bias(-np.pi + 1e-9, d)
+        assert below == pytest.approx(above, rel=1e-6, abs=1e-9)
+    # Grid nodes reproduce the stored bias.
+    energy, _ = bias(meta.variables[0].minValue, meta.variables[1].minValue)
+    assert energy == pytest.approx(meta._totalBias[0, 0], rel=1e-9)
