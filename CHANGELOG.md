@@ -19,6 +19,14 @@
   singularity-free Coulomb splitting instead of a reflective bound on `v2`, so its
   thermostat step no longer fails with a negative square-root argument at large step
   sizes; the per-DOF variable `v2lb` is gone.
+- `MassiveGGMTIntegrator` applies the exponential velocity scaling on both sides of
+  the Coulomb sub-step, so it solves a single Kepler equation per step.
+- With `stochastic=True`, `MassiveGGMTIntegrator` no longer adds Ornstein-Uhlenbeck
+  noise to both thermostat variables. Instead, it rescales each velocity and its
+  fourth-moment thermostat variable by a common random factor, in the manner of the
+  stochastic velocity rescaling of Bussi et al., at the center of the step. The
+  friction coefficient is the rate of this rescaling, with the same default, and the
+  global variables `b1` and `b2` are gone.
 - `ForceMatchingRegressor` takes a `devices` keyword, defaulting to 1, so it no longer
   launches distributed training on multi-GPU hosts; `get_learning_curve()` returns a
   copy, with one row per epoch, and raises before the first fit; positions and forces

@@ -15,6 +15,7 @@ from openxps.integrators.utils import IntegratorMixin, add_property
 from openxps.utils import preprocess_args
 
 _COULOMB_STRENGTH = "(2/sqrt(3))*kT^3*invQ2"
+_V_FLOOR = "max(abs(v), sqrt(1e-30*kT/m))"
 
 
 @add_property("temperature", mmunit.kelvin)
@@ -27,9 +28,9 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     steady-state conditions, such as in d-AFED/TAMD :cite:`Maragliano2006,Abrams2008`
     or UFED :cite:`Chen2012` simulations.
 
-    This implementation optionally introduces stochasticity by applying Langevin-type
-    noise to the variables controlling the second- and fourth-moment of the velocity
-    distribution.
+    This implementation optionally introduces stochasticity by rescaling each velocity
+    and its fourth-moment thermostat variable by a common random factor, in the manner
+    of the stochastic velocity rescaling of :cite:`Bussi2007` (see Notes).
 
     .. note::
         If stochasticity is enabled, the friction coefficient is initially set to the
@@ -52,8 +53,8 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     Keyword Arguments
     -----------------
     stochastic
-        If True, the integrator will apply stochasticity to the variables controlling
-        the second- and fourth-moment of the velocity distribution.
+        If True, the integrator will apply a stochastic rescaling to each velocity and
+        its fourth-moment thermostat variable at the center of the step.
     forceFirst
         If True, the integrator will apply a force-first scheme. Otherwise, it will
         apply a symmetric operator splitting scheme.
@@ -71,8 +72,16 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     an exactly solvable repulsive Coulomb problem and a constant kick. The Coulomb
     flow is obtained from a hyperbolic Kepler equation, solved by a fixed number of
     Halley iterations started from an upper bound of its root, with the hyperbolic
-    functions computed from a single exponential. The resulting step is free of the
-    singularity for any step size.
+    functions computed from a single exponential. The exponential velocity scaling is
+    applied on both sides of the Coulomb sub-step, so that a single Kepler equation is
+    solved per step. The resulting step is free of the singularity for any step size.
+
+    In the stochastic version, the vector :math:`(p/\sqrt{m}, p_{\eta_2}/\sqrt{Q_2})`
+    is rescaled along its own direction, with its squared norm :math:`\phi` following
+    :math:`d\phi = \gamma(2kT - \phi)dt + 2\sqrt{\gamma kT \phi}\,dW`, where
+    :math:`\gamma` is the friction coefficient. This rescaling preserves the canonical
+    distribution and leaves the phase of the Coulomb orbit unchanged, so it is applied
+    exactly at the center of the step without a second Kepler equation.
 
     Example
     -------
@@ -99,18 +108,17 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
        1: v <- v + 0.5*dt*f/m
        2: x <- x + 0.5*dt*v
        3: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
-       4: T1 <- ...
-       5: th <- t0 - g*ch/(2*ch*ch*ch - g*sh); g = t0 + sh*ch - T1; ...
-       6: th <- th - g*ch/(2*ch*ch*ch - g*sh); g = th + sh*ch - T1; ...
+       4: v <- v*exp(-0.5*dt*(v1 + kT*v2))
+       5: T1 <- ...
+       6: th <- t0 - g*ch/(2*ch*ch*ch - g*sh); g = t0 + sh*ch - T1; ...
        7: th <- th - g*ch/(2*ch*ch*ch - g*sh); g = th + sh*ch - T1; ...
-       8: eth <- exp(th)
+       8: eth <- e*(1 - d + d*d/2 - d*d*d/6); ...
        9: v <- v*sqrt(q*q + 1)*2*eth/(eth*eth + 1); q = w*sqrt(z/(2*c)); ...
       10: v2 <- active*(0.5*(eth - 1/eth)*max(abs(v), sqrt(1e-30*kT/m))*...
-      11: v <- v*exp(-1*dt*(v1 + kT*v2))
-    ...
-      19: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
-      20: x <- x + 0.5*dt*v
-      21: v <- v + 0.5*dt*f/m
+      11: v <- v*exp(-0.5*dt*(v1 + kT*v2))
+      12: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
+      13: x <- x + 0.5*dt*v
+      14: v <- v + 0.5*dt*f/m
 
     Force-first scheme
 
@@ -152,7 +160,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addUpdateContextState()
         self._add_boost(1 if forceFirst else 0.5)
         self._add_translation(0.5)
-        self._add_thermostat(1)
+        self._add_thermostat()
         self._add_translation(0.5)
         if not forceFirst:
             self._add_boost(0.5)
@@ -192,8 +200,8 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
             self.addPerDofVariable(name, 0)
         if self._stochastic:
             self.addGlobalVariable("a", 0)
-            self.addGlobalVariable("b1", 0)
-            self.addGlobalVariable("b2", 0)
+            self.addPerDofVariable("R1", 0)
+            self.addPerDofVariable("lam2", 1)
         self._update_global_variables()
 
     def _update_global_variables(self) -> None:
@@ -205,12 +213,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         if self._stochastic:
             friction = self.getFrictionCoefficient()
             dt = self.getStepSize()
-            a = np.exp(-friction * dt)
-            b1 = np.sqrt(1 - a**2) / tau
-            b2 = b1 * np.sqrt(3 / 8) / kt
-            self.setGlobalVariableByName("a", a)
-            self.setGlobalVariableByName("b1", b1)
-            self.setGlobalVariableByName("b2", b2)
+            self.setGlobalVariableByName("a", np.exp(-friction * dt))
 
     def _add_translation(self, fraction: float) -> None:
         self.addComputePerDof("x", f"x + {fraction}*dt*v")
@@ -223,70 +226,88 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
             "v1", self._masked(f"v1 + {fraction}*dt*(m*v^2 - kT)*invQ")
         )
 
-    def _add_v2_boost(self, fraction: float) -> None:
-        """Propagate the (z, w) sub-dynamics over ``fraction*dt`` (Coulomb splitting).
+    def _add_coulomb_step(self) -> None:
+        """Propagate the (z, w) sub-dynamics over a full step (Coulomb splitting).
 
-        The constant kick on ``v2`` is applied over half the time span before and
-        after the exact flow of the repulsive Coulomb Hamiltonian ``w^2/2 + c/z``.
-        With ``q = sinh(th0) = w*sqrt(z/(2c))`` and ``th`` the final hyperbolic angle,
-        the flow satisfies ``z0/z = (q^2 + 1)/cosh(th)^2`` and
-        ``w = sinh(th)*sqrt(2c/z)``, so ``v`` and ``v2`` follow from ``th`` alone. The
-        Kepler equation ``th + sinh(2 th)/2 = T1`` is solved by Halley iterations
-        started from the smaller of its upper bounds ``T1/2`` and ``asinh(2 T1)/2``.
-        The hyperbolic functions are written in terms of a single exponential, and
-        the floor on ``|v|`` avoids an indeterminate product at the fixed point
-        ``v = 0``.
+        The constant kick on ``v2`` is applied over half a step before and after the
+        exact flow of the repulsive Coulomb Hamiltonian ``w^2/2 + c/z``. With
+        ``q = sinh(th0) = w*sqrt(z/(2c))`` and ``th`` the final hyperbolic angle, the
+        flow satisfies ``z0/z = (q^2 + 1)/cosh(th)^2`` and ``w = sinh(th)*sqrt(2c/z)``,
+        so ``v`` and ``v2`` follow from ``th`` alone. The Kepler equation
+        ``th + sinh(2 th)/2 = T1`` is solved by Halley iterations started from the
+        smaller of its upper bounds ``T1/2`` and ``asinh(2 T1)/2``, with the hyperbolic
+        functions written in terms of a single exponential. With two or more
+        iterations, the last correction is applied to ``exp(th)`` by a cubic Taylor
+        factor, so that no further exponential is needed. The floor on ``|v|`` avoids
+        an indeterminate product at the fixed point ``v = 0``.
+
+        In the stochastic version, the rescaling at the center of the Coulomb flow
+        multiplies the orbit energy by ``lam2`` at a fixed ``th``, so the Kepler
+        equation gains the time term of the second half on the new orbit and ``v``
+        gains a factor ``sqrt(lam2)``.
         """
         add = self.addComputePerDof
-        kick = f"{fraction / 2}*dt*kT^2*invQ2"
+        kick = "0.5*dt*kT^2*invQ2"
         state = (
             f"q = w*sqrt(z/(2*c)); w = (2/sqrt(3))*kT*(v2 - {kick});"
-            " z = sqrt(3)*kT/(m*vf*vf); vf = max(abs(v), sqrt(1e-30*kT/m));"
-            f" c = {_COULOMB_STRENGTH}"
+            f" z = sqrt(3)*kT/(m*vf*vf); vf = {_V_FLOOR}; c = {_COULOMB_STRENGTH}"
         )
+        if self._stochastic:
+            # Both normal variates are drawn in adjacent computations: in OpenMM
+            # 8.6.1, a gaussian draw that follows a merged per-DOF computation
+            # without one, after an earlier gaussian draw, reads past the prepared
+            # random numbers. The squared norm is that of the state after the first
+            # kick, which the Coulomb flow conserves.
+            add("R1", "gaussian")
+            add(
+                "lam2",
+                "((sqrt(a*phi) + sqrt((1 - a)*kT)*R1)^2 + (1 - a)*kT*gaussian^2)/phi;"
+                f" phi = m*vf*vf + u*u/invQ2; u = v2 - {kick}; vf = {_V_FLOOR}",
+            )
+            time_term = "0.5*dt*E*sqrt(2*E)*(1 + lam2*sqrt(lam2))/c"
+            scale = "sqrt(lam2)*"
+        else:
+            time_term = "dt*E*sqrt(2*E)/c"
+            scale = ""
         add(
             "T1",
-            f"(2*step(q) - 1)*log(abs(q) + r) + q*r + {fraction}*dt*E*sqrt(2*E)/c;"
+            f"(2*step(q) - 1)*log(abs(q) + r) + q*r + {time_term};"
             f" r = sqrt(q*q + 1); E = 0.5*w*w + c/z; {state}",
         )
         guess = (
             "(2*step(T1) - 1)*min(0.5*T, 0.5*log(2*T + sqrt(4*T*T + 1))); T = abs(T1)"
         )
-
-        def halley(angle: str) -> str:
-            return (
-                f"{angle} - g*ch/(2*ch*ch*ch - g*sh); g = {angle} + sh*ch - T1;"
-                f" sh = 0.5*(e - 1/e); ch = 0.5*(e + 1/e); e = exp({angle})"
+        correction = (
+            "g*ch/(2*ch*ch*ch - g*sh); g = {angle} + sh*ch - T1;"
+            " sh = 0.5*(e - 1/e); ch = 0.5*(e + 1/e); e = exp({angle})"
+        )
+        n = self._halley_iterations
+        if n == 1:
+            add("th", f"t0 - {correction.format(angle='t0')}; t0 = {guess}")
+            add("eth", "exp(th)")
+        else:
+            add("th", f"t0 - {correction.format(angle='t0')}; t0 = {guess}")
+            for _ in range(n - 2):
+                add("th", f"th - {correction.format(angle='th')}")
+            add(
+                "eth",
+                f"e*(1 - d + d*d/2 - d*d*d/6); d = {correction.format(angle='th')}",
             )
-
-        add("th", f"{halley('t0')}; t0 = {guess}")
-        for _ in range(self._halley_iterations - 1):
-            add("th", halley("th"))
-        add("eth", "exp(th)")
-        add("v", f"v*sqrt(q*q + 1)*2*eth/(eth*eth + 1); {state}")
+        add("v", f"v*{scale}sqrt(q*q + 1)*2*eth/(eth*eth + 1); {state}")
         add(
             "v2",
-            self._masked(
-                "0.5*(eth - 1/eth)*max(abs(v), sqrt(1e-30*kT/m))*sqrt(m*invQ2)"
-                f" - {kick}"
-            ),
+            self._masked(f"0.5*(eth - 1/eth)*{_V_FLOOR}*sqrt(m*invQ2) - {kick}"),
         )
 
     def _add_v_scaling(self, fraction: float) -> None:
         self.addComputePerDof("v", f"v*exp(-{fraction}*dt*(v1 + kT*v2))")
 
-    def _add_thermostat(self, fraction: float) -> None:
-        self._add_v1_boost(0.5 * fraction)
-        self._add_v2_boost(0.5 * fraction)
-        if self._stochastic:
-            self._add_v_scaling(0.5 * fraction)
-            self.addComputePerDof("v1", self._masked("a*v1 + b1*gaussian"))
-            self.addComputePerDof("v2", self._masked("a*v2 + b2*gaussian"))
-            self._add_v_scaling(0.5 * fraction)
-        else:
-            self._add_v_scaling(fraction)
-        self._add_v2_boost(0.5 * fraction)
-        self._add_v1_boost(0.5 * fraction)
+    def _add_thermostat(self) -> None:
+        self._add_v1_boost(0.5)
+        self._add_v_scaling(0.5)
+        self._add_coulomb_step()
+        self._add_v_scaling(0.5)
+        self._add_v1_boost(0.5)
 
     def registerWithSystem(self, system: mm.System, isExtension: bool) -> None:
         if system.getNumConstraints() > 0:

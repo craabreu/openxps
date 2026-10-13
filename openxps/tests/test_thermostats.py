@@ -296,9 +296,12 @@ def test_ggmt_has_no_square_root_problem_at_large_steps():
     assert np.all(np.isfinite(state.getVelocities(asNumpy=True)._value))
 
 
-def test_ggmt_fourth_moment_at_one_tenth_of_tau():
+@pytest.mark.parametrize("stochastic", [False, True])
+def test_ggmt_fourth_moment_at_one_tenth_of_tau(stochastic):
     """<(m v^2)^2>/(kT)^2 = 3 within 5% at a step of tau/10."""
-    integrator = integrators.MassiveGGMTIntegrator(300 * KELVIN, 0.1 * PS, 10 * FS)
+    integrator = integrators.MassiveGGMTIntegrator(
+        300 * KELVIN, 0.1 * PS, 10 * FS, stochastic=stochastic
+    )
     integrator.setRandomNumberSeed(3)
     context, kt = _oscillator_context(integrator, 300)
     integrator.step(2000)
@@ -337,9 +340,9 @@ def _reference_ggmt_step(state, constants, dt, substeps=200):
         return np.sign(v) * np.sqrt(np.sqrt(3) * kt / z), (np.sqrt(3) / 2) * w / kt
 
     v1 += 0.5 * dt * (v * v - kt) * inv_q
-    v, v2 = zw_flow(v, v2, 0.5 * dt)
-    v *= np.exp(-dt * (v1 + kt * v2))
-    v, v2 = zw_flow(v, v2, 0.5 * dt)
+    v *= np.exp(-0.5 * dt * (v1 + kt * v2))
+    v, v2 = zw_flow(v, v2, dt)
+    v *= np.exp(-0.5 * dt * (v1 + kt * v2))
     v1 += 0.5 * dt * (v * v - kt) * inv_q
     return v, v1, v2
 
@@ -400,6 +403,34 @@ def test_ggmt_three_halley_iterations_reach_double_precision():
     assert v2_3 == pytest.approx(v2_8, rel=1e-12, abs=1e-14)
 
 
+def _ggmt_velocities_after(integrator, num_steps=50):
+    context, _ = _oscillator_context(integrator, 50)
+    integrator.step(num_steps)
+    return context.getState(getVelocities=True).getVelocities(asNumpy=True)._value
+
+
+def test_ggmt_stochastic_without_friction_matches_deterministic():
+    """With zero friction, the rescaling factor is one and the steps coincide."""
+    stochastic = integrators.MassiveGGMTIntegrator(
+        300 * KELVIN, 0.1 * PS, 10 * FS, stochastic=True
+    )
+    stochastic.setFrictionCoefficient(0.0)
+    deterministic = integrators.MassiveGGMTIntegrator(300 * KELVIN, 0.1 * PS, 10 * FS)
+    np.testing.assert_allclose(
+        _ggmt_velocities_after(stochastic),
+        _ggmt_velocities_after(deterministic),
+        rtol=1e-12,
+        atol=1e-14,
+    )
+
+
+def test_ggmt_single_halley_iteration_runs():
+    integrator = integrators.MassiveGGMTIntegrator(
+        300 * KELVIN, 0.1 * PS, 10 * FS, halleyIterations=1
+    )
+    assert np.all(np.isfinite(_ggmt_velocities_after(integrator)))
+
+
 def test_ggmt_deterministic_rejects_nonzero_friction():
     integrator = integrators.MassiveGGMTIntegrator(300 * KELVIN, 0.1 * PS, 1 * FS)
     integrator.setFrictionCoefficient(0.0)
@@ -422,6 +453,12 @@ def _ggmt_fast():
     return integrators.MassiveGGMTIntegrator(300 * KELVIN, 20 * FS, 1 * FS)
 
 
+def _ggmt_stochastic_fast():
+    return integrators.MassiveGGMTIntegrator(
+        300 * KELVIN, 20 * FS, 1 * FS, stochastic=True
+    )
+
+
 def _nhl_frictionless_fast():
     integrator = integrators.RegulatedNHLIntegrator(300 * KELVIN, 10 * FS, 1 * FS)
     integrator.setFrictionCoefficient(0.0)
@@ -430,7 +467,11 @@ def _nhl_frictionless_fast():
 
 @pytest.mark.parametrize(
     ("factory", "num_steps"),
-    [(_ggmt_fast, 250_000), (_nhl_frictionless_fast, 150_000)],
+    [
+        (_ggmt_fast, 250_000),
+        (_ggmt_stochastic_fast, 50_000),
+        (_nhl_frictionless_fast, 150_000),
+    ],
 )
 def test_extension_thermostat_ignores_inert_components(factory, num_steps):
     """y and z of extension particles stay inert instead of overflowing to NaN.
