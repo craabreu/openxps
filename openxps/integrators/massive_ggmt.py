@@ -28,10 +28,6 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     steady-state conditions, such as in d-AFED/TAMD :cite:`Maragliano2006,Abrams2008`
     or UFED :cite:`Chen2012` simulations.
 
-    This implementation optionally introduces stochasticity by rescaling each velocity
-    and its fourth-moment thermostat variable by a common random factor, in the manner
-    of the stochastic velocity rescaling of :cite:`Bussi2007` (see Notes).
-
     .. note::
         If stochasticity is enabled, the friction coefficient is initially set to the
         inverse of the time constant, but this value can be customized via
@@ -64,24 +60,13 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
 
     Notes
     -----
-    The cubic friction term of the GGMT equations has a finite-time singularity when
-    propagated in isolation, which appears as a negative argument under a square root
-    in Trotter-factorized integrators. This implementation propagates the cubic
-    friction together with the fourth-moment thermostat momentum, whose joint
-    dynamics is Hamiltonian in suitable variables, by splitting that Hamiltonian into
-    an exactly solvable repulsive Coulomb problem and a constant kick. The Coulomb
-    flow is obtained from a hyperbolic Kepler equation, solved by a fixed number of
-    Halley iterations started from an upper bound of its root, with the hyperbolic
-    functions computed from a single exponential. The exponential velocity scaling is
-    applied on both sides of the Coulomb sub-step, so that a single Kepler equation is
-    solved per step. The resulting step is free of the singularity for any step size.
-
-    In the stochastic version, the vector :math:`(p/\sqrt{m}, p_{\eta_2}/\sqrt{Q_2})`
-    is rescaled along its own direction, with its squared norm :math:`\phi` following
-    :math:`d\phi = \gamma(2kT - \phi)dt + 2\sqrt{\gamma kT \phi}\,dW`, where
-    :math:`\gamma` is the friction coefficient. This rescaling preserves the canonical
-    distribution and leaves the phase of the Coulomb orbit unchanged, so it is applied
-    exactly at the center of the step without a second Kepler equation.
+    Propagated alone, the cubic friction of the GGMT equations has a finite-time
+    singularity, which makes Trotter-factorized integrators fail at large step sizes.
+    Here it is propagated together with the fourth-moment thermostat variable, as an
+    exactly solvable Coulomb problem that requires one hyperbolic Kepler equation per
+    step. The stochastic version rescales each velocity and its fourth-moment
+    thermostat variable by a common random factor :cite:`Bussi2007` at the center of
+    the step, where the friction coefficient sets the rate of the rescaling.
 
     Example
     -------
@@ -98,7 +83,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ... )
     >>> integrator
     Per-dof variables:
-      v1, v2, active, T1, th, eth
+      v1, v2, active, meanAnomaly, angle, expAngle
     Global variables:
       kT = 2.494338...
       invQ = 40.090...
@@ -109,12 +94,12 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
        2: x <- x + 0.5*dt*v
        3: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
        4: v <- v*exp(-0.5*dt*(v1 + kT*v2))
-       5: T1 <- ...
-       6: th <- t0 - g*ch/(2*ch*ch*ch - g*sh); g = t0 + sh*ch - T1; ...
-       7: th <- th - g*ch/(2*ch*ch*ch - g*sh); g = th + sh*ch - T1; ...
-       8: eth <- e*(1 - d + d*d/2 - d*d*d/6); ...
-       9: v <- v*sqrt(q*q + 1)*2*eth/(eth*eth + 1); q = w*sqrt(z/(2*c)); ...
-      10: v2 <- active*(0.5*(eth - 1/eth)*max(abs(v), sqrt(1e-30*kT/m))*...
+       5: meanAnomaly <- (2*step(sinh0) - 1)*log(abs(sinh0) + cosh0) + ...
+       6: angle <- start - residual*coshA/(2*coshA^3 - residual*sinhA); ...
+       7: angle <- angle - residual*coshA/(2*coshA^3 - residual*sinhA); ...
+       8: expAngle <- expA*(1 - delta + delta^2/2 - delta^3/6); ...
+       9: v <- v*cosh0*2*expAngle/(expAngle^2 + 1); ...
+      10: v2 <- active*(0.5*(expAngle - 1/expAngle)*...
       11: v <- v*exp(-0.5*dt*(v1 + kT*v2))
       12: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
       13: x <- x + 0.5*dt*v
@@ -196,12 +181,12 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addPerDofVariable("v1", 0)
         self.addPerDofVariable("v2", 0)
         self._add_dof_mask()
-        for name in ("T1", "th", "eth"):
+        for name in ("meanAnomaly", "angle", "expAngle"):
             self.addPerDofVariable(name, 0)
         if self._stochastic:
             self.addGlobalVariable("a", 0)
-            self.addPerDofVariable("R1", 0)
-            self.addPerDofVariable("lam2", 1)
+            self.addPerDofVariable("normal", 0)
+            self.addPerDofVariable("scaleSq", 1)
         self._update_global_variables()
 
     def _update_global_variables(self) -> None:
@@ -227,76 +212,81 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         )
 
     def _add_coulomb_step(self) -> None:
-        """Propagate the (z, w) sub-dynamics over a full step (Coulomb splitting).
+        """Propagate the fourth-moment sub-dynamics over a full step.
 
-        The constant kick on ``v2`` is applied over half a step before and after the
-        exact flow of the repulsive Coulomb Hamiltonian ``w^2/2 + c/z``. With
-        ``q = sinh(th0) = w*sqrt(z/(2c))`` and ``th`` the final hyperbolic angle, the
-        flow satisfies ``z0/z = (q^2 + 1)/cosh(th)^2`` and ``w = sinh(th)*sqrt(2c/z)``,
-        so ``v`` and ``v2`` follow from ``th`` alone. The Kepler equation
-        ``th + sinh(2 th)/2 = T1`` is solved by Halley iterations started from the
-        smaller of its upper bounds ``T1/2`` and ``asinh(2 T1)/2``, with the hyperbolic
-        functions written in terms of a single exponential. With two or more
-        iterations, the last correction is applied to ``exp(th)`` by a cubic Taylor
-        factor, so that no further exponential is needed. The floor on ``|v|`` avoids
-        an indeterminate product at the fixed point ``v = 0``.
-
-        In the stochastic version, the rescaling at the center of the Coulomb flow
-        multiplies the orbit energy by ``lam2`` at a fixed ``th``, so the Kepler
-        equation gains the time term of the second half on the new orbit and ``v``
-        gains a factor ``sqrt(lam2)``.
+        A constant kick on ``v2`` over half a step precedes and follows the exact
+        Coulomb flow, whose final hyperbolic angle solves a Kepler equation by Halley
+        iterations. In the stochastic version, the rescaling at the center of the flow
+        only changes the orbit energy by ``scaleSq``, so it enters the same equation.
         """
         add = self.addComputePerDof
         kick = "0.5*dt*kT^2*invQ2"
-        state = (
-            f"q = w*sqrt(z/(2*c)); w = (2/sqrt(3))*kT*(v2 - {kick});"
-            f" z = sqrt(3)*kT/(m*vf*vf); vf = {_V_FLOOR}; c = {_COULOMB_STRENGTH}"
+        orbit = (
+            "sinh0 = wCoulomb*sqrt(zCoulomb/(2*strength));"
+            f" wCoulomb = (2/sqrt(3))*kT*(v2 - {kick});"
+            " zCoulomb = sqrt(3)*kT/(m*vFloor^2);"
+            f" vFloor = {_V_FLOOR}; strength = {_COULOMB_STRENGTH}"
         )
         if self._stochastic:
-            # Both normal variates are drawn in adjacent computations: in OpenMM
-            # 8.6.1, a gaussian draw that follows a merged per-DOF computation
-            # without one, after an earlier gaussian draw, reads past the prepared
-            # random numbers. The squared norm is that of the state after the first
-            # kick, which the Coulomb flow conserves.
-            add("R1", "gaussian")
+            # Both normal variates are drawn in adjacent computations to avoid an
+            # OpenMM 8.6.1 bug in merged per-DOF kernels.
+            add("normal", "gaussian")
             add(
-                "lam2",
-                "((sqrt(a*phi) + sqrt((1 - a)*kT)*R1)^2 + (1 - a)*kT*gaussian^2)/phi;"
-                f" phi = m*vf*vf + u*u/invQ2; u = v2 - {kick}; vf = {_V_FLOOR}",
+                "scaleSq",
+                "((sqrt(a*normSq) + sqrt((1 - a)*kT)*normal)^2"
+                " + (1 - a)*kT*gaussian^2)/normSq;"
+                " normSq = m*vFloor^2 + v2Kicked^2/invQ2;"
+                f" v2Kicked = v2 - {kick}; vFloor = {_V_FLOOR}",
             )
-            time_term = "0.5*dt*E*sqrt(2*E)*(1 + lam2*sqrt(lam2))/c"
-            scale = "sqrt(lam2)*"
+            time_term = (
+                "0.5*dt*energy*sqrt(2*energy)*(1 + scaleSq*sqrt(scaleSq))/strength"
+            )
+            scale = "sqrt(scaleSq)*"
         else:
-            time_term = "dt*E*sqrt(2*E)/c"
+            time_term = "dt*energy*sqrt(2*energy)/strength"
             scale = ""
         add(
-            "T1",
-            f"(2*step(q) - 1)*log(abs(q) + r) + q*r + {time_term};"
-            f" r = sqrt(q*q + 1); E = 0.5*w*w + c/z; {state}",
+            "meanAnomaly",
+            f"(2*step(sinh0) - 1)*log(abs(sinh0) + cosh0) + sinh0*cosh0 + {time_term};"
+            " cosh0 = sqrt(sinh0^2 + 1);"
+            f" energy = 0.5*wCoulomb^2 + strength/zCoulomb; {orbit}",
         )
         guess = (
-            "(2*step(T1) - 1)*min(0.5*T, 0.5*log(2*T + sqrt(4*T*T + 1))); T = abs(T1)"
+            "(2*step(meanAnomaly) - 1)"
+            "*min(0.5*target, 0.5*log(2*target + sqrt(4*target^2 + 1)));"
+            " target = abs(meanAnomaly)"
         )
-        correction = (
-            "g*ch/(2*ch*ch*ch - g*sh); g = {angle} + sh*ch - T1;"
-            " sh = 0.5*(e - 1/e); ch = 0.5*(e + 1/e); e = exp({angle})"
-        )
-        n = self._halley_iterations
-        if n == 1:
-            add("th", f"t0 - {correction.format(angle='t0')}; t0 = {guess}")
-            add("eth", "exp(th)")
-        else:
-            add("th", f"t0 - {correction.format(angle='t0')}; t0 = {guess}")
-            for _ in range(n - 2):
-                add("th", f"th - {correction.format(angle='th')}")
-            add(
-                "eth",
-                f"e*(1 - d + d*d/2 - d*d*d/6); d = {correction.format(angle='th')}",
+
+        def correction(angle: str) -> str:
+            return (
+                "residual*coshA/(2*coshA^3 - residual*sinhA);"
+                f" residual = {angle} + sinhA*coshA - meanAnomaly;"
+                " sinhA = 0.5*(expA - 1/expA); coshA = 0.5*(expA + 1/expA);"
+                f" expA = exp({angle})"
             )
-        add("v", f"v*{scale}sqrt(q*q + 1)*2*eth/(eth*eth + 1); {state}")
+
+        add("angle", f"start - {correction('start')}; start = {guess}")
+        if self._halley_iterations == 1:
+            add("expAngle", "exp(angle)")
+        else:
+            for _ in range(self._halley_iterations - 2):
+                add("angle", f"angle - {correction('angle')}")
+            # The last correction is applied to exp(angle) by a Taylor factor.
+            add(
+                "expAngle",
+                "expA*(1 - delta + delta^2/2 - delta^3/6);"
+                f" delta = {correction('angle')}",
+            )
+        add(
+            "v",
+            f"v*{scale}cosh0*2*expAngle/(expAngle^2 + 1);"
+            f" cosh0 = sqrt(sinh0^2 + 1); {orbit}",
+        )
         add(
             "v2",
-            self._masked(f"0.5*(eth - 1/eth)*{_V_FLOOR}*sqrt(m*invQ2) - {kick}"),
+            self._masked(
+                f"0.5*(expAngle - 1/expAngle)*{_V_FLOOR}*sqrt(m*invQ2) - {kick}"
+            ),
         )
 
     def _add_v_scaling(self, fraction: float) -> None:
