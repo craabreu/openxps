@@ -52,6 +52,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">openxps.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
 
 <span class="n">_COULOMB_STRENGTH</span> <span class="o">=</span> <span class="s2">"(2/sqrt(3))*kT^3*invQ2"</span>
+<span class="n">_V_FLOOR</span> <span class="o">=</span> <span class="s2">"max(abs(v), sqrt(1e-30*kT/m))"</span>
 
 
 <div class="viewcode-block" id="MassiveGGMTIntegrator">
@@ -65,10 +66,6 @@
 <span class="sd">    The massive GGMT integrator is effective at maintaining temperature control under</span>
 <span class="sd">    steady-state conditions, such as in d-AFED/TAMD :cite:`Maragliano2006,Abrams2008`</span>
 <span class="sd">    or UFED :cite:`Chen2012` simulations.</span>
-
-<span class="sd">    This implementation optionally introduces stochasticity by applying Langevin-type</span>
-<span class="sd">    noise to the variables controlling the second- and fourth-moment of the velocity</span>
-<span class="sd">    distribution.</span>
 
 <span class="sd">    .. note::</span>
 <span class="sd">        If stochasticity is enabled, the friction coefficient is initially set to the</span>
@@ -91,24 +88,24 @@
 <span class="sd">    Keyword Arguments</span>
 <span class="sd">    -----------------</span>
 <span class="sd">    stochastic</span>
-<span class="sd">        If True, the integrator will apply stochasticity to the variables controlling</span>
-<span class="sd">        the second- and fourth-moment of the velocity distribution.</span>
+<span class="sd">        If True, the integrator will apply a stochastic rescaling to each velocity and</span>
+<span class="sd">        its fourth-moment thermostat variable at the center of the step.</span>
 <span class="sd">    forceFirst</span>
 <span class="sd">        If True, the integrator will apply a force-first scheme. Otherwise, it will</span>
 <span class="sd">        apply a symmetric operator splitting scheme.</span>
-<span class="sd">    newtonIterations</span>
-<span class="sd">        The number of Newton iterations used to solve the time equation of the</span>
-<span class="sd">        Coulomb sub-step (see Notes). The default suffices for double precision.</span>
+<span class="sd">    halleyIterations</span>
+<span class="sd">        The number of Halley iterations used to solve the hyperbolic Kepler equation</span>
+<span class="sd">        of the Coulomb sub-step (see Notes). The default reaches double precision.</span>
 
 <span class="sd">    Notes</span>
 <span class="sd">    -----</span>
-<span class="sd">    The cubic friction term of the GGMT equations has a finite-time singularity when</span>
-<span class="sd">    propagated in isolation, which appears as a negative argument under a square root</span>
-<span class="sd">    in Trotter-factorized integrators. This implementation propagates the cubic</span>
-<span class="sd">    friction together with the fourth-moment thermostat momentum, whose joint</span>
-<span class="sd">    dynamics is Hamiltonian in suitable variables, by splitting that Hamiltonian into</span>
-<span class="sd">    an exactly solvable repulsive Coulomb problem and a constant kick. The resulting</span>
-<span class="sd">    step is free of the singularity for any step size.</span>
+<span class="sd">    Propagated alone, the cubic friction of the GGMT equations has a finite-time</span>
+<span class="sd">    singularity, which makes Trotter-factorized integrators fail at large step sizes.</span>
+<span class="sd">    Here it is propagated together with the fourth-moment thermostat variable, as an</span>
+<span class="sd">    exactly solvable Coulomb problem that requires one hyperbolic Kepler equation per</span>
+<span class="sd">    step. The stochastic version rescales each velocity and its fourth-moment</span>
+<span class="sd">    thermostat variable by a common random factor :cite:`Bussi2007` at the center of</span>
+<span class="sd">    the step, where the friction coefficient sets the rate of the rescaling.</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -125,7 +122,7 @@
 <span class="sd">    ... )</span>
 <span class="sd">    &gt;&gt;&gt; integrator</span>
 <span class="sd">    Per-dof variables:</span>
-<span class="sd">      v1, v2, active, z, w, E, s, zmin, th, T1</span>
+<span class="sd">      v1, v2, active, meanAnomaly, angle, expAngle</span>
 <span class="sd">    Global variables:</span>
 <span class="sd">      kT = 2.494338...</span>
 <span class="sd">      invQ = 40.090...</span>
@@ -135,14 +132,17 @@
 <span class="sd">       1: v &lt;- v + 0.5*dt*f/m</span>
 <span class="sd">       2: x &lt;- x + 0.5*dt*v</span>
 <span class="sd">       3: v1 &lt;- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)</span>
-<span class="sd">       4: v2 &lt;- active*(v2 - 0.25*dt*kT^2*invQ2)</span>
-<span class="sd">       5: z &lt;- sqrt(3)*kT/max(m*v*v, 1e-30*kT)</span>
-<span class="sd">    ...</span>
-<span class="sd">      23: v &lt;- v*exp(-1*dt*(v1 + kT*v2))</span>
-<span class="sd">    ...</span>
-<span class="sd">      43: v1 &lt;- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)</span>
-<span class="sd">      44: x &lt;- x + 0.5*dt*v</span>
-<span class="sd">      45: v &lt;- v + 0.5*dt*f/m</span>
+<span class="sd">       4: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))</span>
+<span class="sd">       5: meanAnomaly &lt;- (2*step(sinh0) - 1)*log(abs(sinh0) + cosh0) + ...</span>
+<span class="sd">       6: angle &lt;- start - residual*coshA/(2*coshA^3 - residual*sinhA); ...</span>
+<span class="sd">       7: angle &lt;- angle - residual*coshA/(2*coshA^3 - residual*sinhA); ...</span>
+<span class="sd">       8: expAngle &lt;- expA*(1 - delta + delta^2/2 - delta^3/6); ...</span>
+<span class="sd">       9: v &lt;- v*cosh0*2*expAngle/(expAngle^2 + 1); ...</span>
+<span class="sd">      10: v2 &lt;- active*(0.5*(expAngle - 1/expAngle)*...</span>
+<span class="sd">      11: v &lt;- v*exp(-0.5*dt*(v1 + kT*v2))</span>
+<span class="sd">      12: v1 &lt;- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)</span>
+<span class="sd">      13: x &lt;- x + 0.5*dt*v</span>
+<span class="sd">      14: v &lt;- v + 0.5*dt*f/m</span>
 
 <span class="sd">    Force-first scheme</span>
 
@@ -169,13 +169,13 @@
         <span class="o">*</span><span class="p">,</span>
         <span class="n">stochastic</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">forceFirst</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">newtonIterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">halleyIterations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">3</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">newtonIterations</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The number of Newton iterations must be at least 1."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">halleyIterations</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The number of Halley iterations must be at least 1."</span><span class="p">)</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">stepSize</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_forceFirst</span> <span class="o">=</span> <span class="n">forceFirst</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_newton_iterations</span> <span class="o">=</span> <span class="n">newtonIterations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_halley_iterations</span> <span class="o">=</span> <span class="n">halleyIterations</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_init_temperature</span><span class="p">(</span><span class="n">temperature</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_init_time_constant</span><span class="p">(</span><span class="n">timeConstant</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_init_friction_coefficient</span><span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="n">timeConstant</span> <span class="k">if</span> <span class="n">stochastic</span> <span class="k">else</span> <span class="mf">0.0</span><span class="p">)</span>
@@ -184,7 +184,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addUpdateContextState</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="mi">1</span> <span class="k">if</span> <span class="n">forceFirst</span> <span class="k">else</span> <span class="mf">0.5</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_thermostat</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_thermostat</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_translation</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">forceFirst</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_add_boost</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
@@ -223,12 +223,12 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_add_dof_mask</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"z"</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">,</span> <span class="s2">"E"</span><span class="p">,</span> <span class="s2">"s"</span><span class="p">,</span> <span class="s2">"zmin"</span><span class="p">,</span> <span class="s2">"th"</span><span class="p">,</span> <span class="s2">"T1"</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"meanAnomaly"</span><span class="p">,</span> <span class="s2">"angle"</span><span class="p">,</span> <span class="s2">"expAngle"</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stochastic</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"b1"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addGlobalVariable</span><span class="p">(</span><span class="s2">"b2"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"normal"</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">addPerDofVariable</span><span class="p">(</span><span class="s2">"scaleSq"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_update_global_variables</span><span class="p">()</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_update_global_variables</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -240,12 +240,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stochastic</span><span class="p">:</span>
             <span class="n">friction</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getFrictionCoefficient</span><span class="p">()</span>
             <span class="n">dt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getStepSize</span><span class="p">()</span>
-            <span class="n">a</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">friction</span> <span class="o">*</span> <span class="n">dt</span><span class="p">)</span>
-            <span class="n">b1</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">a</span><span class="o">**</span><span class="mi">2</span><span class="p">)</span> <span class="o">/</span> <span class="n">tau</span>
-            <span class="n">b2</span> <span class="o">=</span> <span class="n">b1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">3</span> <span class="o">/</span> <span class="mi">8</span><span class="p">)</span> <span class="o">/</span> <span class="n">kt</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">"b1"</span><span class="p">,</span> <span class="n">b1</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">"b2"</span><span class="p">,</span> <span class="n">b2</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">setGlobalVariableByName</span><span class="p">(</span><span class="s2">"a"</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">friction</span> <span class="o">*</span> <span class="n">dt</span><span class="p">))</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_translation</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"x"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"x + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*v"</span><span class="p">)</span>
@@ -258,48 +253,93 @@
             <span class="s2">"v1"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="sa">f</span><span class="s2">"v1 + </span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(m*v^2 - kT)*invQ"</span><span class="p">)</span>
         <span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_add_v2_boost</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">c</span> <span class="o">=</span> <span class="n">_COULOMB_STRENGTH</span>
-        <span class="n">constant_kick</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="sa">f</span><span class="s2">"v2 - </span><span class="si">{</span><span class="n">fraction</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">2</span><span class="si">}</span><span class="s2">*dt*kT^2*invQ2"</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_coulomb_step</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Propagate the fourth-moment sub-dynamics over a full step.</span>
+
+<span class="sd">        A constant kick on ``v2`` over half a step precedes and follows the exact</span>
+<span class="sd">        Coulomb flow, whose final hyperbolic angle solves a Kepler equation by Halley</span>
+<span class="sd">        iterations. In the stochastic version, the rescaling at the center of the flow</span>
+<span class="sd">        only changes the orbit energy by ``scaleSq``, so it enters the same equation.</span>
+<span class="sd">        """</span>
         <span class="n">add</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="n">constant_kick</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"z"</span><span class="p">,</span> <span class="s2">"sqrt(3)*kT/max(m*v*v, 1e-30*kT)"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"w"</span><span class="p">,</span> <span class="s2">"(2/sqrt(3))*kT*v2"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"E"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"0.5*w*w + c/z; c=</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"zmin"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"c/E; c=</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"s"</span><span class="p">,</span> <span class="s2">"sqrt(2*E)"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span>
-            <span class="s2">"th"</span><span class="p">,</span>
-            <span class="sa">f</span><span class="s2">"(2*step(q) - 1)*log(abs(q) + sqrt(q*q + 1)); q=w*sqrt(z/(2*c)); c=</span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="n">kick</span> <span class="o">=</span> <span class="s2">"0.5*dt*kT^2*invQ2"</span>
+        <span class="n">orbit</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">"sinh0 = wCoulomb*sqrt(zCoulomb/(2*strength));"</span>
+            <span class="sa">f</span><span class="s2">" wCoulomb = (2/sqrt(3))*kT*(v2 - </span><span class="si">{</span><span class="n">kick</span><span class="si">}</span><span class="s2">);"</span>
+            <span class="s2">" zCoulomb = sqrt(3)*kT/(m*vFloor^2);"</span>
+            <span class="sa">f</span><span class="s2">" vFloor = </span><span class="si">{</span><span class="n">_V_FLOOR</span><span class="si">}</span><span class="s2">; strength = </span><span class="si">{</span><span class="n">_COULOMB_STRENGTH</span><span class="si">}</span><span class="s2">"</span>
         <span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"T1"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"th + 0.5*sinh(2*th) + s*</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt/zmin"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stochastic</span><span class="p">:</span>
+            <span class="c1"># Both normal variates are drawn in adjacent computations to avoid an</span>
+            <span class="c1"># OpenMM 8.6.1 bug in merged per-DOF kernels.</span>
+            <span class="n">add</span><span class="p">(</span><span class="s2">"normal"</span><span class="p">,</span> <span class="s2">"gaussian"</span><span class="p">)</span>
+            <span class="n">add</span><span class="p">(</span>
+                <span class="s2">"scaleSq"</span><span class="p">,</span>
+                <span class="s2">"((sqrt(a*normSq) + sqrt((1 - a)*kT)*normal)^2"</span>
+                <span class="s2">" + (1 - a)*kT*gaussian^2)/normSq;"</span>
+                <span class="s2">" normSq = m*vFloor^2 + v2Kicked^2/invQ2;"</span>
+                <span class="sa">f</span><span class="s2">" v2Kicked = v2 - </span><span class="si">{</span><span class="n">kick</span><span class="si">}</span><span class="s2">; vFloor = </span><span class="si">{</span><span class="n">_V_FLOOR</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">time_term</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"0.5*dt*energy*sqrt(2*energy)*(1 + scaleSq*sqrt(scaleSq))/strength"</span>
+            <span class="p">)</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="s2">"sqrt(scaleSq)*"</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">time_term</span> <span class="o">=</span> <span class="s2">"dt*energy*sqrt(2*energy)/strength"</span>
+            <span class="n">scale</span> <span class="o">=</span> <span class="s2">""</span>
         <span class="n">add</span><span class="p">(</span>
-            <span class="s2">"th"</span><span class="p">,</span>
-            <span class="s2">"0.5*select(step(q - 1e6), log(2*q), log(q + sqrt(q*q + 1))); q=2*abs(T1)"</span><span class="p">,</span>
+            <span class="s2">"meanAnomaly"</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"(2*step(sinh0) - 1)*log(abs(sinh0) + cosh0) + sinh0*cosh0 + </span><span class="si">{</span><span class="n">time_term</span><span class="si">}</span><span class="s2">;"</span>
+            <span class="s2">" cosh0 = sqrt(sinh0^2 + 1);"</span>
+            <span class="sa">f</span><span class="s2">" energy = 0.5*wCoulomb^2 + strength/zCoulomb; </span><span class="si">{</span><span class="n">orbit</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_newton_iterations</span><span class="p">):</span>
-            <span class="n">add</span><span class="p">(</span><span class="s2">"th"</span><span class="p">,</span> <span class="s2">"th - (th + 0.5*sinh(2*th) - abs(T1))/(1 + cosh(2*th))"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"th"</span><span class="p">,</span> <span class="s2">"(2*step(T1) - 1)*th"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"v"</span><span class="p">,</span> <span class="s2">"v*sqrt(z/znew); znew=zmin*cosh(th)^2"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"w"</span><span class="p">,</span> <span class="s2">"s*tanh(th)"</span><span class="p">)</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="s2">"(sqrt(3)/2)*w/kT"</span><span class="p">))</span>
-        <span class="n">add</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="n">constant_kick</span><span class="p">)</span>
+        <span class="n">guess</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="s2">"(2*step(meanAnomaly) - 1)"</span>
+            <span class="s2">"*min(0.5*target, 0.5*log(2*target + sqrt(4*target^2 + 1)));"</span>
+            <span class="s2">" target = abs(meanAnomaly)"</span>
+        <span class="p">)</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">correction</span><span class="p">(</span><span class="n">angle</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">(</span>
+                <span class="s2">"residual*coshA/(2*coshA^3 - residual*sinhA);"</span>
+                <span class="sa">f</span><span class="s2">" residual = </span><span class="si">{</span><span class="n">angle</span><span class="si">}</span><span class="s2"> + sinhA*coshA - meanAnomaly;"</span>
+                <span class="s2">" sinhA = 0.5*(expA - 1/expA); coshA = 0.5*(expA + 1/expA);"</span>
+                <span class="sa">f</span><span class="s2">" expA = exp(</span><span class="si">{</span><span class="n">angle</span><span class="si">}</span><span class="s2">)"</span>
+            <span class="p">)</span>
+
+        <span class="n">add</span><span class="p">(</span><span class="s2">"angle"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"start - </span><span class="si">{</span><span class="n">correction</span><span class="p">(</span><span class="s1">'start'</span><span class="p">)</span><span class="si">}</span><span class="s2">; start = </span><span class="si">{</span><span class="n">guess</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_halley_iterations</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">add</span><span class="p">(</span><span class="s2">"expAngle"</span><span class="p">,</span> <span class="s2">"exp(angle)"</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_halley_iterations</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
+                <span class="n">add</span><span class="p">(</span><span class="s2">"angle"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"angle - </span><span class="si">{</span><span class="n">correction</span><span class="p">(</span><span class="s1">'angle'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="c1"># The last correction is applied to exp(angle) by a Taylor factor.</span>
+            <span class="n">add</span><span class="p">(</span>
+                <span class="s2">"expAngle"</span><span class="p">,</span>
+                <span class="s2">"expA*(1 - delta + delta^2/2 - delta^3/6);"</span>
+                <span class="sa">f</span><span class="s2">" delta = </span><span class="si">{</span><span class="n">correction</span><span class="p">(</span><span class="s1">'angle'</span><span class="p">)</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">add</span><span class="p">(</span>
+            <span class="s2">"v"</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">"v*</span><span class="si">{</span><span class="n">scale</span><span class="si">}</span><span class="s2">cosh0*2*expAngle/(expAngle^2 + 1);"</span>
+            <span class="sa">f</span><span class="s2">" cosh0 = sqrt(sinh0^2 + 1); </span><span class="si">{</span><span class="n">orbit</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">add</span><span class="p">(</span>
+            <span class="s2">"v2"</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"0.5*(expAngle - 1/expAngle)*</span><span class="si">{</span><span class="n">_V_FLOOR</span><span class="si">}</span><span class="s2">*sqrt(m*invQ2) - </span><span class="si">{</span><span class="n">kick</span><span class="si">}</span><span class="s2">"</span>
+            <span class="p">),</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_add_v_scaling</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v"</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"v*exp(-</span><span class="si">{</span><span class="n">fraction</span><span class="si">}</span><span class="s2">*dt*(v1 + kT*v2))"</span><span class="p">)</span>
 
-    <span class="k">def</span><span class="w"> </span><span class="nf">_add_thermostat</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fraction</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v1_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v2_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
-        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_stochastic</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v1"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="s2">"a*v1 + b1*gaussian"</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">addComputePerDof</span><span class="p">(</span><span class="s2">"v2"</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masked</span><span class="p">(</span><span class="s2">"a*v2 + b2*gaussian"</span><span class="p">))</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="n">fraction</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v2_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v1_boost</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">fraction</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_thermostat</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v1_boost</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_coulomb_step</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v_scaling</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_add_v1_boost</span><span class="p">(</span><span class="mf">0.5</span><span class="p">)</span>
 
 <div class="viewcode-block" id="MassiveGGMTIntegrator.registerWithSystem">
 <a class="viewcode-back" href="../../../api/MassiveGGMTIntegrator.html#openxps.integrators.MassiveGGMTIntegrator.registerWithSystem">[docs]</a>
