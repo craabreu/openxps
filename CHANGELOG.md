@@ -34,6 +34,8 @@
   contexts after changes made outside the context's own methods.
 - The `state` argument of `ExtendedSpaceSimulation` accepts a file name.
 - `InnerProductCoupling.getForceGroups()` returns the force groups of its forces.
+- `ExtendedSpaceMetadynamics` accepts dynamical variables with `NoBounds`, whose
+  bias grid spans their typical range, and warns when one leaves that range.
 
 ### Fixed
 - `pandas` and `typing-extensions` are now declared as runtime dependencies.
@@ -44,6 +46,11 @@
   radians (e.g. degrees) with the correct period; previously such couplings produced
   wrong energies across the periodic seam.
 - `HarmonicCoupling` accepts non-periodic collective/dynamical variable pairs.
+- `ExtendedSpaceMetadynamics` mirrors its kernels across reflective walls. Truncated
+  Gaussians halved the bias deposited at a wall, which biased free energies within
+  a few `sigma` of it, by up to `biasFactor*kT*ln(2)`, and left the bias with a
+  nonzero slope there. Periodic variables use a von Mises kernel, which is smooth
+  across the seam and close to a Gaussian for widths small relative to the period.
 - `DynamicalVariable` is hashable.
 - Bounds accept NumPy scalars, reject booleans and non-finite values, and are stored as
   floats.
