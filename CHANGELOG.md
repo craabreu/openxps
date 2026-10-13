@@ -34,8 +34,6 @@
   contexts after changes made outside the context's own methods.
 - The `state` argument of `ExtendedSpaceSimulation` accepts a file name.
 - `InnerProductCoupling.getForceGroups()` returns the force groups of its forces.
-- `ExtendedSpaceMetadynamics` accepts dynamical variables with `NoBounds`, whose
-  bias grid spans their typical range, and warns when one leaves that range.
 
 ### Fixed
 - `pandas` and `typing-extensions` are now declared as runtime dependencies.

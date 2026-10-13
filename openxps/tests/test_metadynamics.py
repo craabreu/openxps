@@ -88,25 +88,13 @@ def test_metadynamics_rejects_unknown_dvs():
         _metadynamics(system, xps.ExtendedSpaceBiasVariable(other, 18 * unit.degree))
 
 
-def test_metadynamics_with_unbounded_dv_warns_outside_grid():
+def test_metadynamics_rejects_unbounded_dvs():
     free = xps.DynamicalVariable(
         "x0", unit.nanometer, 1 * unit.dalton, xps.NoBounds(0, 1, unit.nanometer)
     )
     _, system = _system_with(free, cvpack.Distance(0, 1, name="d"))
-    meta = _metadynamics(
-        system, xps.ExtendedSpaceBiasVariable(free, 0.1 * unit.nanometer)
-    )
-    context = openmm.Context(
-        system.getExtensionSystem(),
-        openmm.VerletIntegrator(0.001),
-        openmm.Platform.getPlatformByName("Reference"),
-    )
-    meta._addGaussian([0.5], 1 * unit.kilojoule_per_mole, context)
-    with pytest.warns(UserWarning, match="left the bias grid"):
-        meta._addGaussian([1.2], 1 * unit.kilojoule_per_mole, context)
-    grid = np.linspace(0, 1, meta.variables[0].gridWidth)
-    expected = sum(np.exp(-0.5 * ((grid - c) / 0.1) ** 2) for c in (0.5, 1.2))
-    np.testing.assert_allclose(meta._totalBias, expected)
+    with pytest.raises(ValueError, match="has no bounds.*Use ReflectiveBounds"):
+        _metadynamics(system, xps.ExtendedSpaceBiasVariable(free, 0.1 * unit.nanometer))
 
 
 def test_metadynamics_step_and_collective_variables():
@@ -205,7 +193,7 @@ def test_kernels_match_gaussian_for_small_widths():
     """With sigma a hundredth of the period, kernels agree to 0.1% of their peak."""
     grid = np.linspace(0, 10, 1001)
     gaussian = np.exp(-0.5 * ((grid - 5) / 0.1) ** 2)
-    for kind in ("periodic", "reflective", "none"):
+    for kind in ("periodic", "reflective"):
         kernel = _axis_kernel(grid, 5.0, 0.1, kind, 0.0, 10.0)
         np.testing.assert_allclose(kernel, gaussian, atol=1e-3)
 

@@ -8,7 +8,6 @@
 """
 
 import typing as t
-import warnings
 from dataclasses import dataclass, field
 from functools import reduce
 
@@ -17,7 +16,7 @@ from cvpack.serialization import Serializable
 from openmm import app as mmapp
 from openmm import unit as mmunit
 
-from .bounds import NoBounds, PeriodicBounds, ReflectiveBounds
+from .bounds import NoBounds, PeriodicBounds
 from .dynamical_variable import DynamicalVariable
 from .system import ExtendedSpaceSystem
 from .utils import preprocess_args
@@ -47,16 +46,14 @@ def _axis_kernel(
     all mirror images of a Gaussian across both walls, which are images of period
     ``2*(upper - lower)`` centered at ``center`` and ``2*lower - center``. Two von
     Mises kernels of that period therefore account for every image, and the kernel
-    has zero slope at both walls. Unbounded variables get a plain Gaussian.
+    has zero slope at both walls.
     """
     if bounds == PeriodicBounds.kind:
         return _von_mises(grid - center, sigma, upper - lower)
-    if bounds == ReflectiveBounds.kind:
-        period = 2 * (upper - lower)
-        return _von_mises(grid - center, sigma, period) + _von_mises(
-            grid + center - 2 * lower, sigma, period
-        )
-    return np.exp(-0.5 * ((grid - center) / sigma) ** 2)
+    period = 2 * (upper - lower)
+    return _von_mises(grid - center, sigma, period) + _von_mises(
+        grid + center - 2 * lower, sigma, period
+    )
 
 
 class _SimulationWrapper:
@@ -75,17 +72,17 @@ class ExtendedSpaceBiasVariable(Serializable):
     """
     A dynamical variable augmented with a bias kernel.
 
-    The kernel shape depends on the bounds of the dynamical variable. It is a
-    Gaussian for :class:`NoBounds`, a von Mises kernel for :class:`PeriodicBounds`,
-    and a Gaussian mirrored across both walls for :class:`ReflectiveBounds`.
+    The kernel shape depends on the bounds of the dynamical variable. It is a von
+    Mises kernel for :class:`PeriodicBounds` and a Gaussian mirrored across both
+    walls for :class:`ReflectiveBounds`.
 
     Parameters
     ----------
     dynamical_variable
         The dynamical variable to be augmented.
     sigma
-        The bandwidth of the bias kernel, which is the standard deviation of a
-        Gaussian kernel and approximately so for the others.
+        The bandwidth of the bias kernel, which approximates the standard deviation
+        of a Gaussian when it is small relative to the bounds.
     grid_width
         The width of the grid for the bias kernel. If ``None``, the grid width is
         automatically determined based on the dynamical variable's bounds and the
@@ -164,12 +161,11 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         by other processes should be loaded.
 
     .. note::
-        The bias is stored on a grid spanning the bounds of each dynamical variable.
-        For a variable with :class:`NoBounds`, these are typical values rather than
-        limits, and the bias and its force are zero outside them. The coupling must
-        keep such a variable within its bounds, beyond a few times ``sigma`` from
-        either end, or the bias stops acting on it. A warning is issued the first
-        time a kernel is deposited outside the grid.
+        The bias is stored on a grid spanning the bounds of each dynamical variable,
+        so variables with :class:`NoBounds` are rejected. Use
+        :class:`ReflectiveBounds` over the range the variable may explore instead.
+        If the variable never reaches the walls, the reflections never act, and if
+        it does, the coupling turns them into soft walls on the physical system.
 
     .. note::
         The bias force is added to the extension system of ``system`` when this
@@ -240,6 +236,12 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
             dv = variable.dynamical_variable.in_md_units()
             if dv not in system_dvs:
                 raise ValueError(f"Dynamical variable {dv.name} not found in system")
+            if isinstance(dv.bounds, NoBounds):
+                raise ValueError(
+                    f"Dynamical variable {dv.name} has no bounds, but metadynamics "
+                    "needs a finite grid. Use ReflectiveBounds over the range the "
+                    "variable may explore."
+                )
             index = system_dvs.index(dv)
             bias_variables.append(
                 mmapp.BiasVariable(
@@ -264,7 +266,6 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         self._bounds_kinds = [
             variable.dynamical_variable.bounds.kind for variable in variables
         ]
-        self._warned_outside_grid = False
 
     def step(self, simulation, steps):
         super().step(_SimulationWrapper(simulation), steps)
@@ -279,8 +280,6 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         axis_kernels = []
         for value, variable, kind in zip(position, self.variables, self._bounds_kinds):
             lower, upper = variable.minValue, variable.maxValue
-            if kind == NoBounds.kind and not lower <= value <= upper:
-                self._warnOutsideGrid()
             grid = np.linspace(lower, upper, variable.gridWidth)
             kernel = _axis_kernel(grid, value, variable.biasWidth, kind, lower, upper)
             if kind == PeriodicBounds.kind:
@@ -297,12 +296,3 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
                 *self._widths, self._totalBias.flatten(), *self._limits
             )
         self._force.updateParametersInContext(context)
-
-    def _warnOutsideGrid(self):
-        if not self._warned_outside_grid:
-            warnings.warn(
-                "An unbounded dynamical variable left the bias grid, where the bias "
-                "and its force are zero. Widen its NoBounds range.",
-                stacklevel=4,
-            )
-            self._warned_outside_grid = True
