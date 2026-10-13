@@ -29,7 +29,9 @@
   components of extension particles rest at the origin with zero velocity.
 
 ### Added
-- `MassiveGGMTIntegrator` accepts `newtonIterations`.
+- `MassiveGGMTIntegrator` accepts `halleyIterations`, the number of Halley iterations
+  used to solve the hyperbolic Kepler equation of the Coulomb sub-step; three reach
+  double precision.
 - `ExtendedSpaceContext.synchronize()` re-synchronizes the physical and extension
   contexts after changes made outside the context's own methods.
 - The `state` argument of `ExtendedSpaceSimulation` accepts a file name.

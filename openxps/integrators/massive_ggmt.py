@@ -57,9 +57,9 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     forceFirst
         If True, the integrator will apply a force-first scheme. Otherwise, it will
         apply a symmetric operator splitting scheme.
-    newtonIterations
-        The number of Newton iterations used to solve the time equation of the
-        Coulomb sub-step (see Notes). The default suffices for double precision.
+    halleyIterations
+        The number of Halley iterations used to solve the hyperbolic Kepler equation
+        of the Coulomb sub-step (see Notes). The default reaches double precision.
 
     Notes
     -----
@@ -68,8 +68,11 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     in Trotter-factorized integrators. This implementation propagates the cubic
     friction together with the fourth-moment thermostat momentum, whose joint
     dynamics is Hamiltonian in suitable variables, by splitting that Hamiltonian into
-    an exactly solvable repulsive Coulomb problem and a constant kick. The resulting
-    step is free of the singularity for any step size.
+    an exactly solvable repulsive Coulomb problem and a constant kick. The Coulomb
+    flow is obtained from a hyperbolic Kepler equation, solved by a fixed number of
+    Halley iterations started from an upper bound of its root, with the hyperbolic
+    functions computed from a single exponential. The resulting step is free of the
+    singularity for any step size.
 
     Example
     -------
@@ -86,7 +89,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ... )
     >>> integrator
     Per-dof variables:
-      v1, v2, active, z, w, E, s, zmin, th, T1
+      v1, v2, active, T1, th, eth
     Global variables:
       kT = 2.494338...
       invQ = 40.090...
@@ -96,14 +99,18 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
        1: v <- v + 0.5*dt*f/m
        2: x <- x + 0.5*dt*v
        3: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
-       4: v2 <- active*(v2 - 0.25*dt*kT^2*invQ2)
-       5: z <- sqrt(3)*kT/max(m*v*v, 1e-30*kT)
+       4: T1 <- ...
+       5: th <- t0 - g*ch/(2*ch*ch*ch - g*sh); g = t0 + sh*ch - T1; ...
+       6: th <- th - g*ch/(2*ch*ch*ch - g*sh); g = th + sh*ch - T1; ...
+       7: th <- th - g*ch/(2*ch*ch*ch - g*sh); g = th + sh*ch - T1; ...
+       8: eth <- exp(th)
+       9: v <- v*sqrt(q*q + 1)*2*eth/(eth*eth + 1); q = w*sqrt(z/(2*c)); ...
+      10: v2 <- active*(0.5*(eth - 1/eth)*max(abs(v), sqrt(1e-30*kT/m))*...
+      11: v <- v*exp(-1*dt*(v1 + kT*v2))
     ...
-      23: v <- v*exp(-1*dt*(v1 + kT*v2))
-    ...
-      43: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
-      44: x <- x + 0.5*dt*v
-      45: v <- v + 0.5*dt*f/m
+      19: v1 <- active*(v1 + 0.5*dt*(m*v^2 - kT)*invQ)
+      20: x <- x + 0.5*dt*v
+      21: v <- v + 0.5*dt*f/m
 
     Force-first scheme
 
@@ -130,13 +137,13 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         *,
         stochastic: bool = False,
         forceFirst: bool = False,
-        newtonIterations: int = 5,
+        halleyIterations: int = 3,
     ) -> None:
-        if newtonIterations < 1:
-            raise ValueError("The number of Newton iterations must be at least 1.")
+        if halleyIterations < 1:
+            raise ValueError("The number of Halley iterations must be at least 1.")
         super().__init__(stepSize)
         self._forceFirst = forceFirst
-        self._newton_iterations = newtonIterations
+        self._halley_iterations = halleyIterations
         self._init_temperature(temperature)
         self._init_time_constant(timeConstant)
         self._init_friction_coefficient(1 / timeConstant if stochastic else 0.0)
@@ -181,7 +188,7 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addPerDofVariable("v1", 0)
         self.addPerDofVariable("v2", 0)
         self._add_dof_mask()
-        for name in ("z", "w", "E", "s", "zmin", "th", "T1"):
+        for name in ("T1", "th", "eth"):
             self.addPerDofVariable(name, 0)
         if self._stochastic:
             self.addGlobalVariable("a", 0)
@@ -217,31 +224,53 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         )
 
     def _add_v2_boost(self, fraction: float) -> None:
-        c = _COULOMB_STRENGTH
-        constant_kick = self._masked(f"v2 - {fraction / 2}*dt*kT^2*invQ2")
+        """Propagate the (z, w) sub-dynamics over ``fraction*dt`` (Coulomb splitting).
+
+        The constant kick on ``v2`` is applied over half the time span before and
+        after the exact flow of the repulsive Coulomb Hamiltonian ``w^2/2 + c/z``.
+        With ``q = sinh(th0) = w*sqrt(z/(2c))`` and ``th`` the final hyperbolic angle,
+        the flow satisfies ``z0/z = (q^2 + 1)/cosh(th)^2`` and
+        ``w = sinh(th)*sqrt(2c/z)``, so ``v`` and ``v2`` follow from ``th`` alone. The
+        Kepler equation ``th + sinh(2 th)/2 = T1`` is solved by Halley iterations
+        started from the smaller of its upper bounds ``T1/2`` and ``asinh(2 T1)/2``.
+        The hyperbolic functions are written in terms of a single exponential, and
+        the floor on ``|v|`` avoids an indeterminate product at the fixed point
+        ``v = 0``.
+        """
         add = self.addComputePerDof
-        add("v2", constant_kick)
-        add("z", "sqrt(3)*kT/max(m*v*v, 1e-30*kT)")
-        add("w", "(2/sqrt(3))*kT*v2")
-        add("E", f"0.5*w*w + c/z; c={c}")
-        add("zmin", f"c/E; c={c}")
-        add("s", "sqrt(2*E)")
-        add(
-            "th",
-            f"(2*step(q) - 1)*log(abs(q) + sqrt(q*q + 1)); q=w*sqrt(z/(2*c)); c={c}",
+        kick = f"{fraction / 2}*dt*kT^2*invQ2"
+        state = (
+            f"q = w*sqrt(z/(2*c)); w = (2/sqrt(3))*kT*(v2 - {kick});"
+            " z = sqrt(3)*kT/(m*vf*vf); vf = max(abs(v), sqrt(1e-30*kT/m));"
+            f" c = {_COULOMB_STRENGTH}"
         )
-        add("T1", f"th + 0.5*sinh(2*th) + s*{fraction}*dt/zmin")
         add(
-            "th",
-            "0.5*select(step(q - 1e6), log(2*q), log(q + sqrt(q*q + 1))); q=2*abs(T1)",
+            "T1",
+            f"(2*step(q) - 1)*log(abs(q) + r) + q*r + {fraction}*dt*E*sqrt(2*E)/c;"
+            f" r = sqrt(q*q + 1); E = 0.5*w*w + c/z; {state}",
         )
-        for _ in range(self._newton_iterations):
-            add("th", "th - (th + 0.5*sinh(2*th) - abs(T1))/(1 + cosh(2*th))")
-        add("th", "(2*step(T1) - 1)*th")
-        add("v", "v*sqrt(z/znew); znew=zmin*cosh(th)^2")
-        add("w", "s*tanh(th)")
-        add("v2", self._masked("(sqrt(3)/2)*w/kT"))
-        add("v2", constant_kick)
+        guess = (
+            "(2*step(T1) - 1)*min(0.5*T, 0.5*log(2*T + sqrt(4*T*T + 1))); T = abs(T1)"
+        )
+
+        def halley(angle: str) -> str:
+            return (
+                f"{angle} - g*ch/(2*ch*ch*ch - g*sh); g = {angle} + sh*ch - T1;"
+                f" sh = 0.5*(e - 1/e); ch = 0.5*(e + 1/e); e = exp({angle})"
+            )
+
+        add("th", f"{halley('t0')}; t0 = {guess}")
+        for _ in range(self._halley_iterations - 1):
+            add("th", halley("th"))
+        add("eth", "exp(th)")
+        add("v", f"v*sqrt(q*q + 1)*2*eth/(eth*eth + 1); {state}")
+        add(
+            "v2",
+            self._masked(
+                "0.5*(eth - 1/eth)*max(abs(v), sqrt(1e-30*kT/m))*sqrt(m*invQ2)"
+                f" - {kick}"
+            ),
+        )
 
     def _add_v_scaling(self, fraction: float) -> None:
         self.addComputePerDof("v", f"v*exp(-{fraction}*dt*(v1 + kT*v2))")

@@ -369,6 +369,37 @@ def test_ggmt_step_matches_reference_sub_dynamics():
         assert v2[component] == pytest.approx(v2_ref, rel=1e-6)
 
 
+def test_ggmt_rejects_zero_halley_iterations():
+    with pytest.raises(ValueError, match="Halley iterations"):
+        integrators.MassiveGGMTIntegrator(
+            300 * KELVIN, 0.1 * PS, 1 * FS, halleyIterations=0
+        )
+
+
+def _ggmt_coulomb_step(halley_iterations, dt, v0, v2_0):
+    integrator = integrators.MassiveGGMTIntegrator(
+        300 * KELVIN, 0.1 * PS, dt * PS, halleyIterations=halley_iterations
+    )
+    system = _ideal_gas(1, mass=1.0)
+    context = mm.Context(system, integrator, mm.Platform.getPlatformByName("Reference"))
+    context.setPositions([mm.Vec3(0, 0, 0)])
+    context.setVelocities([mm.Vec3(v0, 2 * v0, 0.1 * v0)])
+    integrator.setPerDofVariableByName("v2", [mm.Vec3(v2_0, v2_0, v2_0)])
+    integrator.step(1)
+    v = context.getState(getVelocities=True).getVelocities(asNumpy=True)._value[0]
+    return v, np.array(integrator.getPerDofVariableByName("v2")[0])
+
+
+def test_ggmt_three_halley_iterations_reach_double_precision():
+    """Three Halley iterations agree with eight, in a step past the singularity of
+    the isolated cubic friction (v2 < 0 and dt = tau/2)."""
+    v_3, v2_3 = _ggmt_coulomb_step(3, 0.05, 3.0, -40.0)
+    v_8, v2_8 = _ggmt_coulomb_step(8, 0.05, 3.0, -40.0)
+    assert np.all(np.isfinite(v_3))
+    assert v_3 == pytest.approx(v_8, rel=1e-12, abs=1e-14)
+    assert v2_3 == pytest.approx(v2_8, rel=1e-12, abs=1e-14)
+
+
 def test_ggmt_deterministic_rejects_nonzero_friction():
     integrator = integrators.MassiveGGMTIntegrator(300 * KELVIN, 0.1 * PS, 1 * FS)
     integrator.setFrictionCoefficient(0.0)
