@@ -2,7 +2,11 @@
 Unit tests for the openxps.metadynamics module.
 """
 
+import functools
+import itertools
+
 import cvpack
+import numpy as np
 import openmm
 import pytest
 import yaml
@@ -10,6 +14,7 @@ from openmm import unit
 from openmmtools import testsystems
 
 import openxps as xps
+from openxps.metadynamics import _axis_kernel
 
 
 def _system_with(dv, cv=None):
@@ -74,21 +79,22 @@ def test_metadynamics_with_reflective_dv():
     assert not variable.periodic
 
 
-def test_metadynamics_rejects_unknown_and_unbounded_dvs():
+def test_metadynamics_rejects_unknown_dvs():
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
     dv = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
     _, system = _system_with(dv)
     other = xps.DynamicalVariable("psi0", unit.radian, mass, xps.CircularBounds())
     with pytest.raises(ValueError, match="not found in system"):
         _metadynamics(system, xps.ExtendedSpaceBiasVariable(other, 18 * unit.degree))
+
+
+def test_metadynamics_rejects_unbounded_dvs():
     free = xps.DynamicalVariable(
         "x0", unit.nanometer, 1 * unit.dalton, xps.NoBounds(0, 1, unit.nanometer)
     )
-    _, free_system = _system_with(free, cvpack.Distance(0, 1, name="d"))
-    with pytest.raises(ValueError, match="has no bounds"):
-        _metadynamics(
-            free_system, xps.ExtendedSpaceBiasVariable(free, 0.1 * unit.nanometer)
-        )
+    _, system = _system_with(free, cvpack.Distance(0, 1, name="d"))
+    with pytest.raises(ValueError, match="has no bounds.*Use ReflectiveBounds"):
+        _metadynamics(system, xps.ExtendedSpaceBiasVariable(free, 0.1 * unit.nanometer))
 
 
 def test_metadynamics_step_and_collective_variables():
@@ -116,3 +122,170 @@ def test_metadynamics_step_and_collective_variables():
     (dv_value,) = simulation.context.getDynamicalVariableValues()
     assert value == pytest.approx(dv_value.value_in_unit(unit.radian), abs=1e-6)
     assert meta.getFreeEnergy().shape == (meta.variables[0].gridWidth,)
+
+
+def _reflective_dv(name, lower, upper):
+    return xps.DynamicalVariable(
+        name,
+        unit.nanometer,
+        10 * unit.dalton,
+        xps.ReflectiveBounds(lower, upper, unit.nanometer),
+    )
+
+
+def _deposit_uniformly(meta, extension_system, num_per_axis):
+    """Deposit kernels on a uniform lattice of centers, mimicking flat sampling."""
+    context = openmm.Context(
+        extension_system,
+        openmm.VerletIntegrator(0.001),
+        openmm.Platform.getPlatformByName("Reference"),
+    )
+    axes = [
+        v.minValue
+        + (np.arange(num_per_axis) + 0.5) * (v.maxValue - v.minValue) / num_per_axis
+        for v in meta.variables
+    ]
+    for center in itertools.product(*axes):
+        meta._addGaussian(list(center), 1 * unit.kilojoule_per_mole, context)
+
+
+@pytest.mark.parametrize("num_dvs", [1, 2])
+def test_uniform_sampling_gives_flat_bias_with_reflective_walls(num_dvs):
+    """Without mirrored kernels, the bias sags by up to half within sigma of a wall."""
+    dvs = [_reflective_dv(f"s{i}", 0.1, 1.0) for i in range(num_dvs)]
+    cvs = [cvpack.Distance(0, 1 + i, name=f"d{i}") for i in range(num_dvs)]
+    model = testsystems.AlanineDipeptideVacuum()
+    kappa = 1000 * unit.kilojoules_per_mole / unit.nanometer**2
+    coupling = xps.HarmonicCoupling(cvs[0], dvs[0], kappa)
+    for cv, dv in zip(cvs[1:], dvs[1:]):
+        coupling += xps.HarmonicCoupling(cv, dv, kappa)
+    system = xps.ExtendedSpaceSystem(model.system, coupling)
+    meta = xps.ExtendedSpaceMetadynamics(
+        system,
+        [xps.ExtendedSpaceBiasVariable(dv, 0.05 * unit.nanometer) for dv in dvs],
+        300 * unit.kelvin,
+        5,
+        1 * unit.kilojoule_per_mole,
+        10,
+    )
+    _deposit_uniformly(meta, system.getExtensionSystem(), 90 if num_dvs == 1 else 45)
+    bias = meta._totalBias
+    assert bias.min() == pytest.approx(bias.max(), rel=1e-3)
+
+
+def test_reflective_kernel_is_mirror_symmetric_at_both_walls():
+    lower, upper, sigma = 0.1, 1.0, 0.2
+    offsets = np.linspace(0, 0.5, 11)
+    for center in (0.1, 0.15, 0.6, 0.97):
+        kernel = functools.partial(
+            _axis_kernel,
+            center=center,
+            sigma=sigma,
+            bounds="reflective",
+            lower=lower,
+            upper=upper,
+        )
+        np.testing.assert_allclose(kernel(lower - offsets), kernel(lower + offsets))
+        np.testing.assert_allclose(kernel(upper - offsets), kernel(upper + offsets))
+
+
+def test_kernels_match_gaussian_for_small_widths():
+    """With sigma a hundredth of the period, kernels agree to 0.1% of their peak."""
+    grid = np.linspace(0, 10, 1001)
+    gaussian = np.exp(-0.5 * ((grid - 5) / 0.1) ** 2)
+    for kind in ("periodic", "reflective"):
+        kernel = _axis_kernel(grid, 5.0, 0.1, kind, 0.0, 10.0)
+        np.testing.assert_allclose(kernel, gaussian, atol=1e-3)
+
+
+def test_periodic_kernel_is_periodic():
+    grid = np.linspace(-np.pi, np.pi, 101)
+    kernel = _axis_kernel(grid, 3.0, 0.5, "periodic", -np.pi, np.pi)
+    shifted = _axis_kernel(grid + 2 * np.pi, 3.0, 0.5, "periodic", -np.pi, np.pi)
+    np.testing.assert_allclose(kernel, shifted, atol=1e-12)
+    assert kernel[0] == pytest.approx(kernel[-1])
+
+
+@pytest.mark.parametrize("center", [0.1, 0.12, 0.2])
+def test_reflective_bias_has_zero_slope_at_walls(center):
+    """The interpolated bias is flat at both walls, not only its grid values."""
+    dv = _reflective_dv("s", 0.1, 1.0)
+    _, system = _system_with(dv, cvpack.Distance(0, 1, name="d"))
+    meta = _metadynamics(
+        system, xps.ExtendedSpaceBiasVariable(dv, 0.05 * unit.nanometer)
+    )
+    context = openmm.Context(
+        system.getExtensionSystem(),
+        openmm.VerletIntegrator(0.001),
+        openmm.Platform.getPlatformByName("Reference"),
+    )
+    meta._addGaussian([center], 1 * unit.kilojoule_per_mole, context)
+    group = {meta._force.getForceGroup()}
+
+    def bias_force(x):
+        context.setPositions([openmm.Vec3(x, 0, 0)])
+        state = context.getState(getForces=True, groups=group)
+        return state.getForces(asNumpy=True)[0, 0]._value
+
+    peak = max(abs(bias_force(x)) for x in np.linspace(0.1, 0.4, 61))
+    assert abs(bias_force(0.1)) < 1e-9 * peak
+    assert abs(bias_force(1.0)) < 1e-9 * peak
+
+
+def test_mixed_periodic_and_reflective_bias():
+    """A periodic and a reflective variable share one table, each with its own grid."""
+    mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
+    d0 = _reflective_dv("d0", 0.1, 1.0)
+    model = testsystems.AlanineDipeptideVacuum()
+    coupling = xps.HarmonicCoupling(
+        cvpack.Torsion(6, 8, 14, 16, name="phi"),
+        phi0,
+        1000 * unit.kilojoules_per_mole / unit.radian**2,
+    ) + xps.HarmonicCoupling(
+        cvpack.Distance(0, 1, name="d"),
+        d0,
+        1000 * unit.kilojoules_per_mole / unit.nanometer**2,
+    )
+    system = xps.ExtendedSpaceSystem(model.system, coupling)
+    meta = xps.ExtendedSpaceMetadynamics(
+        system,
+        [
+            xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degree),
+            xps.ExtendedSpaceBiasVariable(d0, 0.05 * unit.nanometer),
+        ],
+        300 * unit.kelvin,
+        5,
+        1 * unit.kilojoule_per_mole,
+        10,
+    )
+    assert [v.periodic for v in meta.variables] == [True, False]
+    context = openmm.Context(
+        system.getExtensionSystem(),
+        openmm.VerletIntegrator(0.001),
+        openmm.Platform.getPlatformByName("Reference"),
+    )
+    meta._addGaussian([3.0, 0.12], 1 * unit.kilojoule_per_mole, context)
+    group = {meta._force.getForceGroup()}
+
+    order = [dv.name for dv in system.getDynamicalVariables()]
+
+    def bias(phi, d):
+        values = {"phi0": phi, "d0": d}
+        context.setPositions([openmm.Vec3(values[name], 0, 0) for name in order])
+        state = context.getState(getEnergy=True, getForces=True, groups=group)
+        forces = state.getForces(asNumpy=True)[:, 0]._value
+        return state.getPotentialEnergy()._value, dict(zip(order, forces))
+
+    peak = max(abs(force) for force in bias(2.95, 0.15)[1].values())
+    assert abs(bias(2.95, 0.1)[1]["d0"]) < 1e-9 * peak
+    assert abs(bias(2.95, 1.0)[1]["d0"]) < 1e-9 * peak
+    assert abs(bias(2.95, 0.15)[1]["d0"]) > 0.1 * peak
+    # The periodic axis is continuous across its seam.
+    for d in (0.1, 0.12, 0.3):
+        below, _ = bias(np.pi - 1e-9, d)
+        above, _ = bias(-np.pi + 1e-9, d)
+        assert below == pytest.approx(above, rel=1e-6, abs=1e-9)
+    # Grid nodes reproduce the stored bias.
+    energy, _ = bias(meta.variables[0].minValue, meta.variables[1].minValue)
+    assert energy == pytest.approx(meta._totalBias[0, 0], rel=1e-9)
