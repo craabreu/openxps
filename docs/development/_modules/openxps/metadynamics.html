@@ -46,15 +46,51 @@
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">functools</span><span class="w"> </span><span class="kn">import</span> <span class="n">reduce</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">cvpack.serialization</span><span class="w"> </span><span class="kn">import</span> <span class="n">Serializable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">app</span> <span class="k">as</span> <span class="n">mmapp</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">NoBounds</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">NoBounds</span><span class="p">,</span> <span class="n">PeriodicBounds</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.system</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceSystem</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_von_mises</span><span class="p">(</span><span class="n">displacement</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">period</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""A Gaussian in the chord distance ``(period/pi)*sin(pi*displacement/period)``.</span>
+
+<span class="sd">    It is smooth and periodic, and matches a Gaussian of width ``sigma`` when the</span>
+<span class="sd">    displacement is much smaller than the period.</span>
+<span class="sd">    """</span>
+    <span class="n">factor</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">period</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">((</span><span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">factor</span> <span class="o">*</span> <span class="n">displacement</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">factor</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_axis_kernel</span><span class="p">(</span>
+    <span class="n">grid</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+    <span class="n">center</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">bounds</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">lower</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+    <span class="n">upper</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">"""The bias kernel along one axis, on the given grid points.</span>
+
+<span class="sd">    Periodic variables get a von Mises kernel. Reflective variables get the sum of</span>
+<span class="sd">    all mirror images of a Gaussian across both walls, which are images of period</span>
+<span class="sd">    ``2*(upper - lower)`` centered at ``center`` and ``2*lower - center``. Two von</span>
+<span class="sd">    Mises kernels of that period therefore account for every image, and the kernel</span>
+<span class="sd">    has zero slope at both walls.</span>
+<span class="sd">    """</span>
+    <span class="k">if</span> <span class="n">bounds</span> <span class="o">==</span> <span class="n">PeriodicBounds</span><span class="o">.</span><span class="n">kind</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">_von_mises</span><span class="p">(</span><span class="n">grid</span> <span class="o">-</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">upper</span> <span class="o">-</span> <span class="n">lower</span><span class="p">)</span>
+    <span class="n">period</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">upper</span> <span class="o">-</span> <span class="n">lower</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">_von_mises</span><span class="p">(</span><span class="n">grid</span> <span class="o">-</span> <span class="n">center</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">period</span><span class="p">)</span> <span class="o">+</span> <span class="n">_von_mises</span><span class="p">(</span>
+        <span class="n">grid</span> <span class="o">+</span> <span class="n">center</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">lower</span><span class="p">,</span> <span class="n">sigma</span><span class="p">,</span> <span class="n">period</span>
+    <span class="p">)</span>
 
 
 <span class="k">class</span><span class="w"> </span><span class="nc">_SimulationWrapper</span><span class="p">:</span>
@@ -73,14 +109,19 @@
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">ExtendedSpaceBiasVariable</span><span class="p">(</span><span class="n">Serializable</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">"""</span>
-<span class="sd">    A dynamical variable augmented with a Gaussian bias kernel.</span>
+<span class="sd">    A dynamical variable augmented with a bias kernel.</span>
+
+<span class="sd">    The kernel shape depends on the bounds of the dynamical variable. It is a von</span>
+<span class="sd">    Mises kernel for :class:`PeriodicBounds` and a Gaussian mirrored across both</span>
+<span class="sd">    walls for :class:`ReflectiveBounds`.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    dynamical_variable</span>
 <span class="sd">        The dynamical variable to be augmented.</span>
 <span class="sd">    sigma</span>
-<span class="sd">        The bandwidth (standard deviation) of the Gaussian bias kernel.</span>
+<span class="sd">        The bandwidth of the bias kernel, which approximates the standard deviation</span>
+<span class="sd">        of a Gaussian when it is small relative to the bounds.</span>
 <span class="sd">    grid_width</span>
 <span class="sd">        The width of the grid for the bias kernel. If ``None``, the grid width is</span>
 <span class="sd">        automatically determined based on the dynamical variable's bounds and the</span>
@@ -162,6 +203,19 @@
 <span class="sd">        by other processes should be loaded.</span>
 
 <span class="sd">    .. note::</span>
+<span class="sd">        The bias is stored on a grid spanning the bounds of each dynamical variable,</span>
+<span class="sd">        so variables with :class:`NoBounds` are rejected. Use</span>
+<span class="sd">        :class:`ReflectiveBounds` over the range the variable may explore instead.</span>
+<span class="sd">        If the variable never reaches the walls, the reflections never act, and if</span>
+<span class="sd">        it does, the coupling turns them into soft walls on the physical system.</span>
+
+<span class="sd">    .. note::</span>
+<span class="sd">        Periodic and reflective variables can be mixed. A reflective variable is</span>
+<span class="sd">        tabulated as a periodic one of twice its range, holding the bias and its</span>
+<span class="sd">        mirror image, which makes the interpolated bias exactly flat at the walls.</span>
+<span class="sd">        This doubles the table along each reflective axis.</span>
+
+<span class="sd">    .. note::</span>
 <span class="sd">        The bias force is added to the extension system of ``system`` when this</span>
 <span class="sd">        object is created, so it must be created before the</span>
 <span class="sd">        :class:`~openxps.ExtendedSpaceSimulation` or</span>
@@ -231,7 +285,11 @@
             <span class="k">if</span> <span class="n">dv</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">system_dvs</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> not found in system"</span><span class="p">)</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="p">,</span> <span class="n">NoBounds</span><span class="p">):</span>
-                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has no bounds"</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Dynamical variable </span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2"> has no bounds, but metadynamics "</span>
+                    <span class="s2">"needs a finite grid. Use ReflectiveBounds over the range the "</span>
+                    <span class="s2">"variable may explore."</span>
+                <span class="p">)</span>
             <span class="n">index</span> <span class="o">=</span> <span class="n">system_dvs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">dv</span><span class="p">)</span>
             <span class="n">bias_variables</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
                 <span class="n">mmapp</span><span class="o">.</span><span class="n">BiasVariable</span><span class="p">(</span>
@@ -239,10 +297,12 @@
                     <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">lower</span> <span class="o">*</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
                     <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">upper</span> <span class="o">*</span> <span class="n">dv</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">unit</span><span class="p">,</span>
                     <span class="n">variable</span><span class="o">.</span><span class="n">sigma</span><span class="p">,</span>
-                    <span class="n">dv</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">(),</span>
+                    <span class="kc">True</span><span class="p">,</span>
                     <span class="n">variable</span><span class="o">.</span><span class="n">grid_width</span><span class="p">,</span>
                 <span class="p">)</span>
             <span class="p">)</span>
+        <span class="c1"># Every table axis is periodic, so OpenMM must not reject the mix of periodic</span>
+        <span class="c1"># and reflective variables. Their true periodicity is restored afterwards.</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span>
             <span class="n">system</span><span class="o">.</span><span class="n">getExtensionSystem</span><span class="p">(),</span>
             <span class="n">bias_variables</span><span class="p">,</span>
@@ -253,6 +313,19 @@
             <span class="n">saveFrequency</span><span class="p">,</span>
             <span class="n">biasDir</span><span class="p">,</span>
         <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_bounds_kinds</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">variable</span><span class="o">.</span><span class="n">dynamical_variable</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">kind</span> <span class="k">for</span> <span class="n">variable</span> <span class="ow">in</span> <span class="n">variables</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="n">v</span><span class="p">,</span> <span class="n">kind</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bounds_kinds</span><span class="p">):</span>
+            <span class="n">v</span><span class="o">.</span><span class="n">periodic</span> <span class="o">=</span> <span class="n">kind</span> <span class="o">==</span> <span class="n">PeriodicBounds</span><span class="o">.</span><span class="n">kind</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_widths</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">v</span><span class="o">.</span><span class="n">gridWidth</span> <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">periodic</span> <span class="k">else</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">v</span><span class="o">.</span><span class="n">gridWidth</span> <span class="o">-</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span>
+        <span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_limits</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">:</span>
+            <span class="n">upper</span> <span class="o">=</span> <span class="n">v</span><span class="o">.</span><span class="n">maxValue</span> <span class="k">if</span> <span class="n">v</span><span class="o">.</span><span class="n">periodic</span> <span class="k">else</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">v</span><span class="o">.</span><span class="n">maxValue</span> <span class="o">-</span> <span class="n">v</span><span class="o">.</span><span class="n">minValue</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_limits</span> <span class="o">+=</span> <span class="p">[</span><span class="n">v</span><span class="o">.</span><span class="n">minValue</span><span class="p">,</span> <span class="n">upper</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_updateTable</span><span class="p">()</span>
 
 <div class="viewcode-block" id="ExtendedSpaceMetadynamics.step">
 <a class="viewcode-back" href="../../api/ExtendedSpaceMetadynamics.html#openxps.ExtendedSpaceMetadynamics.step">[docs]</a>
@@ -266,7 +339,45 @@
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_force</span><span class="o">.</span><span class="n">getCollectiveVariableValues</span><span class="p">(</span>
             <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span>
         <span class="p">)</span></div>
-</div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_addGaussian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">position</span><span class="p">,</span> <span class="n">height</span><span class="p">,</span> <span class="n">context</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Add a kernel to the bias, overriding the truncated Gaussian of OpenMM."""</span>
+        <span class="n">axis_kernels</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">value</span><span class="p">,</span> <span class="n">variable</span><span class="p">,</span> <span class="n">kind</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">position</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bounds_kinds</span><span class="p">):</span>
+            <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span> <span class="o">=</span> <span class="n">variable</span><span class="o">.</span><span class="n">minValue</span><span class="p">,</span> <span class="n">variable</span><span class="o">.</span><span class="n">maxValue</span>
+            <span class="n">grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">variable</span><span class="o">.</span><span class="n">gridWidth</span><span class="p">)</span>
+            <span class="n">kernel</span> <span class="o">=</span> <span class="n">_axis_kernel</span><span class="p">(</span><span class="n">grid</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">variable</span><span class="o">.</span><span class="n">biasWidth</span><span class="p">,</span> <span class="n">kind</span><span class="p">,</span> <span class="n">lower</span><span class="p">,</span> <span class="n">upper</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">kind</span> <span class="o">==</span> <span class="n">PeriodicBounds</span><span class="o">.</span><span class="n">kind</span><span class="p">:</span>
+                <span class="n">kernel</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">kernel</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">axis_kernels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">kernel</span><span class="p">)</span>
+        <span class="n">kernel</span> <span class="o">=</span> <span class="n">reduce</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">multiply</span><span class="o">.</span><span class="n">outer</span><span class="p">,</span> <span class="nb">reversed</span><span class="p">(</span><span class="n">axis_kernels</span><span class="p">))</span>
+        <span class="n">height</span> <span class="o">=</span> <span class="n">height</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_selfBias</span> <span class="o">+=</span> <span class="n">height</span> <span class="o">*</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_totalBias</span> <span class="o">+=</span> <span class="n">height</span> <span class="o">*</span> <span class="n">kernel</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_updateTable</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_force</span><span class="o">.</span><span class="n">updateParametersInContext</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_updateTable</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Copy the total bias into the periodic table.</span>
+
+<span class="sd">        A reflective variable on ``[lower, upper]`` behaves as a periodic one of period</span>
+<span class="sd">        ``2*(upper - lower)`` whose bias is mirrored about ``upper``. Its table axis</span>
+<span class="sd">        holds the bias followed by its mirror image, so the periodic spline that</span>
+<span class="sd">        OpenMM fits is symmetric about both walls and has zero slope there.</span>
+<span class="sd">        """</span>
+        <span class="n">bias</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_totalBias</span>
+        <span class="c1"># The bias array stores the last variable along its first axis.</span>
+        <span class="k">for</span> <span class="n">axis</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="nb">reversed</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">v</span><span class="o">.</span><span class="n">periodic</span><span class="p">:</span>
+                <span class="n">mirror</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">flip</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">take</span><span class="p">(</span><span class="n">bias</span><span class="p">,</span> <span class="nb">range</span><span class="p">(</span><span class="n">v</span><span class="o">.</span><span class="n">gridWidth</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">),</span> <span class="n">axis</span><span class="p">)</span>
+                <span class="n">bias</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">bias</span><span class="p">,</span> <span class="n">mirror</span><span class="p">),</span> <span class="n">axis</span><span class="o">=</span><span class="n">axis</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">variables</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">setFunctionParameters</span><span class="p">(</span><span class="n">bias</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_limits</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_table</span><span class="o">.</span><span class="n">setFunctionParameters</span><span class="p">(</span>
+                <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_widths</span><span class="p">,</span> <span class="n">bias</span><span class="o">.</span><span class="n">flatten</span><span class="p">(),</span> <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">_limits</span>
+            <span class="p">)</span></div>
 
 </pre></div>
 

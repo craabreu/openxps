@@ -64,7 +64,16 @@ the same time it writes biases, it also checks for updated biases written by
 other processes and loads them in. This must be a multiple of frequency.</p></li>
 <li><p><strong>biasDir</strong> (<em>str</em><em> | </em><em>None</em>) – The directory to which biases should be written, and from which biases written
 by other processes should be loaded.</p></li>
-<li><p><strong>note::</strong> (<em>..</em>) – The bias force is added to the extension system of <code class="docutils literal notranslate"><span class="pre">system</span></code> when this
+<li><p><strong>note::</strong> (<em>..</em>) – The bias is stored on a grid spanning the bounds of each dynamical variable,
+so variables with <code class="xref py py-class docutils literal notranslate"><span class="pre">NoBounds</span></code> are rejected. Use
+<code class="xref py py-class docutils literal notranslate"><span class="pre">ReflectiveBounds</span></code> over the range the variable may explore instead.
+If the variable never reaches the walls, the reflections never act, and if
+it does, the coupling turns them into soft walls on the physical system.</p></li>
+<li><p><strong>note::</strong> – Periodic and reflective variables can be mixed. A reflective variable is
+tabulated as a periodic one of twice its range, holding the bias and its
+mirror image, which makes the interpolated bias exactly flat at the walls.
+This doubles the table along each reflective axis.</p></li>
+<li><p><strong>note::</strong> – The bias force is added to the extension system of <code class="docutils literal notranslate"><span class="pre">system</span></code> when this
 object is created, so it must be created before the
 <a class="reference internal" href="ExtendedSpaceSimulation.html#openxps.ExtendedSpaceSimulation" title="openxps.ExtendedSpaceSimulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation</span></code></a> or
 <a class="reference internal" href="ExtendedSpaceContext.html#openxps.ExtendedSpaceContext" title="openxps.ExtendedSpaceContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceContext</span></code></a> that uses the system.</p></li>
