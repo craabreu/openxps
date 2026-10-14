@@ -13,13 +13,17 @@ temperature-accelerated molecular dynamics (TAMD).
 Installation
 ------------
 
-To install OpenXPS in a conda environment, run the following command::
+OpenXPS requires Python 3.10 or newer and OpenMM 8.4 or newer. Install it from the
+mdtools conda channel::
 
     conda install -c conda-forge -c mdtools openxps
 
-Or use mamba instead::
+or from PyPI::
 
-    mamba install -c mdtools openxps
+    pip install openxps
+
+PyTorch and Lightning, which :class:`~openxps.ForceMatchingRegressor` uses, are
+installed as dependencies.
 
 Usage
 -----
