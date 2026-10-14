@@ -156,3 +156,5 @@
 - Passing a coupling that is already part of a system to `ExtendedSpaceSystem` raises
   a clear error instead of crashing in OpenMM. A deep copy of the coupling can be
   used instead.
+- `ExtendedSpaceSimulation.saveState` and `loadState` accept file objects open in
+  binary mode and `os.PathLike` paths, as does the `state` argument.

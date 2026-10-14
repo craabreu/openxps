@@ -499,6 +499,27 @@ def test_save_and_load_state_roundtrip_dvs(tmp_path):
     assert simulation.context.getParameter("phi0") == pytest.approx(2.5)
 
 
+@pytest.mark.parametrize("mode", ["path", "text", "binary"])
+def test_save_and_load_state_file_kinds(tmp_path, mode):
+    """saveState/loadState accept paths and text or binary file objects."""
+    simulation, _ = _simulation()
+    simulation.context.setDynamicalVariableValues([2.5])
+    path = tmp_path / "state.xml"
+    if mode == "path":
+        simulation.saveState(path)
+    else:
+        with open(path, "w" if mode == "text" else "wb") as file:
+            simulation.saveState(file)
+    simulation.context.setDynamicalVariableValues([-1.0])
+    if mode == "path":
+        simulation.loadState(path)
+    else:
+        with open(path, "r" if mode == "text" else "rb") as file:
+            simulation.loadState(file)
+    (value,) = simulation.context.getDynamicalVariableValues()
+    assert value.value_in_unit(mmunit.radian) == pytest.approx(2.5)
+
+
 def test_state_argument_accepts_filename(tmp_path):
     """Like OpenMM's Simulation, state= may be a file name."""
     simulation, _ = _simulation()
