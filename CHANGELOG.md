@@ -1,6 +1,42 @@
 # Changelog
 
-## Unreleased
+## 0.2.0
+
+This release rewrites most of the package, so code written for 0.1.0 needs to be
+ported. In 0.1.0, an `ExtendedSpaceContext` wrapped an existing OpenMM context and
+took extra degrees of freedom, a coupling meta-collective variable and an optional
+biasing potential. Since 0.2.0, an `ExtendedSpaceSystem` combines a physical system
+with a coupling, and an `ExtendedSpaceContext` or `ExtendedSpaceSimulation` is built
+from that system and an extended-space integrator.
+
+### Upgrading from 0.1.0
+- `ExtraDOF` is now `DynamicalVariable`. Its `bounds` argument can no longer be
+  `None`; use `NoBounds` for unbounded variables.
+- The `Periodic` and `Reflective` bounds are now `PeriodicBounds` and
+  `ReflectiveBounds`, and the new `CircularBounds` and `NoBounds` join them in the
+  `openxps.bounds` module.
+- `MetadynamicsBias` and the `biasing_potential` module are replaced by
+  `ExtendedSpaceMetadynamics` and `ExtendedSpaceBiasVariable`.
+- Couplings are built with `HarmonicCoupling`, `CollectiveVariableCoupling` or
+  `InnerProductCoupling`, and can be summed, instead of being given as a
+  meta-collective variable.
+- `ExtensionWriter` no longer takes a context. It is added to a CVPack
+  `StateDataReporter` of an `ExtendedSpaceSimulation`, and its `potential` and
+  `total` columns are gone.
+
+### New in 0.2.0
+- `ExtendedSpaceSystem` and `ExtendedSpaceSimulation`.
+- `LockstepIntegrator` and `SplitIntegrator` advance the physical and extension
+  systems together, the latter with different step sizes.
+- `SymmetricVerletIntegrator`, `SymmetricLangevinIntegrator`, `CSVRIntegrator`,
+  `MassiveGGMTIntegrator` and `RegulatedNHLIntegrator`.
+- `ForceMatchingRegressor` fits free energy surfaces to mean forces with radial
+  basis functions.
+- `ExtensionWriter` can also report dynamical variables, forces, collective
+  variables, effective masses and coupling functions.
+- Example notebooks for alanine dipeptide.
+
+The entries below describe changes made during the 0.2.0 development cycle.
 
 ### Changed
 - Python 3.9 is no longer supported; the minimum version is 3.10.

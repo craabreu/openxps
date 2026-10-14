@@ -47,7 +47,8 @@ jobs:
           conda build . --no-anaconda-upload -c conda-forge --output-folder $outdir
           echo "::endgroup::"
           echo "::group::Uploading package to mdtools conda channel"
-          PACKAGE=$(find $outdir -name *.tar.bz2 | head -1)
+          PACKAGE=$(find $outdir \( -name '*.conda' -o -name '*.tar.bz2' \) | head -1)
+          test -n "$PACKAGE" || { echo "No conda package found in $outdir"; exit 1; }
           export ANACONDA_API_TOKEN=${{ secrets.ANACONDA_TOKEN }}
           anaconda upload --user mdtools --force --label main $PACKAGE
           echo "::endgroup::"
