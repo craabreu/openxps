@@ -24,10 +24,11 @@ def test_dv_initialization():
 
 
 @pytest.mark.parametrize(
-    "name", ["my-var", "1phi", ".phi", "phi s", "a+b", "f(x)", "a,b", "", 3]
+    "name",
+    ["my-var", "1phi", "phi s", "f(x)", "lambda.vdw", "x'", "a<b", "a=b", "x²", "", 3],
 )
 def test_dv_invalid_name(name):
-    """Names must be valid Lepton variable names."""
+    """Names must be identifiers, as in Python."""
     with pytest.raises(ValueError, match="Invalid name"):
         DynamicalVariable(
             name,
@@ -37,9 +38,9 @@ def test_dv_invalid_name(name):
         )
 
 
-@pytest.mark.parametrize("name", ["phi", "_x1", "lambda.vdw", "λ", "x'"])
+@pytest.mark.parametrize("name", ["phi", "_x1", "λ", "λ_vdw", "θ1"])
 def test_dv_valid_name(name):
-    """Lepton accepts more than Python identifiers as variable names."""
+    """Identifiers may contain non-ASCII letters."""
     dv = DynamicalVariable(
         name,
         mmunit.radian,

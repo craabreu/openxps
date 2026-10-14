@@ -253,11 +253,15 @@ def test_sum_order_survives_copy_and_yaml():
     assert [dv.name for dv in nested.getDynamicalVariables()] == ["a", "b", "c", "e"]
 
 
-@pytest.mark.parametrize("name", ["lambda.vdw", "λ"])
-def test_dv_name_accepted_by_lepton(name):
-    """Names that Lepton accepts work as coupled parameters."""
-    context = _context(_ipc(f"{name}*10*r^2", [name], [_dv(name)]))
-    assert _physical_energy(context, [0.3]) == pytest.approx(0.3 * 10 * 0.7**2)
+@pytest.mark.parametrize("name", ["λ", "λ_vdw"])
+def test_non_ascii_dv_names(name):
+    """Non-ASCII identifiers work as parameters and in functions."""
+    direct = _context(_ipc(f"{name}*10*r^2", [name], [_dv(name)]))
+    assert _physical_energy(direct, [0.3]) == pytest.approx(0.3 * 10 * 0.7**2)
+    function = _context(
+        _ipc("s*10*r^2", ["s"], [_dv(name)], {"s": f"{name}^2"}),
+    )
+    assert _physical_energy(function, [0.3]) == pytest.approx(0.3**2 * 10 * 0.7**2)
 
 
 def test_sum_rejects_conflicting_function_definitions():

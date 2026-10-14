@@ -76,6 +76,21 @@ def test_function_variables_named_like_coordinates(expression, mapping, expected
     assert _energy(Function("f", expression), mapping, xs) == pytest.approx(expected)
 
 
+@pytest.mark.parametrize("name", ["λ", "λ_vdw", "θ1", "a·b"])
+def test_function_non_ascii_identifiers(name):
+    """Names are identifiers, as in Python, including non-ASCII ones."""
+    fn = Function("f", f"2*{name}^2 + k", k=1.0)
+    assert fn.getVariables() == {name}
+    assert set(fn.getParameters()) == {"k"}
+    assert _energy(fn, {name: 0}, [3.0]) == pytest.approx(2 * 9 + 1)
+
+
+def test_function_names_are_lepton_tokens():
+    """A name is a whole Lepton token, so parts of other tokens are not names."""
+    fn = Function("f", "lambda.vdw + x²*y + 1e-3*z")
+    assert fn.getVariables() == {"y", "z"}
+
+
 def test_preprocess_args_handles_named_tuples_and_other_sequences():
     @preprocess_args
     def identity(data):
