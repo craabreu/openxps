@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>RegulatedNHLIntegrator &#8212; OpenXPS v0.2.0  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="SymmetricLangevinIntegrator" href="SymmetricLangevinIntegrator.html" />
+    <link rel="prev" title="MassiveGGMTIntegrator" href="MassiveGGMTIntegrator.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="regulatednhlintegrator">
+<h1>RegulatedNHLIntegrator<a class="headerlink" href="#regulatednhlintegrator" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">openxps.integrators.</span></span><span class="sig-name descname"><span class="pre">RegulatedNHLIntegrator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">temperature</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">timeConstant</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stepSize</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">regulationParameter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">forceFirst</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/regulated_nhl.html#RegulatedNHLIntegrator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator" title="Link to this definition">¶</a></dt>
+<dd><p>A Regulated Nosé-Hoover-Langevin (NHL) integrator <span class="bibtex-citation" id="id1">[<a class="reference internal" href="../references.html#id17" title="Charlles R. A. Abreu and Mark E. Tuckerman. Hamiltonian based resonance-free approach for enabling very large time steps in multiple time-scale molecular dynamics. Molecular Physics, May 2021. doi:10.1080/00268976.2021.1923848.">6</a>]</span>.</p>
+<p>The Regulated Nosé-Hoover-Langevin (NHL) integrator is effective at maintaining
+temperature control under steady-state conditions, such as in d-AFED/TAMD
+<span class="bibtex-citation" id="id2">[<a class="reference internal" href="../references.html#id7" title="Luca Maragliano and Eric Vanden-Eijnden. A temperature accelerated method for sampling free energy and determining reaction pathways in rare events simulations. Chemical Physics Letters, 426(1–3):168–175, July 2006. doi:10.1016/j.cplett.2006.05.062.">3</a>, <a class="reference internal" href="../references.html#id10" title="Jerry B. Abrams and Mark E. Tuckerman. Efficient and direct generation of multidimensional free energy surfaces via adiabatic dynamics without coordinate transformations. The Journal of Physical Chemistry B, 112(49):15742–15757, November 2008. doi:10.1021/jp805039u.">4</a>]</span> or UFED <span class="bibtex-citation" id="id3">[<a class="reference internal" href="../references.html#id11" title="Ming Chen, Michel A. Cuendet, and Mark E. Tuckerman. Heating and flooding: a unified approach for rapid generation of free energy surfaces. The Journal of Chemical Physics, July 2012. doi:10.1063/1.4733389.">5</a>]</span> simulations.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The friction coefficient is initially set to the inverse of the time constant,
+but this value can be customized via <a class="reference internal" href="#openxps.integrators.RegulatedNHLIntegrator.setFrictionCoefficient" title="openxps.integrators.RegulatedNHLIntegrator.setFrictionCoefficient"><code class="xref py py-meth docutils literal notranslate"><span class="pre">setFrictionCoefficient()</span></code></a>.</p>
+</div>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This integrator is incompatible with systems subject to constraints.</p>
+</div>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>temperature</strong> (<em>Quantity</em>) – The temperature of the heat bath.</p></li>
+<li><p><strong>timeConstant</strong> (<em>Quantity</em>) – The time constant (a.k.a. coupling/damping/relaxation time) of the thermostat.</p></li>
+<li><p><strong>stepSize</strong> (<em>Quantity</em>) – The integration step size.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Keyword Arguments<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>regulationParameter</strong> – The regulation parameter (see <span class="bibtex-citation" id="id4">[<a class="reference internal" href="../references.html#id17" title="Charlles R. A. Abreu and Mark E. Tuckerman. Hamiltonian based resonance-free approach for enabling very large time steps in multiple time-scale molecular dynamics. Molecular Physics, May 2021. doi:10.1080/00268976.2021.1923848.">6</a>]</span> for details).</p></li>
+<li><p><strong>forceFirst</strong> – If True, the integrator will apply a force-first scheme. Otherwise, it will
+apply a symmetric operator splitting scheme.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmmtools</span><span class="w"> </span><span class="kn">import</span> <span class="n">testsystems</span>
+</pre></div>
+</div>
+<p>Symmetric scheme (default)</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">RegulatedNHLIntegrator</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">temperature</span><span class="o">=</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">timeConstant</span><span class="o">=</span><span class="mi">100</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">stepSize</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span>
+<span class="go">Per-dof variables:</span>
+<span class="go">  v1, active</span>
+<span class="go">Global variables:</span>
+<span class="go">  kT = 2.494...</span>
+<span class="go">  invQ = 40.090...</span>
+<span class="go">  a = 0.9801...</span>
+<span class="go">  b = 1.9801...</span>
+<span class="go">Computation steps:</span>
+<span class="go">   0: allow forces to update the context state</span>
+<span class="go">   1: v &lt;- v + 0.5*dt*f/m</span>
+<span class="go">   2: x &lt;- x + 0.5*dt*c*tanh(v/c); c=sqrt(1*kT/m)</span>
+<span class="go">   3: v1 &lt;- active*(v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ); c=sqrt(1*kT/m)</span>
+<span class="go">   4: v &lt;- v*exp(-0.5*dt*v1)</span>
+<span class="go">   5: v1 &lt;- active*(a*v1 + b*gaussian)</span>
+<span class="go">   6: v &lt;- v*exp(-0.5*dt*v1)</span>
+<span class="go">   7: v1 &lt;- active*(v1 + 0.5*dt*(m*v*c*tanh(v/c) - kT)*invQ); c=sqrt(1*kT/m)</span>
+<span class="go">   8: x &lt;- x + 0.5*dt*c*tanh(v/c); c=sqrt(1*kT/m)</span>
+<span class="go">   9: v &lt;- v + 0.5*dt*f/m</span>
+</pre></div>
+</div>
+<p>Force-first scheme</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">integrator_ff</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">integrators</span><span class="o">.</span><span class="n">RegulatedNHLIntegrator</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">temperature</span><span class="o">=</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">timeConstant</span><span class="o">=</span><span class="mi">100</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">stepSize</span><span class="o">=</span><span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtoseconds</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">forceFirst</span><span class="o">=</span><span class="kc">True</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">testsystems</span><span class="o">.</span><span class="n">AlanineDipeptideVacuum</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="n">integrator_ff</span><span class="o">.</span><span class="n">registerWithSystem</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+<span class="gp">... </span><span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+<span class="go">Regulated NHL integrators do not support constraints.</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.getFrictionCoefficient">
+<span class="sig-name descname"><span class="pre">getFrictionCoefficient</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.getFrictionCoefficient" title="Link to this definition">¶</a></dt>
+<dd><p>Get the friction coefficient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The friction coefficient.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>openmm.unit.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.getRegulationParameter">
+<span class="sig-name descname"><span class="pre">getRegulationParameter</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/regulated_nhl.html#RegulatedNHLIntegrator.getRegulationParameter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.getRegulationParameter" title="Link to this definition">¶</a></dt>
+<dd><p>Get the regulation parameter of the integrator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The regulation parameter.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.getTemperature">
+<span class="sig-name descname"><span class="pre">getTemperature</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.getTemperature" title="Link to this definition">¶</a></dt>
+<dd><p>Get the temperature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The temperature.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>openmm.unit.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.getTimeConstant">
+<span class="sig-name descname"><span class="pre">getTimeConstant</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.getTimeConstant" title="Link to this definition">¶</a></dt>
+<dd><p>Get the time constant.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>The time constant.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>openmm.unit.Quantity</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.registerWithSystem">
+<span class="sig-name descname"><span class="pre">registerWithSystem</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isExtension</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/integrators/regulated_nhl.html#RegulatedNHLIntegrator.registerWithSystem"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.registerWithSystem" title="Link to this definition">¶</a></dt>
+<dd><p>Register the integrator with the system.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.setFrictionCoefficient">
+<span class="sig-name descname"><span class="pre">setFrictionCoefficient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.setFrictionCoefficient" title="Link to this definition">¶</a></dt>
+<dd><p>Set the friction coefficient.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Quantity</em><em> | </em><em>float</em>) – The friction coefficient.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.setTemperature">
+<span class="sig-name descname"><span class="pre">setTemperature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.setTemperature" title="Link to this definition">¶</a></dt>
+<dd><p>Set the temperature.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Quantity</em><em> | </em><em>float</em>) – The temperature.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.integrators.RegulatedNHLIntegrator.setTimeConstant">
+<span class="sig-name descname"><span class="pre">setTimeConstant</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.integrators.RegulatedNHLIntegrator.setTimeConstant" title="Link to this definition">¶</a></dt>
+<dd><p>Set the time constant.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>value</strong> (<em>Quantity</em><em> | </em><em>float</em>) – The time constant.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">OpenXPS v0.2.0</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="main.html">Core</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="couplings.html">Couplings</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="integrators.html">Integrators</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="CSVRIntegrator.html">CSVRIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="MassiveGGMTIntegrator.html">MassiveGGMTIntegrator</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">RegulatedNHLIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SymmetricLangevinIntegrator.html">SymmetricLangevinIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SymmetricVerletIntegrator.html">SymmetricVerletIntegrator</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024-2026 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/RegulatedNHLIntegrator.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

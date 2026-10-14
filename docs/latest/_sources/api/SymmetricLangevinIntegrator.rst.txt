@@ -1,0 +1,13 @@
+SymmetricLangevinIntegrator
+===========================
+
+.. currentmodule:: openxps.integrators
+.. autoclass:: SymmetricLangevinIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getFrictionCoefficient
+    .. automethod:: getTemperature
+    .. automethod:: setFrictionCoefficient
+    .. automethod:: setTemperature

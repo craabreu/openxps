@@ -1,0 +1,13 @@
+InnerProductCoupling
+====================
+
+.. currentmodule:: openxps.couplings
+.. autoclass:: InnerProductCoupling
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: addToPhysicalSystem
+    .. automethod:: getForceGroups
+    .. automethod:: merge
+    .. automethod:: updateExtensionContext

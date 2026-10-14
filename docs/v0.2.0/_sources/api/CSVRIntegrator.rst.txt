@@ -1,0 +1,17 @@
+CSVRIntegrator
+==============
+
+.. currentmodule:: openxps.integrators
+.. autoclass:: CSVRIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getFrictionCoefficient
+    .. automethod:: getNumDegreesOfFreedom
+    .. automethod:: getTemperature
+    .. automethod:: registerWithSystem
+    .. automethod:: setFrictionCoefficient
+    .. automethod:: setRandomNumberSeed
+    .. automethod:: setTemperature
+    .. automethod:: step

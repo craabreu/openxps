@@ -1,0 +1,10 @@
+LockstepIntegrator
+==================
+
+.. currentmodule:: openxps
+.. autoclass:: LockstepIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: step

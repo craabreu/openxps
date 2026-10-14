@@ -1,0 +1,13 @@
+Couplings
+=========
+
+.. toctree::
+    :titlesonly:
+
+    CollectiveVariableCoupling
+    HarmonicCoupling
+    InnerProductCoupling
+
+.. testsetup::
+
+    from openxps import *

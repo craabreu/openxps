@@ -1,0 +1,7 @@
+SymmetricVerletIntegrator
+=========================
+
+.. currentmodule:: openxps.integrators
+.. autoclass:: SymmetricVerletIntegrator
+    :member-order: alphabetical
+

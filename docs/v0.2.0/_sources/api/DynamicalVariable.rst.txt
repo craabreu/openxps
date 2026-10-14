@@ -1,0 +1,13 @@
+DynamicalVariable
+=================
+
+.. currentmodule:: openxps
+.. autoclass:: DynamicalVariable
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: createCollectiveVariable
+    .. automethod:: distanceTo
+    .. automethod:: in_md_units
+    .. automethod:: isPeriodic

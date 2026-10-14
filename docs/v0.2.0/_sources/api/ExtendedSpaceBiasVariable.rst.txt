@@ -1,0 +1,7 @@
+ExtendedSpaceBiasVariable
+=========================
+
+.. currentmodule:: openxps
+.. autoclass:: ExtendedSpaceBiasVariable
+    :member-order: alphabetical
+

@@ -1,0 +1,11 @@
+NoBounds
+========
+
+.. currentmodule:: openxps.bounds
+.. autoclass:: NoBounds
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: leptonExpression
+    .. automethod:: wrap

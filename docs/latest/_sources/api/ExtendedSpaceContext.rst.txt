@@ -7,12 +7,19 @@ ExtendedSpaceContext
 
     .. rubric:: Methods
 
-    .. automethod:: addBiasKernel
+    .. automethod:: createCheckpoint
+    .. automethod:: getDynamicalVariableValues
+    .. automethod:: getDynamicalVariableVelocities
     .. automethod:: getExtensionContext
-    .. automethod:: getExtraDOFs
-    .. automethod:: getExtraValues
-    .. automethod:: getExtraVelocities
-    .. automethod:: setExtraValues
-    .. automethod:: setExtraVelocities
-    .. automethod:: setExtraVelocitiesToTemperature
+    .. automethod:: getIntegrator
+    .. automethod:: getParameter
+    .. automethod:: getSystem
+    .. automethod:: loadCheckpoint
+    .. automethod:: reinitialize
+    .. automethod:: setDynamicalVariableValues
+    .. automethod:: setDynamicalVariableVelocities
+    .. automethod:: setDynamicalVariableVelocitiesToTemperature
+    .. automethod:: setParameter
     .. automethod:: setPositions
+    .. automethod:: setState
+    .. automethod:: synchronize

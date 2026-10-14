@@ -1,0 +1,7 @@
+CircularBounds
+==============
+
+.. currentmodule:: openxps.bounds
+.. autoclass:: CircularBounds
+    :member-order: alphabetical
+

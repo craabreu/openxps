@@ -1,0 +1,12 @@
+ExtendedSpaceSimulation
+=======================
+
+.. currentmodule:: openxps
+.. autoclass:: ExtendedSpaceSimulation
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: loadState
+    .. automethod:: minimizeEnergy
+    .. automethod:: saveState

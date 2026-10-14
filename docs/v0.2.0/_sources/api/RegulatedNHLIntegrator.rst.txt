@@ -1,0 +1,17 @@
+RegulatedNHLIntegrator
+======================
+
+.. currentmodule:: openxps.integrators
+.. autoclass:: RegulatedNHLIntegrator
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getFrictionCoefficient
+    .. automethod:: getRegulationParameter
+    .. automethod:: getTemperature
+    .. automethod:: getTimeConstant
+    .. automethod:: registerWithSystem
+    .. automethod:: setFrictionCoefficient
+    .. automethod:: setTemperature
+    .. automethod:: setTimeConstant
