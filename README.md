@@ -29,11 +29,10 @@ smoothed by the harmonic coupling. This is the idea behind TAMD
 ([Maragliano and Vanden-Eijnden, 2006][Maragliano2006]) and d-AFED
 ([Abrams and Tuckerman, 2008][Abrams2008]).
 
-A dynamical variable can also drive a global parameter of OpenMM forces, such as a
-factor that scales some interactions, so that the parameter itself is sampled.
-Couplings of this kind, in which the energy is a sum of functions of **s** multiplied
-by functions of **r**, are used in solute-tempered adiabatic free-energy dynamics
-([Bajpai et al., 2025][Bajpai2025]).
+A dynamical variable can also drive a global parameter of OpenMM forces, such as an
+alchemical coupling parameter λ, so that the parameter itself is sampled, as in
+λ-dynamics. [Correa et al. (2026)][Correa2026] combined λ-dynamics with d-AFED to
+compute solvation free energies.
 
 UFED ([Chen et al., 2012][Chen2012]) combines d-AFED with a metadynamics bias
 ([Laio and Parrinello, 2002][Laio2002]; [Barducci et al., 2008][Barducci2008]) applied
@@ -215,7 +214,7 @@ Copyright (c) 2024-2026 [C. Abreu](https://github.com/craabreu)
 
 [Maragliano2006]: https://doi.org/10.1016/j.cplett.2006.05.062
 [Abrams2008]: https://doi.org/10.1021/jp805039u
-[Bajpai2025]: https://doi.org/10.1021/acs.jctc.5c00717
+[Correa2026]: https://arxiv.org/abs/2608.12691
 [Chen2012]: https://doi.org/10.1063/1.4733389
 [Laio2002]: https://doi.org/10.1073/pnas.202427399
 [Barducci2008]: https://doi.org/10.1103/physrevlett.100.020603

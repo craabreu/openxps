@@ -12,6 +12,7 @@ authors:
     given-names: Charlles
     orcid: "https://orcid.org/0000-0002-6956-4045"
 version: 0.2.0
+date-released: 2026-10-14
 license: MIT
 repository-code: "https://github.com/craabreu/openxps"
 url: "https://craabreu.github.io/openxps/latest"
