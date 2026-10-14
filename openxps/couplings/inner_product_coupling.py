@@ -293,13 +293,18 @@ class InnerProductCoupling(Coupling):
         Raises
         ------
         ValueError
-            If two couplings define the same function or parameter differently.
+            If two couplings define the same dynamical variable, function or
+            parameter differently.
         """
         forces, dvs, functions, parameters = [], {}, {}, {}
         for coupling in couplings:
             forces.extend(coupling.getForces())
             for dv in coupling.getDynamicalVariables():
-                dvs.setdefault(dv.name, dv)
+                if dvs.setdefault(dv.name, dv) != dv:
+                    raise ValueError(
+                        f'The dynamical variable "{dv.name}" has conflicting '
+                        "definitions in the couplings."
+                    )
             for fn in coupling._functions:
                 name, expression = fn.getName(), fn.getExpression()
                 if functions.setdefault(name, expression) != expression:

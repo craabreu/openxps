@@ -21,6 +21,26 @@ Extended Phase-Space Simulations with OpenMM
 
 ### Overview
 
+OpenXPS runs extended phase-space (XPS) simulations with [OpenMM]. It adds
+dynamical variables to a physical system and couples them to collective variables
+or to force parameters, as in driven adiabatic free-energy dynamics (d-AFED) and
+temperature-accelerated molecular dynamics (TAMD).
+
+Main features:
+
+* Dynamical variables with periodic, reflective or no bounds, in any units.
+* Harmonic, custom collective-variable, and inner-product couplings between
+  dynamical variables and the physical system. Couplings can be summed.
+* `ExtendedSpaceSimulation` and `ExtendedSpaceContext`, which keep the physical and
+  extension contexts in sync and save or load both together.
+* Lockstep and multiple-time-step (split) integration of the two subsystems.
+* Thermostatted integrators: CSVR, massive GGMT, regulated Nosé-Hoover-Langevin and
+  symmetric Langevin.
+* Extended phase-space metadynamics.
+* `ForceMatchingRegressor`, which fits free energy surfaces to mean forces with
+  radial basis functions.
+* `ExtensionWriter`, which reports extension-system data through
+  [CVPack] reporters.
 
 ### Installation and Usage
 
@@ -48,8 +68,10 @@ Documentation for the latest OpenXPS version is available at [Github Pages].
 
 ### Copyright
 
-Copyright (c) 2024 [C. Abreu](https://github.com/craabreu)
+Copyright (c) 2024-2026 [C. Abreu](https://github.com/craabreu)
 
 
 [Github Pages]: https://craabreu.github.io/openxps/latest
 [mdtools]: https://anaconda.org/mdtools/openxps
+[OpenMM]: https://openmm.org
+[CVPack]: https://github.com/RedesignScience/cvpack

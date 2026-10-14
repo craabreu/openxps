@@ -51,7 +51,7 @@ def test_dv_mass_without_unit():
     """Test DynamicalVariable initialization with mass missing a unit."""
     with pytest.raises(TypeError) as excinfo:
         DynamicalVariable("phi", mmunit.radian, 3, NoBounds(0, 1, mmunit.radian))
-    assert "Mass must be have units of measurement." in str(excinfo.value)
+    assert "Mass must have units of measurement." in str(excinfo.value)
 
 
 def test_dv_incompatible_mass_unit():

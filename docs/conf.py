@@ -26,13 +26,16 @@ sys.path.insert(0, os.path.abspath(".."))
 
 def create_class_rst_file(cls, module_name="openxps"):
     name = cls.__name__
-    methods = list(cls.__dict__.keys())
+    methods = dict(cls.__dict__)
     excluded = ["yaml_tag"]
     with open(f"api/{name}.rst", "w") as f:
         included_methods = [
             f"    .. automethod:: {method}\n"
             for method in sorted(methods)
             if not (method.startswith("_") or method in excluded)
+            and (
+                callable(getattr(cls, method)) or isinstance(methods[method], property)
+            )
         ]
         f.writelines(
             [
@@ -221,7 +224,7 @@ with open("api/index.rst", "w") as f:
 
 version = os.getenv("OPENXPS_VERSION", openxps.__version__)
 project = f"OpenXPS {version}"
-copyright = r"2024 C. Abreu"
+copyright = r"2024-2026 C. Abreu"
 author = "Charlles Abreu"
 release = ""
 

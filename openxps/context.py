@@ -51,15 +51,12 @@ class ExtendedSpaceContext(mm.Context):
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     >>> kappa = 1000 * unit.kilojoule_per_mole / unit.radian**2
     >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)
-    >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)
     >>> temp = 300 * unit.kelvin
     >>> integrator = openmm.LangevinMiddleIntegrator(
     ...     temp, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
     >>> integrator.setRandomNumberSeed(1234)
     >>> platform = openmm.Platform.getPlatformByName("Reference")
-    >>> height = 2 * unit.kilojoule_per_mole
-    >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
     ...     xps.ExtendedSpaceSystem(model.system, harmonic_force),
     ...     xps.LockstepIntegrator(integrator),
@@ -387,7 +384,7 @@ class ExtendedSpaceContext(mm.Context):
         """
         return self._extension_context
 
-    def createCheckpoint(self) -> str:
+    def createCheckpoint(self) -> bytes:
         r"""Create a checkpoint recording the current state of the Context.
 
         This should be treated as an opaque block of binary data. See
@@ -395,8 +392,8 @@ class ExtendedSpaceContext(mm.Context):
 
         Returns
         -------
-        str
-            A string containing the checkpoint data
+        bytes
+            The checkpoint data
 
         """
         return (
@@ -405,7 +402,7 @@ class ExtendedSpaceContext(mm.Context):
             + mmswig.Context_createCheckpoint(self._extension_context)
         )
 
-    def loadCheckpoint(self, checkpoint):
+    def loadCheckpoint(self, checkpoint: bytes) -> None:
         r"""Load a checkpoint that was written by :meth:`createCheckpoint`.
 
         See :OpenMM:`Context` for more details.

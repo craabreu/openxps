@@ -155,7 +155,7 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def _add_boost(self, fraction: float) -> None:
         self.addComputePerDof("v", f"v + {fraction}*dt*f/m")
 
-    def _add_v1_boost(self, fraction: float) -> str:
+    def _add_v1_boost(self, fraction: float) -> None:
         self.addComputePerDof(
             "v1",
             self._masked(
@@ -164,7 +164,7 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
             ),
         )
 
-    def _add_v_scaling(self, fraction: float) -> str:
+    def _add_v_scaling(self, fraction: float) -> int:
         return self.addComputePerDof("v", f"v*exp(-{fraction}*dt*v1)")
 
     def _add_thermostat(self, fraction: float) -> None:

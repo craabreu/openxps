@@ -221,7 +221,7 @@ class Coupling(Serializable):
         ...     xps.CircularBounds()
         ... )
         >>> coupling = xps.CollectiveVariableCoupling(
-        ...     "0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
+        ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
         ...     [phi],
         ...     [phi0],
         ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,

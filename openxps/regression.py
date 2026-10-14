@@ -1,5 +1,5 @@
 """
-.. module:: openxps.rbf
+.. module:: openxps.regression
    :platform: Linux, MacOS, Windows
    :synopsis: Radial basis function regressor for free energy surface fitting.
 

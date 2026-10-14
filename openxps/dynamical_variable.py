@@ -82,7 +82,7 @@ class DynamicalVariable(Serializable):
         if not mmunit.is_unit(self.unit):
             raise TypeError("The unit must be a valid OpenMM unit.")
         if not mmunit.is_quantity(self.mass):
-            raise TypeError("Mass must be have units of measurement.")
+            raise TypeError("Mass must have units of measurement.")
         mass_unit = mmunit.dalton * (mmunit.nanometer / self.unit) ** 2
         if not self.mass.unit.is_compatible(mass_unit):
             raise TypeError(f"Mass units must be compatible with {mass_unit}.")
@@ -248,7 +248,6 @@ class DynamicalVariable(Serializable):
         >>> psi = cvpack.Torsion(6, 8, 14, 16, name="psi")
         >>> dv.distanceTo(psi)
         '(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))'
-        >>>
 
         """
         if isinstance(other, cvpack.CollectiveVariable):

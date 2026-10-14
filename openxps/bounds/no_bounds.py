@@ -24,7 +24,7 @@ class NoBounds(Bounds):
     upper
         A typical high value for the dynamical variable, not an actual bound.
     unit
-        The unity of measurement of the bounds. If the bounds do not have a unit, use
+        The unit of measurement of the bounds. If the bounds do not have a unit, use
         ``dimensionless``.
 
     Example

@@ -242,6 +242,14 @@ def test_sum_rejects_conflicting_parameter_values():
         _ = first + second
 
 
+def test_sum_rejects_conflicting_dynamical_variables():
+    first = _ipc("scaling*10*r^2", ["scaling"], [_dv("lam")], {"scaling": "lam"})
+    other_lam = _dv("lam", ReflectiveBounds(0.0, 2.0, mmunit.dimensionless))
+    second = _ipc("scaling*3*r", ["scaling"], [other_lam], {"scaling": "lam"})
+    with pytest.raises(ValueError, match='variable "lam" has conflicting'):
+        _ = first + second
+
+
 def test_force_outside_coupling_using_its_parameter_is_rejected():
     system = _two_particles()
     system.addForce(_bond("scaling*3*r", ["scaling"]))

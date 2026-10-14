@@ -33,8 +33,8 @@
   must be given in MD units.
 
 - `ExtendedSpaceSystem` no longer takes `tether_period`, and
-  `getTetheringForce()` is gone. The tether never engaged, because the y and z
-  components of extension particles rest at the origin with zero velocity.
+  `getTetheringForce()` is gone. Only the x components of extension particles enter
+  forces and reports, so the y and z components need no tether.
 - The dynamical variables of a sum of couplings keep the order in which they first
   appear in the summed couplings, instead of being sorted by name. This is the order
   expected by `setDynamicalVariableValues` and `setDynamicalVariableVelocities` and
@@ -158,6 +158,13 @@
   now be both a force parameter and a function input.
 - Arguments of decorated constructors and setters may be named tuples (such as
   `openmm.Vec3`) or other sequences such as `range`, which previously raised errors.
+- Summing inner product couplings that define the same dynamical variable
+  differently raises an error instead of keeping the first definition.
+- `ExtensionWriter` reports the regulated kinetic energy when the extension
+  integrator is a `RegulatedNHLIntegrator`, so its temperature no longer exceeds the
+  thermostat's.
+- The `Coupling.addToExtensionSystem` example builds its periodic expression with an
+  f-string, so it no longer gives wrong energies across the periodic seam.
 - Passing a coupling that is already part of a system to `ExtendedSpaceSystem` raises
   a clear error instead of crashing in OpenMM. A deep copy of the coupling can be
   used instead.
