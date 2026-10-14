@@ -59,6 +59,7 @@
 - The conda recipe declares every runtime dependency.
 - The Linux CI matrix now installs the OpenMM version it names and tests OpenMM 8.4
   through 8.6.
+- CI tests Python 3.14 and uses `setup-micromamba` v2.
 - `HarmonicCoupling` wraps periodic dynamical variables declared in units other than
   radians (e.g. degrees) with the correct period; previously such couplings produced
   wrong energies across the periodic seam.

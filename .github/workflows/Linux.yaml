@@ -24,6 +24,10 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            python-version: "3.14"
+            openmm-version: "8.6"
+
+          - os: ubuntu-latest
             python-version: "3.13"
             openmm-version: "8.6"
 
@@ -49,7 +53,7 @@ jobs:
           df -h
           ulimit -a
 
-      - uses: mamba-org/setup-micromamba@v1
+      - uses: mamba-org/setup-micromamba@v2
         with:
           environment-file: devtools/conda-envs/test_env.yaml
           environment-name: test
