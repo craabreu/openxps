@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - v*
+  # Rebuild and upload the package of an existing release tag
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build, such as v0.2.0"
+        required: true
 
 jobs:
   test:
@@ -16,6 +22,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
 
       - name: Additional info about the build
         shell: bash
@@ -41,10 +50,10 @@ jobs:
         shell: bash -l {0}
         working-directory: ./devtools/conda-recipes/anaconda
         run: |
-          export OPENXPS_VERSION=${{ github.ref_name }}
+          export OPENXPS_VERSION=${{ inputs.tag || github.ref_name }}
           echo "::group::Building conda package for openxps $OPENXPS_VERSION"
           outdir=$(mktemp -d)
-          conda build . --no-anaconda-upload -c conda-forge --output-folder $outdir
+          conda build . --no-anaconda-upload -c conda-forge -c mdtools --output-folder $outdir
           echo "::endgroup::"
           echo "::group::Uploading package to mdtools conda channel"
           PACKAGE=$(find $outdir \( -name '*.conda' -o -name '*.tar.bz2' \) | head -1)
