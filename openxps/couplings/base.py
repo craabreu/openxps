@@ -306,6 +306,10 @@ class Coupling(Serializable):
 class CouplingSum(Coupling):
     """A sum of couplings.
 
+    The dynamical variables of the sum are ordered by first appearance in the
+    summed couplings, and this is the order in which an
+    :class:`ExtendedSpaceContext` expects and reports their values and velocities.
+
     Parameters
     ----------
     couplings
@@ -340,20 +344,17 @@ class CouplingSum(Coupling):
                 flattened.extend(coupling.getCouplings())
             else:
                 flattened.append(coupling)
-        self._couplings = self._mergeInnerProductCouplings(flattened)
-        forces = []
         dv_dict = {}
-        for coupling in self._couplings:
-            forces.extend(coupling.getForces())
+        for coupling in flattened:
             for dv in coupling.getDynamicalVariables():
-                if dv.name not in dv_dict:
-                    dv_dict[dv.name] = dv
-                elif dv_dict[dv.name] != dv:
+                if dv_dict.setdefault(dv.name, dv) != dv:
                     raise ValueError(
                         f'The dynamical variable "{dv.name}" has '
                         "conflicting definitions in the couplings."
                     )
-        super().__init__(forces, sorted(dv_dict.values(), key=lambda dv: dv.name))
+        self._couplings = self._mergeInnerProductCouplings(flattened)
+        forces = [force for c in self._couplings for force in c.getForces()]
+        super().__init__(forces, list(dv_dict.values()))
         self._checkCollectiveVariables()
 
     @staticmethod

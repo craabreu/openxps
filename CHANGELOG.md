@@ -35,6 +35,10 @@
 - `ExtendedSpaceSystem` no longer takes `tether_period`, and
   `getTetheringForce()` is gone. The tether never engaged, because the y and z
   components of extension particles rest at the origin with zero velocity.
+- The dynamical variables of a sum of couplings keep the order in which they first
+  appear in the summed couplings, instead of being sorted by name. This is the order
+  expected by `setDynamicalVariableValues` and `setDynamicalVariableVelocities` and
+  used by `ExtensionWriter` columns.
 
 ### Added
 - `MassiveGGMTIntegrator` accepts `halleyIterations`, the number of Halley iterations
