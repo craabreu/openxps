@@ -7,11 +7,13 @@ with respect to that variable.
 """
 
 import math
+from copy import copy, deepcopy
 
 import cvpack
 import numpy as np
 import openmm as mm
 import pytest
+import yaml
 from openmm import unit as mmunit
 
 import openxps as xps
@@ -226,6 +228,29 @@ def test_sum_merges_inner_product_couplings():
     assert isinstance(merged, xps.InnerProductCoupling)
     assert len(merged.getForces()) == 2
     assert first.getForceGroups() == set() and second.getForceGroups() == set()
+
+
+def test_sum_order_survives_copy_and_yaml():
+    """Merging interleaved inner product couplings does not reorder the variables."""
+    b = xps.DynamicalVariable(
+        "b", mmunit.nanometer, 1 * mmunit.dalton, NoBounds(0, 1, mmunit.nanometer)
+    )
+    harmonic = xps.HarmonicCoupling(
+        cvpack.Distance(0, 1, name="d"),
+        b,
+        100 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
+    )
+    total = _ipc("a*r", ["a"], [_dv("a")]) + harmonic + _ipc("c*r^2", ["c"], [_dv("c")])
+    clones = {
+        "copy": copy(total),
+        "deepcopy": deepcopy(total),
+        "yaml": yaml.safe_load(yaml.safe_dump(total)),
+    }
+    for kind, coupling in {"original": total, **clones}.items():
+        names = [dv.name for dv in coupling.getDynamicalVariables()]
+        assert names == ["a", "b", "c"], kind
+    nested = deepcopy(total) + _ipc("e*r", ["e"], [_dv("e")])
+    assert [dv.name for dv in nested.getDynamicalVariables()] == ["a", "b", "c", "e"]
 
 
 def test_sum_rejects_conflicting_function_definitions():

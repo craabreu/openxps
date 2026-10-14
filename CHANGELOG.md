@@ -38,7 +38,7 @@
 - The dynamical variables of a sum of couplings keep the order in which they first
   appear in the summed couplings, instead of being sorted by name. This is the order
   expected by `setDynamicalVariableValues` and `setDynamicalVariableVelocities` and
-  used by `ExtensionWriter` columns.
+  used by `ExtensionWriter` columns, and copies and serialized sums keep it.
 - `ForceMatchingRegressor.fit` no longer shows Lightning's progress bar, model
   summary and informational messages unless the new `verbose` keyword is `True`.
 - `DynamicalVariable` raises `TypeError`, like `Bounds`, instead of `ValueError` for

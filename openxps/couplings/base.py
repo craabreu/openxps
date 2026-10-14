@@ -341,7 +341,7 @@ class CouplingSum(Coupling):
         flattened = []
         for coupling in couplings:
             if isinstance(coupling, CouplingSum):
-                flattened.extend(coupling.getCouplings())
+                flattened.extend(coupling._flattened)
             else:
                 flattened.append(coupling)
         dv_dict = {}
@@ -352,6 +352,7 @@ class CouplingSum(Coupling):
                         f'The dynamical variable "{dv.name}" has '
                         "conflicting definitions in the couplings."
                     )
+        self._flattened = flattened
         self._couplings = self._mergeInnerProductCouplings(flattened)
         forces = [force for c in self._couplings for force in c.getForces()]
         super().__init__(forces, list(dv_dict.values()))
@@ -388,7 +389,9 @@ class CouplingSum(Coupling):
         return new
 
     def __getstate__(self) -> dict[str, t.Any]:
-        return {"couplings": self._couplings}
+        # The couplings before merging, so that a rebuilt sum keeps the order of
+        # its dynamical variables
+        return {"couplings": self._flattened}
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self.__init__(state["couplings"])
