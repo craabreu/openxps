@@ -53,6 +53,7 @@
 - The `state` argument of `ExtendedSpaceSimulation` accepts a file name.
 - `InnerProductCoupling.getForceGroups()` returns the force groups of its forces.
 - `ExtendedSpaceMetadynamics` accepts periodic and reflective variables together.
+- `RegulatedNHLIntegrator.getRegulationParameter()` returns the regulation parameter.
 
 ### Fixed
 - `pandas` and `typing-extensions` are now declared as runtime dependencies.

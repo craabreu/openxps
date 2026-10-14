@@ -127,6 +127,16 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
         if not forceFirst:
             self._add_boost(0.5)
 
+    def getRegulationParameter(self) -> float:
+        """Get the regulation parameter of the integrator.
+
+        Returns
+        -------
+        float
+            The regulation parameter.
+        """
+        return self._regulation_parameter
+
     def _add_variables(self) -> None:
         self.addGlobalVariable("kT", 0)
         self.addGlobalVariable("invQ", 0)

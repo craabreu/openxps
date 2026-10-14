@@ -143,8 +143,9 @@ class ExtensionWriter(CustomWriter):
         self._dv_objects = coupling.getDynamicalVariables()
         self._masses = np.array([dv.mass / dv.mass.unit for dv in self._dv_objects])
         integrator = context.getIntegrator().getExtensionIntegrator()
-        if isinstance(integrator, RegulatedNHLIntegrator):
-            self._regulated_integrator = integrator
+        self._regulated_integrator = (
+            integrator if isinstance(integrator, RegulatedNHLIntegrator) else None
+        )
         kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
             mmunit.kilojoules_per_mole / mmunit.kelvin
         )
@@ -251,7 +252,7 @@ class ExtensionWriter(CustomWriter):
             return 0.5 * float(np.dot(self._masses, rates * rates))
         integrator = self._regulated_integrator
         kt = integrator.getGlobalVariableByName("kT")
-        c = np.sqrt(integrator._regulation_parameter * kt / self._masses)
+        c = np.sqrt(integrator.getRegulationParameter() * kt / self._masses)
         return 0.5 * float(np.dot(self._masses, rates * c * np.tanh(rates / c)))
 
     def getValues(self, simulation: ExtendedSpaceSimulation) -> list[float]:  # noqa: PLR0912

@@ -561,8 +561,8 @@ def test_extension_writer_temperature_is_physical():
     assert abs(np.mean(temperatures) - 300) < 60
 
 
-def test_extension_writer_temperature_with_regulated_nhl():
-    """With regulated NHL, the reported kinetic energy is the regulated one."""
+def _regulated_simulation():
+    """A simulation whose extension integrator is a RegulatedNHLIntegrator."""
     model = testsystems.AlanineDipeptideVacuum(constraints=None)
     mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
     phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
@@ -583,6 +583,12 @@ def test_extension_writer_temperature_with_regulated_nhl():
     simulation.context.setDynamicalVariableVelocitiesToTemperature(
         300 * unit.kelvin, 1234
     )
+    return simulation
+
+
+def test_extension_writer_temperature_with_regulated_nhl():
+    """With regulated NHL, the reported kinetic energy is the regulated one."""
+    simulation = _regulated_simulation()
     writer = xps.ExtensionWriter(kinetic=True, temperature=True)
     writer.initialize(simulation)
     kt = (unit.MOLAR_GAS_CONSTANT_R * 300 * unit.kelvin).value_in_unit(
@@ -599,6 +605,18 @@ def test_extension_writer_temperature_with_regulated_nhl():
         v = rate.value_in_unit(unit.radian / unit.picosecond)
         assert kinetic == pytest.approx(0.5 * 3 * v * c * np.tanh(v / c), rel=1e-6)
     assert abs(np.mean(temperatures) - 300) < 60
+
+
+def test_extension_writer_reinitialized_without_regulated_nhl():
+    """Re-initializing with another integrator drops the regulated kinetic energy."""
+    writer = xps.ExtensionWriter(kinetic=True)
+    writer.initialize(_regulated_simulation())
+    simulation = create_test_simulation()
+    writer.initialize(simulation)
+    (kinetic,) = writer.getValues(simulation)
+    (rate,) = simulation.context.getDynamicalVariableVelocities()
+    v = rate.value_in_unit(unit.radian / unit.picosecond)
+    assert kinetic == pytest.approx(0.5 * 3 * v**2, rel=1e-6)
 
 
 def test_extension_writer_headers_independent_of_flags():
