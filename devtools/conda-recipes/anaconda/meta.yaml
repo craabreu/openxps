@@ -39,7 +39,7 @@ about:
   license: MIT
   license_family: MIT
   license_file: LICENSE.md
-  doc_url: https://openxps.readthedocs.io/en/stable
+  doc_url: https://craabreu.github.io/openxps/latest
   dev_url: https://github.com/craabreu/openxps
 
 extra:

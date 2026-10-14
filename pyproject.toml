@@ -35,10 +35,10 @@ dependencies = [
     "typing-extensions",
 ]
 
-# Update the urls once the hosting is set up.
-#[project.urls]
-#"Source" = "https://github.com/<username>/openxps/"
-#"Documentation" = "https://openxps.readthedocs.io/"
+[project.urls]
+"Source" = "https://github.com/craabreu/openxps"
+"Documentation" = "https://craabreu.github.io/openxps/latest"
+"Changelog" = "https://github.com/craabreu/openxps/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 test = [
