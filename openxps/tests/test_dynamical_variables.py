@@ -23,9 +23,11 @@ def test_dv_initialization():
     assert isinstance(dv.bounds, PeriodicBounds)
 
 
-@pytest.mark.parametrize("name", ["my-var", "1phi", "phi s", "", 3])
+@pytest.mark.parametrize(
+    "name", ["my-var", "1phi", ".phi", "phi s", "a+b", "f(x)", "a,b", "", 3]
+)
 def test_dv_invalid_name(name):
-    """Names must be valid Lepton identifiers."""
+    """Names must be valid Lepton variable names."""
     with pytest.raises(ValueError, match="Invalid name"):
         DynamicalVariable(
             name,
@@ -33,6 +35,18 @@ def test_dv_invalid_name(name):
             3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
             NoBounds(0, 1, mmunit.radian),
         )
+
+
+@pytest.mark.parametrize("name", ["phi", "_x1", "lambda.vdw", "λ", "x'"])
+def test_dv_valid_name(name):
+    """Lepton accepts more than Python identifiers as variable names."""
+    dv = DynamicalVariable(
+        name,
+        mmunit.radian,
+        3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
+        NoBounds(0, 1, mmunit.radian),
+    )
+    assert yaml.safe_load(yaml.safe_dump(dv)).name == name
 
 
 def test_dv_invalid_unit():

@@ -173,7 +173,8 @@
 - `ForceMatchingRegressor.get_learning_curve()` returns its columns in the documented
   order (`epoch`, `train_loss`, `val_loss`), and the documented loss now matches the
   one minimized, which averages over dynamical variables too.
-- `DynamicalVariable` rejects names that are not valid Lepton identifiers, which
-  previously failed later with an obscure Lepton error.
+- `DynamicalVariable` rejects names that Lepton cannot parse as variables (empty,
+  starting with a digit or a period, or containing whitespace or any of
+  `+-*/^(),;`), which previously failed later with an obscure Lepton error.
 - Errors about incompatible periodicity explain that periodic variables must have
   the same bounds, and errors of `InnerProductCoupling` list names in sorted order.

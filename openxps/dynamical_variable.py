@@ -21,7 +21,9 @@ from openmm import unit as mmunit
 from .bounds import Bounds, PeriodicBounds
 from .utils import preprocess_args
 
-_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# Names that Lepton parses as a variable: no whitespace or delimiters, and no
+# leading digit or period, which would start a number
+_LEPTON_NAME = re.compile(r"[^\s\d.+\-*/^(),;][^\s+\-*/^(),;]*", re.ASCII)
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,8 @@ class DynamicalVariable(Serializable):
     ----------
     name
         The name of the context parameter to be turned into a dynamical variable.
+        It must be a valid Lepton variable name: nonempty, not starting with a digit
+        or a period, and without whitespace or any of ``+-*/^(),;``.
     unit
         The unit of measurement of this dynamical variable. If it does not have a
         unit, use ``openmm.unit.dimensionless``. Couplings convert dynamical
@@ -74,10 +78,11 @@ class DynamicalVariable(Serializable):
     bounds: Bounds
 
     def __post_init__(self) -> None:
-        if not (isinstance(self.name, str) and _IDENTIFIER.fullmatch(self.name)):
+        if not (isinstance(self.name, str) and _LEPTON_NAME.fullmatch(self.name)):
             raise ValueError(
-                f"Invalid name {self.name!r}: it must start with a letter or an "
-                "underscore and contain only letters, digits and underscores."
+                f"Invalid name {self.name!r}: it must be nonempty, must not start "
+                "with a digit or a period, and must not contain whitespace or any "
+                "of +-*/^(),;"
             )
         if not mmunit.is_unit(self.unit):
             raise TypeError("The unit must be a valid OpenMM unit.")

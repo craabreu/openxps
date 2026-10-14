@@ -253,6 +253,13 @@ def test_sum_order_survives_copy_and_yaml():
     assert [dv.name for dv in nested.getDynamicalVariables()] == ["a", "b", "c", "e"]
 
 
+@pytest.mark.parametrize("name", ["lambda.vdw", "λ"])
+def test_dv_name_accepted_by_lepton(name):
+    """Names that Lepton accepts work as coupled parameters."""
+    context = _context(_ipc(f"{name}*10*r^2", [name], [_dv(name)]))
+    assert _physical_energy(context, [0.3]) == pytest.approx(0.3 * 10 * 0.7**2)
+
+
 def test_sum_rejects_conflicting_function_definitions():
     first = _ipc("scaling*10*r^2", ["scaling"], [_dv("lam")], {"scaling": "lam"})
     second = _ipc("scaling*3*r", ["scaling"], [_dv("lam")], {"scaling": "lam^2"})
