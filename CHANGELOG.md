@@ -153,3 +153,6 @@
   now be both a force parameter and a function input.
 - Arguments of decorated constructors and setters may be named tuples (such as
   `openmm.Vec3`) or other sequences such as `range`, which previously raised errors.
+- Passing a coupling that is already part of a system to `ExtendedSpaceSystem` raises
+  a clear error instead of crashing in OpenMM. A deep copy of the coupling can be
+  used instead.

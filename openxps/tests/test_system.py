@@ -2,6 +2,8 @@
 Unit tests for the openxps.system module.
 """
 
+import copy
+
 import cvpack
 import numpy as np
 import openmm as mm
@@ -165,3 +167,17 @@ def test_missing_dv_parameter():
     system = ExtendedSpaceSystem(model.system, potential_without_dvs)
     assert len(system.getDynamicalVariables()) == 0
     assert system.getExtensionSystem().getNumParticles() == 0
+
+
+def test_coupling_reuse_raises_clear_error():
+    """A coupling can be part of only one system, but a deep copy can be reused."""
+    model = testsystems.AlanineDipeptideVacuum()
+    coupling = create_coupling()
+    ExtendedSpaceSystem(model.system, coupling)
+    other = testsystems.AlanineDipeptideVacuum()
+    num_forces = other.system.getNumForces()
+    with pytest.raises(RuntimeError, match="already part of another system"):
+        ExtendedSpaceSystem(other.system, coupling)
+    assert other.system.getNumForces() == num_forces
+    system = ExtendedSpaceSystem(other.system, copy.deepcopy(coupling))
+    assert system.getNumForces() > num_forces
