@@ -38,7 +38,9 @@ class CollectiveVariableCoupling(Coupling):
     dynamical_variables
         The extended dynamical variables used in the coupling function.
     **parameters
-        Named parameters that appear in the mathematical expression.
+        Named parameters that appear in the mathematical expression. Values given
+        for names of dynamical variables are ignored, since dynamical variables
+        take their values from the extension context.
 
     Examples
     --------

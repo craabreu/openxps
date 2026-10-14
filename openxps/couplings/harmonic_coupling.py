@@ -79,7 +79,10 @@ class HarmonicCoupling(CollectiveVariableCoupling):
         if cv_periodic != dv.isPeriodic() or (
             cv_periodic and cv.getPeriodicBounds() != dv.bounds.asQuantity()
         ):
-            raise ValueError(f"Incompatible periodicity for {pair}.")
+            raise ValueError(
+                f"Incompatible periodicity for {pair}: either both are nonperiodic "
+                "or both have the same periodic bounds (same lower and upper limits)."
+            )
         if mmunit.is_quantity(kappa) and not kappa.unit.is_compatible(
             mmunit.kilojoule_per_mole / dv.unit**2
         ):

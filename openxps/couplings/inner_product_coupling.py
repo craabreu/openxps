@@ -214,7 +214,7 @@ class InnerProductCoupling(Coupling):
         if missing := function_names - all_force_parameters:
             raise ValueError(
                 "These functions are not global parameters in the provided forces: "
-                + ", ".join(missing)
+                + ", ".join(sorted(missing))
             )
 
         all_dvs = {dv.name for dv in self._dynamical_variables}
@@ -248,7 +248,7 @@ class InnerProductCoupling(Coupling):
         ):
             raise ValueError(
                 "These dynamical variables are neither function variables nor global "
-                "context parameters: " + ", ".join(dvs_in_neither)
+                "context parameters: " + ", ".join(sorted(dvs_in_neither))
             )
 
         dynamic_parameters = dvs_in_force_parameters | function_names
@@ -265,7 +265,7 @@ class InnerProductCoupling(Coupling):
                 raise ValueError(
                     "The following parameters require a derivative and are present in "
                     f"force {force.getName()}, but no derivative was requested: "
-                    + ", ".join(missing)
+                    + ", ".join(sorted(missing))
                 )
         return dynamic_parameters
 

@@ -23,9 +23,21 @@ def test_dv_initialization():
     assert isinstance(dv.bounds, PeriodicBounds)
 
 
+@pytest.mark.parametrize("name", ["my-var", "1phi", "phi s", "", 3])
+def test_dv_invalid_name(name):
+    """Names must be valid Lepton identifiers."""
+    with pytest.raises(ValueError, match="Invalid name"):
+        DynamicalVariable(
+            name,
+            mmunit.radian,
+            3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
+            NoBounds(0, 1, mmunit.radian),
+        )
+
+
 def test_dv_invalid_unit():
     """Test DynamicalVariable initialization with an invalid unit."""
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(TypeError) as excinfo:
         DynamicalVariable(
             "phi",
             "not_a_unit",
@@ -136,7 +148,7 @@ def test_dv_distance_method():
                 NoBounds(0, 1, mmunit.radian),
             )
         )
-    assert "Incompatible boundary conditions." in str(excinfo.value)
+    assert "Incompatible boundary conditions" in str(excinfo.value)
 
     distance0 = DynamicalVariable(
         "distance0",

@@ -7,6 +7,7 @@
 
 """
 
+import re
 import typing as t
 from dataclasses import dataclass
 
@@ -19,6 +20,8 @@ from openmm import unit as mmunit
 
 from .bounds import Bounds, PeriodicBounds
 from .utils import preprocess_args
+
+_IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 @dataclass(frozen=True)
@@ -71,8 +74,13 @@ class DynamicalVariable(Serializable):
     bounds: Bounds
 
     def __post_init__(self) -> None:
+        if not (isinstance(self.name, str) and _IDENTIFIER.fullmatch(self.name)):
+            raise ValueError(
+                f"Invalid name {self.name!r}: it must start with a letter or an "
+                "underscore and contain only letters, digits and underscores."
+            )
         if not mmunit.is_unit(self.unit):
-            raise ValueError("The unit must be a valid OpenMM unit.")
+            raise TypeError("The unit must be a valid OpenMM unit.")
         if not mmunit.is_quantity(self.mass):
             raise TypeError("Mass must be have units of measurement.")
         mass_unit = mmunit.dalton * (mmunit.nanometer / self.unit) ** 2
@@ -191,7 +199,10 @@ class DynamicalVariable(Serializable):
         if self.isPeriodic() and other.getPeriodicBounds() == self.bounds.asQuantity():
             period = self.bounds.in_md_units().period
             return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
-        raise ValueError("Incompatible boundary conditions.")
+        raise ValueError(
+            "Incompatible boundary conditions: either both variables are nonperiodic "
+            "or both have the same periodic bounds (same lower and upper limits)."
+        )
 
     def _distanceToDV(self, other: te.Self) -> str:
         diff = f"{other.name}-{self.name}"
@@ -200,7 +211,11 @@ class DynamicalVariable(Serializable):
         if not (self.isPeriodic() or other.isPeriodic()):
             return f"({diff})"
         if self.bounds != other.bounds:
-            raise ValueError("Incompatible boundary conditions.")
+            raise ValueError(
+                "Incompatible boundary conditions: either both variables are "
+                "nonperiodic or both have the same periodic bounds (same lower and "
+                "upper limits)."
+            )
         period = self.bounds.in_md_units().period
         return f"({diff}-{period}*floor(0.5+({diff})/{period}))"
 

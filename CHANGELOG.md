@@ -41,6 +41,8 @@
   used by `ExtensionWriter` columns.
 - `ForceMatchingRegressor.fit` no longer shows Lightning's progress bar, model
   summary and informational messages unless the new `verbose` keyword is `True`.
+- `DynamicalVariable` raises `TypeError`, like `Bounds`, instead of `ValueError` for
+  an invalid unit.
 
 ### Added
 - `MassiveGGMTIntegrator` accepts `halleyIterations`, the number of Halley iterations
@@ -163,3 +165,7 @@
 - `ForceMatchingRegressor.get_learning_curve()` returns its columns in the documented
   order (`epoch`, `train_loss`, `val_loss`), and the documented loss now matches the
   one minimized, which averages over dynamical variables too.
+- `DynamicalVariable` rejects names that are not valid Lepton identifiers, which
+  previously failed later with an obscure Lepton error.
+- Errors about incompatible periodicity explain that periodic variables must have
+  the same bounds, and errors of `InnerProductCoupling` list names in sorted order.
