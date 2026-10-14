@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use OpenXPS in published work, please cite it as below."
+type: software
+title: "OpenXPS: Extended Phase-Space Simulations with OpenMM"
+abstract: >-
+  OpenXPS runs extended phase-space simulations with OpenMM. It adds dynamical
+  variables to a physical system and couples them to collective variables or to
+  force parameters, as in temperature-accelerated molecular dynamics, driven
+  adiabatic free-energy dynamics and unified free-energy dynamics.
+authors:
+  - family-names: Abreu
+    given-names: Charlles
+    orcid: "https://orcid.org/0000-0002-6956-4045"
+version: 0.2.0
+license: MIT
+repository-code: "https://github.com/craabreu/openxps"
+url: "https://craabreu.github.io/openxps/latest"
+keywords:
+  - molecular dynamics
+  - enhanced sampling
+  - extended phase space
+  - free energy
+  - OpenMM
