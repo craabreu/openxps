@@ -39,6 +39,8 @@
   appear in the summed couplings, instead of being sorted by name. This is the order
   expected by `setDynamicalVariableValues` and `setDynamicalVariableVelocities` and
   used by `ExtensionWriter` columns.
+- `ForceMatchingRegressor.fit` no longer shows Lightning's progress bar, model
+  summary and informational messages unless the new `verbose` keyword is `True`.
 
 ### Added
 - `MassiveGGMTIntegrator` accepts `halleyIterations`, the number of Halley iterations
@@ -158,3 +160,6 @@
   used instead.
 - `ExtendedSpaceSimulation.saveState` and `loadState` accept file objects open in
   binary mode and `os.PathLike` paths, as does the `state` argument.
+- `ForceMatchingRegressor.get_learning_curve()` returns its columns in the documented
+  order (`epoch`, `train_loss`, `val_loss`), and the documented loss now matches the
+  one minimized, which averages over dynamical variables too.
