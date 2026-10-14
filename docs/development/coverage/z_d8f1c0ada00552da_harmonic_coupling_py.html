@@ -65,7 +65,7 @@
             <a id="nextFileLink" class="nav" href="z_d8f1c0ada00552da_inner_product_coupling_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.16.2">coverage.py v7.16.2</a>,
-            created at 2026-10-13 20:43 +0000
+            created at 2026-10-14 19:24 +0000
         </p>
         <aside class="hidden">
             <button type="button" class="button_next_chunk" data-shortcut="j"></button>
@@ -161,14 +161,17 @@
     <p class="run"><span class="n"><a id="t79" href="#t79">79</a></span><span class="t">        <span class="key">if</span> <span class="nam">cv_periodic</span> <span class="op">!=</span> <span class="nam">dv</span><span class="op">.</span><span class="nam">isPeriodic</span><span class="op">(</span><span class="op">)</span> <span class="key">or</span> <span class="op">(</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t80" href="#t80">80</a></span><span class="t">            <span class="nam">cv_periodic</span> <span class="key">and</span> <span class="nam">cv</span><span class="op">.</span><span class="nam">getPeriodicBounds</span><span class="op">(</span><span class="op">)</span> <span class="op">!=</span> <span class="nam">dv</span><span class="op">.</span><span class="nam">bounds</span><span class="op">.</span><span class="nam">asQuantity</span><span class="op">(</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
     <p class="run run2"><span class="n"><a id="t81" href="#t81">81</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">            <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="fst">f&quot;</span><span class="fst">Incompatible periodicity for </span><span class="op">{</span><span class="nam">pair</span><span class="op">}</span><span class="fst">.</span><span class="fst">&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">        <span class="key">if</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">is_quantity</span><span class="op">(</span><span class="nam">kappa</span><span class="op">)</span> <span class="key">and</span> <span class="key">not</span> <span class="nam">kappa</span><span class="op">.</span><span class="nam">unit</span><span class="op">.</span><span class="nam">is_compatible</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">            <span class="nam">mmunit</span><span class="op">.</span><span class="nam">kilojoule_per_mole</span> <span class="op">/</span> <span class="nam">dv</span><span class="op">.</span><span class="nam">unit</span><span class="op">**</span><span class="num">2</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">            <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="fst">f&quot;</span><span class="fst">Incompatible force constant units for </span><span class="op">{</span><span class="nam">pair</span><span class="op">}</span><span class="fst">.</span><span class="fst">&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="pln"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
-    <p class="run"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t"><span class="nam">HarmonicCoupling</span><span class="op">.</span><span class="nam">registerTag</span><span class="op">(</span><span class="str">&quot;!openxps.HarmonicCoupling&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t82" href="#t82">82</a></span><span class="t">            <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t83" href="#t83">83</a></span><span class="t">                <span class="fst">f&quot;</span><span class="fst">Incompatible periodicity for </span><span class="op">{</span><span class="nam">pair</span><span class="op">}</span><span class="fst">: either both are nonperiodic </span><span class="fst">&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t84" href="#t84">84</a></span><span class="t">                <span class="str">&quot;or both have the same periodic bounds (same lower and upper limits).&quot;</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t85" href="#t85">85</a></span><span class="t">            <span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t86" href="#t86">86</a></span><span class="t">        <span class="key">if</span> <span class="nam">mmunit</span><span class="op">.</span><span class="nam">is_quantity</span><span class="op">(</span><span class="nam">kappa</span><span class="op">)</span> <span class="key">and</span> <span class="key">not</span> <span class="nam">kappa</span><span class="op">.</span><span class="nam">unit</span><span class="op">.</span><span class="nam">is_compatible</span><span class="op">(</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t87" href="#t87">87</a></span><span class="t">            <span class="nam">mmunit</span><span class="op">.</span><span class="nam">kilojoule_per_mole</span> <span class="op">/</span> <span class="nam">dv</span><span class="op">.</span><span class="nam">unit</span><span class="op">**</span><span class="num">2</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run run2"><span class="n"><a id="t88" href="#t88">88</a></span><span class="t">        <span class="op">)</span><span class="op">:</span>&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t89" href="#t89">89</a></span><span class="t">            <span class="key">raise</span> <span class="nam">ValueError</span><span class="op">(</span><span class="fst">f&quot;</span><span class="fst">Incompatible force constant units for </span><span class="op">{</span><span class="nam">pair</span><span class="op">}</span><span class="fst">.</span><span class="fst">&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t90" href="#t90">90</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="pln"><span class="n"><a id="t91" href="#t91">91</a></span><span class="t">&nbsp;</span><span class="r"></span></p>
+    <p class="run"><span class="n"><a id="t92" href="#t92">92</a></span><span class="t"><span class="nam">HarmonicCoupling</span><span class="op">.</span><span class="nam">registerTag</span><span class="op">(</span><span class="str">&quot;!openxps.HarmonicCoupling&quot;</span><span class="op">)</span>&nbsp;</span><span class="r"></span></p>
 </main>
 <footer>
     <div class="content">
@@ -178,7 +181,7 @@
             <a class="nav" href="z_d8f1c0ada00552da_inner_product_coupling_py.html">&#xbb; next</a>
             &nbsp; &nbsp; &nbsp;
             <a class="nav" href="https://coverage.readthedocs.io/en/7.16.2">coverage.py v7.16.2</a>,
-            created at 2026-10-13 20:43 +0000
+            created at 2026-10-14 19:24 +0000
         </p>
     </div>
 </footer>

@@ -52,7 +52,9 @@ a mathematical expression involving physical collective variables and parameters
 collective variables and parameters.</p></li>
 <li><p><strong>collective_variables</strong> (<em>Iterable</em><em>[</em><em>CollectiveVariable</em><em>]</em>) – The physical collective variables used in the coupling function.</p></li>
 <li><p><strong>dynamical_variables</strong> (<em>Iterable</em><em>[</em><a class="reference internal" href="DynamicalVariable.html#openxps.DynamicalVariable" title="openxps.dynamical_variable.DynamicalVariable"><em>DynamicalVariable</em></a><em>]</em>) – The extended dynamical variables used in the coupling function.</p></li>
-<li><p><strong>**parameters</strong> (<em>Quantity</em>) – Named parameters that appear in the mathematical expression.</p></li>
+<li><p><strong>**parameters</strong> (<em>Quantity</em>) – Named parameters that appear in the mathematical expression. Values given
+for names of dynamical variables are ignored, since dynamical variables
+take their values from the extension context.</p></li>
 </ul>
 </dd>
 </dl>
@@ -145,7 +147,7 @@ collective variables and parameters.</p></li>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &#169;2024 C. Abreu.
+      &#169;2024-2026 C. Abreu.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>

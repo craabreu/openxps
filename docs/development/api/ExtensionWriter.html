@@ -51,7 +51,9 @@ associated properties.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>kinetic</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the kinetic energy of the dynamical variables will be reported
-in units of kJ/mol.</p></li>
+in units of kJ/mol. If the extension integrator is a
+<code class="xref py py-class docutils literal notranslate"><span class="pre">RegulatedNHLIntegrator</span></code>, its regulated kinetic energy is reported
+instead, so that equipartition holds for the reported temperature.</p></li>
 <li><p><strong>temperature</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the temperature of the dynamical variables, with one degree of
 freedom per variable, will be reported in units of Kelvin.</p></li>
 <li><p><strong>dynamical_variables</strong> (<em>bool</em><em>, </em><em>optional</em><em>, </em><em>default=False</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, the current values of all dynamical variables will be reported.
@@ -273,7 +275,7 @@ can be used to perform any necessary setup.</p>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &#169;2024 C. Abreu.
+      &#169;2024-2026 C. Abreu.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>

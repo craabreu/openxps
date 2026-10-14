@@ -8,6 +8,7 @@ RegulatedNHLIntegrator
     .. rubric:: Methods
 
     .. automethod:: getFrictionCoefficient
+    .. automethod:: getRegulationParameter
     .. automethod:: getTemperature
     .. automethod:: getTimeConstant
     .. automethod:: registerWithSystem

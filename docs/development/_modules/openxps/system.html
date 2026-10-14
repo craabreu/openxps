@@ -56,6 +56,8 @@
 <span class="w">    </span><span class="sd">"""An :OpenMM:`System` object that includes extra dynamical variables (DVs) and</span>
 <span class="sd">    allows for extended phase-space (XPS) simulations.</span>
 
+<span class="sd">    **Note**: The system provided as argument is modified in place.</span>
+
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    system</span>
@@ -63,6 +65,8 @@
 <span class="sd">    coupling</span>
 <span class="sd">        A :class:`Coupling` object, required to couple the physical and extended</span>
 <span class="sd">        phase-space systems. The dynamical variables are obtained from this coupling.</span>
+<span class="sd">        Its forces are moved into ``system``, so a coupling can be part of only one</span>
+<span class="sd">        system. To reuse it, pass a deep copy (``copy.deepcopy(coupling)``).</span>
 
 <span class="sd">    Example</span>
 <span class="sd">    -------</span>
@@ -94,6 +98,11 @@
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">coupling</span><span class="p">,</span> <span class="n">Coupling</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"The coupling must be an instance of Coupling."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">thisown</span> <span class="k">for</span> <span class="n">force</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getForces</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span>
+                <span class="s2">"The coupling is already part of another system. Create a new "</span>
+                <span class="s2">"coupling or pass a deep copy of this one (copy.deepcopy)."</span>
+            <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span> <span class="o">=</span> <span class="n">coupling</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">()</span>
         <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">():</span>
@@ -135,7 +144,9 @@
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
 <span class="sd">        t.Tuple[DynamicalVariable]</span>
-<span class="sd">            A tuple containing the dynamical variables.</span>
+<span class="sd">            The dynamical variables, converted to MD units. Their order is the one</span>
+<span class="sd">            expected by the methods of :class:`ExtendedSpaceContext` that get or set</span>
+<span class="sd">            the values and velocities of dynamical variables.</span>
 <span class="sd">        """</span>
         <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">())</span></div>
 
@@ -210,7 +221,7 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &#169;2024 C. Abreu.
+      &#169;2024-2026 C. Abreu.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>

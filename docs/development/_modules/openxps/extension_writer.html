@@ -51,6 +51,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">_openmm</span> <span class="k">as</span> <span class="n">mmswig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span> <span class="k">as</span> <span class="n">mmunit</span>
 
+<span class="kn">from</span><span class="w"> </span><span class="nn">.integrators</span><span class="w"> </span><span class="kn">import</span> <span class="n">RegulatedNHLIntegrator</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.simulation</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceSimulation</span>
 
 
@@ -69,7 +70,9 @@
 <span class="sd">    ----------</span>
 <span class="sd">    kinetic : bool, optional, default=False</span>
 <span class="sd">        If ``True``, the kinetic energy of the dynamical variables will be reported</span>
-<span class="sd">        in units of kJ/mol.</span>
+<span class="sd">        in units of kJ/mol. If the extension integrator is a</span>
+<span class="sd">        :class:`RegulatedNHLIntegrator`, its regulated kinetic energy is reported</span>
+<span class="sd">        instead, so that equipartition holds for the reported temperature.</span>
 <span class="sd">    temperature : bool, optional, default=False</span>
 <span class="sd">        If ``True``, the temperature of the dynamical variables, with one degree of</span>
 <span class="sd">        freedom per variable, will be reported in units of Kelvin.</span>
@@ -166,6 +169,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_temp_factor</span> <span class="o">=</span> <span class="mf">0.0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_masses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_regulated_integrator</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_meta_cvs</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_function_names</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_inner_cvs</span> <span class="o">=</span> <span class="p">[]</span>
@@ -179,6 +183,10 @@
         <span class="n">coupling</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getSystem</span><span class="p">()</span><span class="o">.</span><span class="n">getCoupling</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span> <span class="o">=</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_masses</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">dv</span><span class="o">.</span><span class="n">mass</span> <span class="o">/</span> <span class="n">dv</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dv_objects</span><span class="p">])</span>
+        <span class="n">integrator</span> <span class="o">=</span> <span class="n">context</span><span class="o">.</span><span class="n">getIntegrator</span><span class="p">()</span><span class="o">.</span><span class="n">getExtensionIntegrator</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_regulated_integrator</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">integrator</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">integrator</span><span class="p">,</span> <span class="n">RegulatedNHLIntegrator</span><span class="p">)</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="p">)</span>
         <span class="n">kb</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">MOLAR_GAS_CONSTANT_R</span><span class="o">.</span><span class="n">value_in_unit</span><span class="p">(</span>
             <span class="n">mmunit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">kelvin</span>
         <span class="p">)</span>
@@ -296,6 +304,14 @@
         <span class="k">return</span> <span class="n">headers</span></div>
 
 
+    <span class="k">def</span><span class="w"> </span><span class="nf">_kineticEnergy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rates</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_regulated_integrator</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_masses</span><span class="p">,</span> <span class="n">rates</span> <span class="o">*</span> <span class="n">rates</span><span class="p">))</span>
+        <span class="n">integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_regulated_integrator</span>
+        <span class="n">kt</span> <span class="o">=</span> <span class="n">integrator</span><span class="o">.</span><span class="n">getGlobalVariableByName</span><span class="p">(</span><span class="s2">"kT"</span><span class="p">)</span>
+        <span class="n">c</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">integrator</span><span class="o">.</span><span class="n">getRegulationParameter</span><span class="p">()</span> <span class="o">*</span> <span class="n">kt</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">_masses</span><span class="p">)</span>
+        <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_masses</span><span class="p">,</span> <span class="n">rates</span> <span class="o">*</span> <span class="n">c</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">tanh</span><span class="p">(</span><span class="n">rates</span> <span class="o">/</span> <span class="n">c</span><span class="p">)))</span>
+
 <div class="viewcode-block" id="ExtensionWriter.getValues">
 <a class="viewcode-back" href="../../api/ExtensionWriter.html#openxps.ExtensionWriter.getValues">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">getValues</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">ExtendedSpaceSimulation</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]:</span>  <span class="c1"># noqa: PLR0912</span>
@@ -309,7 +325,7 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_velocities</span><span class="p">:</span>
             <span class="n">velocities</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Velocities</span><span class="p">)</span>
             <span class="n">rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">velocity</span><span class="o">.</span><span class="n">x</span> <span class="k">for</span> <span class="n">velocity</span> <span class="ow">in</span> <span class="n">velocities</span><span class="p">])</span>
-            <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="nb">float</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_masses</span><span class="p">,</span> <span class="n">rates</span> <span class="o">*</span> <span class="n">rates</span><span class="p">))</span>
+            <span class="n">kinetic_energy</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_kineticEnergy</span><span class="p">(</span><span class="n">rates</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_needs_positions</span><span class="p">:</span>
             <span class="n">positions</span> <span class="o">=</span> <span class="n">mmswig</span><span class="o">.</span><span class="n">State__getVectorAsVec3</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">State</span><span class="o">.</span><span class="n">Positions</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_forces</span><span class="p">:</span>
@@ -385,7 +401,7 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &#169;2024 C. Abreu.
+      &#169;2024-2026 C. Abreu.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>

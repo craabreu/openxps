@@ -253,7 +253,7 @@
         <span class="k">if</span> <span class="n">missing</span> <span class="o">:=</span> <span class="n">function_names</span> <span class="o">-</span> <span class="n">all_force_parameters</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s2">"These functions are not global parameters in the provided forces: "</span>
-                <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span>
+                <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">missing</span><span class="p">))</span>
             <span class="p">)</span>
 
         <span class="n">all_dvs</span> <span class="o">=</span> <span class="p">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamical_variables</span><span class="p">}</span>
@@ -287,7 +287,7 @@
         <span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s2">"These dynamical variables are neither function variables nor global "</span>
-                <span class="s2">"context parameters: "</span> <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dvs_in_neither</span><span class="p">)</span>
+                <span class="s2">"context parameters: "</span> <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">dvs_in_neither</span><span class="p">))</span>
             <span class="p">)</span>
 
         <span class="n">dynamic_parameters</span> <span class="o">=</span> <span class="n">dvs_in_force_parameters</span> <span class="o">|</span> <span class="n">function_names</span>
@@ -304,7 +304,7 @@
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                     <span class="s2">"The following parameters require a derivative and are present in "</span>
                     <span class="sa">f</span><span class="s2">"force </span><span class="si">{</span><span class="n">force</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2">, but no derivative was requested: "</span>
-                    <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span>
+                    <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">missing</span><span class="p">))</span>
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">dynamic_parameters</span>
 
@@ -334,13 +334,18 @@
 <span class="sd">        Raises</span>
 <span class="sd">        ------</span>
 <span class="sd">        ValueError</span>
-<span class="sd">            If two couplings define the same function or parameter differently.</span>
+<span class="sd">            If two couplings define the same dynamical variable, function or</span>
+<span class="sd">            parameter differently.</span>
 <span class="sd">        """</span>
         <span class="n">forces</span><span class="p">,</span> <span class="n">dvs</span><span class="p">,</span> <span class="n">functions</span><span class="p">,</span> <span class="n">parameters</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">{},</span> <span class="p">{},</span> <span class="p">{}</span>
         <span class="k">for</span> <span class="n">coupling</span> <span class="ow">in</span> <span class="n">couplings</span><span class="p">:</span>
             <span class="n">forces</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">coupling</span><span class="o">.</span><span class="n">getForces</span><span class="p">())</span>
             <span class="k">for</span> <span class="n">dv</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">getDynamicalVariables</span><span class="p">():</span>
-                <span class="n">dvs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">dv</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">dvs</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">dv</span><span class="p">)</span> <span class="o">!=</span> <span class="n">dv</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s1">'The dynamical variable "</span><span class="si">{</span><span class="n">dv</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s1">" has conflicting '</span>
+                        <span class="s2">"definitions in the couplings."</span>
+                    <span class="p">)</span>
             <span class="k">for</span> <span class="n">fn</span> <span class="ow">in</span> <span class="n">coupling</span><span class="o">.</span><span class="n">_functions</span><span class="p">:</span>
                 <span class="n">name</span><span class="p">,</span> <span class="n">expression</span> <span class="o">=</span> <span class="n">fn</span><span class="o">.</span><span class="n">getName</span><span class="p">(),</span> <span class="n">fn</span><span class="o">.</span><span class="n">getExpression</span><span class="p">()</span>
                 <span class="k">if</span> <span class="n">functions</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">expression</span><span class="p">)</span> <span class="o">!=</span> <span class="n">expression</span><span class="p">:</span>
@@ -460,7 +465,7 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &#169;2024 C. Abreu.
+      &#169;2024-2026 C. Abreu.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>

@@ -46,9 +46,14 @@
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>name</strong> (<em>str</em>) – The name of the context parameter to be turned into a dynamical variable.</p></li>
-<li><p><strong>unit</strong> (<em>openmm.unit.unit.Unit</em>) – The unity of measurement of this dynamical variable. If it does not have a
-unit, use <code class="docutils literal notranslate"><span class="pre">openmm.unit.dimensionless</span></code>.</p></li>
+<li><p><strong>name</strong> (<em>str</em>) – The name of the context parameter to be turned into a dynamical variable.
+It must be an identifier, as in Python: a letter or an underscore followed
+by letters, digits or underscores, where letters may be non-ASCII (<code class="docutils literal notranslate"><span class="pre">λ</span></code>).</p></li>
+<li><p><strong>unit</strong> (<em>openmm.unit.unit.Unit</em>) – The unit of measurement of this dynamical variable. If it does not have a
+unit, use <code class="docutils literal notranslate"><span class="pre">openmm.unit.dimensionless</span></code>. Couplings convert dynamical
+variables to MD units (see <a class="reference internal" href="#openxps.DynamicalVariable.in_md_units" title="openxps.DynamicalVariable.in_md_units"><code class="xref py py-meth docutils literal notranslate"><span class="pre">in_md_units()</span></code></a>), so an extended phase-space
+context reports values in MD units and, as in OpenMM, reads numbers given
+without units in MD units too.</p></li>
 <li><p><strong>mass</strong> (<em>openmm.unit.quantity.Quantity</em>) – The mass assigned to this dynamical variable, whose unit of measurement
 must be compatible with <code class="docutils literal notranslate"><span class="pre">dalton*(nanometer/unit)**2</span></code>, where <code class="docutils literal notranslate"><span class="pre">unit</span></code> is the
 dynamical variable’s own unit (see <code class="docutils literal notranslate"><span class="pre">unit</span></code> above).</p></li>
@@ -142,7 +147,6 @@ of freedom and another variable.</p>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">psi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"psi"</span><span class="p">)</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="n">dv</span><span class="o">.</span><span class="n">distanceTo</span><span class="p">(</span><span class="n">psi</span><span class="p">)</span>
 <span class="go">'(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))'</span>
-<span class="gp">&gt;&gt;&gt;</span>
 </pre></div>
 </div>
 </dd></dl>
@@ -248,7 +252,7 @@ of freedom and another variable.</p>
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &#169;2024 C. Abreu.
+      &#169;2024-2026 C. Abreu.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>

@@ -69,9 +69,14 @@
 <span class="sd">    ----------</span>
 <span class="sd">    name</span>
 <span class="sd">        The name of the context parameter to be turned into a dynamical variable.</span>
+<span class="sd">        It must be an identifier, as in Python: a letter or an underscore followed</span>
+<span class="sd">        by letters, digits or underscores, where letters may be non-ASCII (``λ``).</span>
 <span class="sd">    unit</span>
-<span class="sd">        The unity of measurement of this dynamical variable. If it does not have a</span>
-<span class="sd">        unit, use ``openmm.unit.dimensionless``.</span>
+<span class="sd">        The unit of measurement of this dynamical variable. If it does not have a</span>
+<span class="sd">        unit, use ``openmm.unit.dimensionless``. Couplings convert dynamical</span>
+<span class="sd">        variables to MD units (see :meth:`in_md_units`), so an extended phase-space</span>
+<span class="sd">        context reports values in MD units and, as in OpenMM, reads numbers given</span>
+<span class="sd">        without units in MD units too.</span>
 <span class="sd">    mass</span>
 <span class="sd">        The mass assigned to this dynamical variable, whose unit of measurement</span>
 <span class="sd">        must be compatible with ``dalton*(nanometer/unit)**2``, where ``unit`` is the</span>
@@ -107,10 +112,16 @@
     <span class="n">bounds</span><span class="p">:</span> <span class="n">Bounds</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">isidentifier</span><span class="p">()):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">"Invalid name </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">!r}</span><span class="s2">: it must be an identifier, starting "</span>
+                <span class="s2">"with a letter or an underscore and continuing with letters, digits "</span>
+                <span class="s2">"or underscores."</span>
+            <span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_unit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"The unit must be a valid OpenMM unit."</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"The unit must be a valid OpenMM unit."</span><span class="p">)</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">is_quantity</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="p">):</span>
-            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Mass must be have units of measurement."</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="s2">"Mass must have units of measurement."</span><span class="p">)</span>
         <span class="n">mass_unit</span> <span class="o">=</span> <span class="n">mmunit</span><span class="o">.</span><span class="n">dalton</span> <span class="o">*</span> <span class="p">(</span><span class="n">mmunit</span><span class="o">.</span><span class="n">nanometer</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">unit</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">mass</span><span class="o">.</span><span class="n">unit</span><span class="o">.</span><span class="n">is_compatible</span><span class="p">(</span><span class="n">mass_unit</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">TypeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Mass units must be compatible with </span><span class="si">{</span><span class="n">mass_unit</span><span class="si">}</span><span class="s2">."</span><span class="p">)</span>
@@ -236,7 +247,10 @@
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">and</span> <span class="n">other</span><span class="o">.</span><span class="n">getPeriodicBounds</span><span class="p">()</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">asQuantity</span><span class="p">():</span>
             <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span><span class="o">.</span><span class="n">period</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))"</span>
-        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Incompatible boundary conditions."</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">"Incompatible boundary conditions: either both variables are nonperiodic "</span>
+            <span class="s2">"or both have the same periodic bounds (same lower and upper limits)."</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_distanceToDV</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="n">te</span><span class="o">.</span><span class="n">Self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="n">diff</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">other</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">"</span>
@@ -245,7 +259,11 @@
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()</span> <span class="ow">or</span> <span class="n">other</span><span class="o">.</span><span class="n">isPeriodic</span><span class="p">()):</span>
             <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)"</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">bounds</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">"Incompatible boundary conditions."</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">"Incompatible boundary conditions: either both variables are "</span>
+                <span class="s2">"nonperiodic or both have the same periodic bounds (same lower and "</span>
+                <span class="s2">"upper limits)."</span>
+            <span class="p">)</span>
         <span class="n">period</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">bounds</span><span class="o">.</span><span class="n">in_md_units</span><span class="p">()</span><span class="o">.</span><span class="n">period</span>
         <span class="k">return</span> <span class="sa">f</span><span class="s2">"(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">*floor(0.5+(</span><span class="si">{</span><span class="n">diff</span><span class="si">}</span><span class="s2">)/</span><span class="si">{</span><span class="n">period</span><span class="si">}</span><span class="s2">))"</span>
 
@@ -280,7 +298,6 @@
 <span class="sd">        &gt;&gt;&gt; psi = cvpack.Torsion(6, 8, 14, 16, name="psi")</span>
 <span class="sd">        &gt;&gt;&gt; dv.distanceTo(psi)</span>
 <span class="sd">        '(psi-psi0-6.28318...*floor(0.5+(psi-psi0)/6.28318...))'</span>
-<span class="sd">        &gt;&gt;&gt;</span>
 
 <span class="sd">        """</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">CollectiveVariable</span><span class="p">):</span>
@@ -337,7 +354,7 @@
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &#169;2024 C. Abreu.
+      &#169;2024-2026 C. Abreu.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>

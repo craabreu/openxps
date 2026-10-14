@@ -62,8 +62,8 @@ even integer ratio.</p></li>
 will be used.</p></li>
 <li><p><strong>platformProperties</strong> (<em>dict</em><em> | </em><em>None</em>) – A dictionary of platform-specific properties. If None, the default properties
 will be used.</p></li>
-<li><p><strong>state</strong> (<em>State</em><em> | </em><em>str</em><em> | </em><em>None</em>) – If specified, either an <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">openmm.State</a> object or the name of a file written
-by <a class="reference internal" href="#openxps.ExtendedSpaceSimulation.saveState" title="openxps.ExtendedSpaceSimulation.saveState"><code class="xref py py-meth docutils literal notranslate"><span class="pre">saveState()</span></code></a>, from which the simulation state is set after
+<li><p><strong>state</strong> (<em>State</em><em> | </em><em>str</em><em> | </em><em>PathLike</em><em> | </em><em>None</em>) – If specified, either an <a class="extlink-OpenMM reference external" href="http://docs.openmm.org/latest/api-python/generated/openmm.openmm.State.html">openmm.State</a> object or the name or path of a file
+written by <a class="reference internal" href="#openxps.ExtendedSpaceSimulation.saveState" title="openxps.ExtendedSpaceSimulation.saveState"><code class="xref py py-meth docutils literal notranslate"><span class="pre">saveState()</span></code></a>, from which the simulation state is set after
 initialization.</p></li>
 </ul>
 </dd>
@@ -109,7 +109,7 @@ initialization.</p></li>
 <dd><p>Load the states written by <a class="reference internal" href="#openxps.ExtendedSpaceSimulation.saveState" title="openxps.ExtendedSpaceSimulation.saveState"><code class="xref py py-meth docutils literal notranslate"><span class="pre">saveState()</span></code></a> and synchronize the contexts.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>file</strong> (<em>str</em><em> | </em><em>IO</em>) – A file name or an open file object.</p>
+<dd class="field-odd"><p><strong>file</strong> (<em>str</em><em> | </em><em>PathLike</em><em> | </em><em>IO</em>) – A file name or path, or a file object open in text or binary mode.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -129,7 +129,7 @@ context. Arguments are those of <a class="extlink-OpenMM reference external" hre
 <dd><p>Save the states of the physical and extension contexts to a file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>file</strong> (<em>str</em><em> | </em><em>IO</em>) – A file name or an open file object.</p>
+<dd class="field-odd"><p><strong>file</strong> (<em>str</em><em> | </em><em>PathLike</em><em> | </em><em>IO</em>) – A file name or path, or a file object open in text or binary mode.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -197,7 +197,7 @@ context. Arguments are those of <a class="extlink-OpenMM reference external" hre
       <div class="clearer"></div>
     </div>
     <div class="footer">
-      &#169;2024 C. Abreu.
+      &#169;2024-2026 C. Abreu.
       
       |
       Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
