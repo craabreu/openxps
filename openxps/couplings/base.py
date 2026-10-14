@@ -117,7 +117,7 @@ class Coupling(Serializable):
         Returns
         -------
         list[DynamicalVariable]
-            A list of DynamicalVariable objects contained within this coupling.
+            The dynamical variables of this coupling, converted to MD units.
         """
         return self._dynamical_variables
 

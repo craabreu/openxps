@@ -31,8 +31,11 @@ class DynamicalVariable(Serializable):
     name
         The name of the context parameter to be turned into a dynamical variable.
     unit
-        The unity of measurement of this dynamical variable. If it does not have a
-        unit, use ``openmm.unit.dimensionless``.
+        The unit of measurement of this dynamical variable. If it does not have a
+        unit, use ``openmm.unit.dimensionless``. Couplings convert dynamical
+        variables to MD units (see :meth:`in_md_units`), so an extended phase-space
+        context reports values in MD units and, as in OpenMM, reads numbers given
+        without units in MD units too.
     mass
         The mass assigned to this dynamical variable, whose unit of measurement
         must be compatible with ``dalton*(nanometer/unit)**2``, where ``unit`` is the

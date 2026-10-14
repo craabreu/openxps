@@ -94,7 +94,9 @@ class ExtendedSpaceSystem(mm.System):
         Returns
         -------
         t.Tuple[DynamicalVariable]
-            A tuple containing the dynamical variables.
+            The dynamical variables, converted to MD units. Their order is the one
+            expected by the methods of :class:`ExtendedSpaceContext` that get or set
+            the values and velocities of dynamical variables.
         """
         return tuple(self._coupling.getDynamicalVariables())
 
