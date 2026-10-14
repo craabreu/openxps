@@ -48,14 +48,17 @@ temperature-accelerated molecular dynamics (TAMD).</p>
 </section>
 <section id="installation">
 <h2>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h2>
-<p>To install OpenXPS in a conda environment, run the following command:</p>
+<p>OpenXPS requires Python 3.10 or newer and OpenMM 8.4 or newer. Install it from the
+mdtools conda channel:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">conda</span> <span class="n">install</span> <span class="o">-</span><span class="n">c</span> <span class="n">conda</span><span class="o">-</span><span class="n">forge</span> <span class="o">-</span><span class="n">c</span> <span class="n">mdtools</span> <span class="n">openxps</span>
 </pre></div>
 </div>
-<p>Or use mamba instead:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">mamba</span> <span class="n">install</span> <span class="o">-</span><span class="n">c</span> <span class="n">mdtools</span> <span class="n">openxps</span>
+<p>or from PyPI:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">openxps</span>
 </pre></div>
 </div>
+<p>PyTorch and Lightning, which <a class="reference internal" href="api/ForceMatchingRegressor.html#openxps.ForceMatchingRegressor" title="openxps.ForceMatchingRegressor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ForceMatchingRegressor</span></code></a> uses, are
+installed as dependencies.</p>
 </section>
 <section id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h2>
