@@ -95,7 +95,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         integrator: ExtendedSpaceIntegrator,
         platform: mm.Platform | None = None,
         platformProperties: dict | None = None,
-        state: mm.State | str | None = None,
+        state: mm.State | str | os.PathLike | None = None,
     ) -> None:
         self.topology = topology
         self.system = system
@@ -160,11 +160,10 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         if isinstance(file, (str, os.PathLike)):
             with open(file, "w", encoding="utf-8") as stream:
                 stream.write(content)
+        elif hasattr(file, "encoding"):  # text mode, including wrapped streams
+            file.write(content)
         else:
-            try:
-                file.write(content)
-            except TypeError:  # binary mode
-                file.write(content.encode("utf-8"))
+            file.write(content.encode("utf-8"))
 
     def loadState(self, file: str | os.PathLike | t.IO) -> None:
         """
