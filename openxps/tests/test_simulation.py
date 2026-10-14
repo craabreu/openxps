@@ -3,6 +3,7 @@ Unit tests for the openxps.simulation module.
 """
 
 import io
+import tempfile
 from copy import deepcopy
 
 import cvpack
@@ -497,6 +498,43 @@ def test_save_and_load_state_roundtrip_dvs(tmp_path):
     assert value.value_in_unit(mmunit.radian) == pytest.approx(2.5)
     assert rate.value_in_unit(mmunit.radian / mmunit.picosecond) == pytest.approx(0.4)
     assert simulation.context.getParameter("phi0") == pytest.approx(2.5)
+
+
+@pytest.mark.parametrize("mode", ["path", "text", "binary"])
+def test_save_and_load_state_file_kinds(tmp_path, mode):
+    """saveState/loadState accept paths and text or binary file objects."""
+    simulation, _ = _simulation()
+    simulation.context.setDynamicalVariableValues([2.5])
+    path = tmp_path / "state.xml"
+    if mode == "path":
+        simulation.saveState(path)
+    else:
+        with open(path, "w" if mode == "text" else "wb") as file:
+            simulation.saveState(file)
+    simulation.context.setDynamicalVariableValues([-1.0])
+    if mode == "path":
+        simulation.loadState(path)
+    else:
+        with open(path, "r" if mode == "text" else "rb") as file:
+            simulation.loadState(file)
+    (value,) = simulation.context.getDynamicalVariableValues()
+    assert value.value_in_unit(mmunit.radian) == pytest.approx(2.5)
+
+
+@pytest.mark.parametrize("mode", ["w+", "w+b"])
+def test_save_and_load_state_temporary_files(mode):
+    """Wrapped streams such as temporary files work in text and binary mode."""
+    simulation, _ = _simulation()
+    simulation.context.setDynamicalVariableValues([2.5])
+    with tempfile.SpooledTemporaryFile(mode=mode) as spooled:
+        with tempfile.NamedTemporaryFile(mode=mode) as named:
+            for file in (spooled, named):
+                simulation.saveState(file)
+                file.seek(0)
+                simulation.context.setDynamicalVariableValues([-1.0])
+                simulation.loadState(file)
+                (value,) = simulation.context.getDynamicalVariableValues()
+                assert value.value_in_unit(mmunit.radian) == pytest.approx(2.5)
 
 
 def test_state_argument_accepts_filename(tmp_path):

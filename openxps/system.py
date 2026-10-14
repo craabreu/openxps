@@ -17,6 +17,8 @@ class ExtendedSpaceSystem(mm.System):
     """An :OpenMM:`System` object that includes extra dynamical variables (DVs) and
     allows for extended phase-space (XPS) simulations.
 
+    **Note**: The system provided as argument is modified in place.
+
     Parameters
     ----------
     system
@@ -24,6 +26,8 @@ class ExtendedSpaceSystem(mm.System):
     coupling
         A :class:`Coupling` object, required to couple the physical and extended
         phase-space systems. The dynamical variables are obtained from this coupling.
+        Its forces are moved into ``system``, so a coupling can be part of only one
+        system. To reuse it, pass a deep copy (``copy.deepcopy(coupling)``).
 
     Example
     -------
@@ -55,6 +59,11 @@ class ExtendedSpaceSystem(mm.System):
     ) -> None:
         if not isinstance(coupling, Coupling):
             raise TypeError("The coupling must be an instance of Coupling.")
+        if not all(force.thisown for force in coupling.getForces()):
+            raise RuntimeError(
+                "The coupling is already part of another system. Create a new "
+                "coupling or pass a deep copy of this one (copy.deepcopy)."
+            )
         self._coupling = coupling
         self._extension_system = mm.System()
         for dv in coupling.getDynamicalVariables():
@@ -94,7 +103,9 @@ class ExtendedSpaceSystem(mm.System):
         Returns
         -------
         t.Tuple[DynamicalVariable]
-            A tuple containing the dynamical variables.
+            The dynamical variables, converted to MD units. Their order is the one
+            expected by the methods of :class:`ExtendedSpaceContext` that get or set
+            the values and velocities of dynamical variables.
         """
         return tuple(self._coupling.getDynamicalVariables())
 

@@ -127,6 +127,16 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
         if not forceFirst:
             self._add_boost(0.5)
 
+    def getRegulationParameter(self) -> float:
+        """Get the regulation parameter of the integrator.
+
+        Returns
+        -------
+        float
+            The regulation parameter.
+        """
+        return self._regulation_parameter
+
     def _add_variables(self) -> None:
         self.addGlobalVariable("kT", 0)
         self.addGlobalVariable("invQ", 0)
@@ -155,7 +165,7 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
     def _add_boost(self, fraction: float) -> None:
         self.addComputePerDof("v", f"v + {fraction}*dt*f/m")
 
-    def _add_v1_boost(self, fraction: float) -> str:
+    def _add_v1_boost(self, fraction: float) -> None:
         self.addComputePerDof(
             "v1",
             self._masked(
@@ -164,7 +174,7 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
             ),
         )
 
-    def _add_v_scaling(self, fraction: float) -> str:
+    def _add_v_scaling(self, fraction: float) -> int:
         return self.addComputePerDof("v", f"v*exp(-{fraction}*dt*v1)")
 
     def _add_thermostat(self, fraction: float) -> None:

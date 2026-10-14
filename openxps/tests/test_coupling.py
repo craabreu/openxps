@@ -622,6 +622,26 @@ def test_coupling_sum_conflicting_dvs():
         _ = coupling1 + coupling2
 
 
+def test_coupling_sum_keeps_order_of_first_appearance():
+    """Dynamical variables of a sum follow the order of the summed couplings."""
+    model = testsystems.AlanineDipeptideVacuum()
+    kappa = 1000 * mmunit.kilojoule_per_mole / mmunit.radian**2
+    phi_s, psi_s = create_test_dv("phi_s"), create_test_dv("psi_s")
+    coupling = HarmonicCoupling(
+        cvpack.Torsion(4, 6, 8, 14, name="psi"), psi_s, kappa
+    ) + HarmonicCoupling(cvpack.Torsion(6, 8, 14, 16, name="phi"), phi_s, kappa)
+    assert [dv.name for dv in coupling.getDynamicalVariables()] == ["psi_s", "phi_s"]
+    context = ExtendedSpaceContext(
+        ExtendedSpaceSystem(model.system, coupling),
+        LockstepIntegrator(mm.VerletIntegrator(1 * mmunit.femtosecond)),
+        mm.Platform.getPlatformByName("Reference"),
+    )
+    context.setPositions(model.positions)
+    context.setDynamicalVariableValues([1.0 * mmunit.radian, -2.0 * mmunit.radian])
+    assert context.getParameter("psi_s") == pytest.approx(1.0)
+    assert context.getParameter("phi_s") == pytest.approx(-2.0)
+
+
 def test_coupling_sum_update_physical_context():
     """Test updatePhysicalContext() delegates to all couplings."""
     model = create_test_system()

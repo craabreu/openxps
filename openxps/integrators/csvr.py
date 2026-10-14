@@ -224,6 +224,7 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         This method overrides the :class:`openmm.CustomIntegrator` method to include the
         efficient computation of the sum of squares of normally distributed random
         numbers.
+
         Parameters
         ----------
         steps

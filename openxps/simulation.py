@@ -7,6 +7,7 @@
 
 """
 
+import os
 import typing as t
 
 import openmm as mm
@@ -48,8 +49,8 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         A dictionary of platform-specific properties. If None, the default properties
         will be used.
     state
-        If specified, either an :OpenMM:`State` object or the name of a file written
-        by :meth:`saveState`, from which the simulation state is set after
+        If specified, either an :OpenMM:`State` object or the name or path of a file
+        written by :meth:`saveState`, from which the simulation state is set after
         initialization.
 
     Example
@@ -94,7 +95,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         integrator: ExtendedSpaceIntegrator,
         platform: mm.Platform | None = None,
         platformProperties: dict | None = None,
-        state: mm.State | str | None = None,
+        state: mm.State | str | os.PathLike | None = None,
     ) -> None:
         self.topology = topology
         self.system = system
@@ -111,7 +112,7 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         self.currentStep = 0
         self.reporters = []
 
-        if isinstance(state, str):
+        if isinstance(state, (str, os.PathLike)):
             self.loadState(state)
         elif state is not None:
             self.context.setState(state)
@@ -129,14 +130,14 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
         super().minimizeEnergy(*args, **kwargs)
         self.context.synchronize()
 
-    def saveState(self, file: str | t.IO) -> None:
+    def saveState(self, file: str | os.PathLike | t.IO) -> None:
         """
         Save the states of the physical and extension contexts to a file.
 
         Parameters
         ----------
         file
-            A file name or an open file object.
+            A file name or path, or a file object open in text or binary mode.
         """
         physical = self.context.getState(
             getPositions=True,
@@ -156,26 +157,30 @@ class ExtendedSpaceSimulation(mmapp.Simulation):
             + STRING_SEPARATOR
             + mm.XmlSerializer.serialize(extension)
         )
-        if isinstance(file, str):
+        if isinstance(file, (str, os.PathLike)):
             with open(file, "w", encoding="utf-8") as stream:
                 stream.write(content)
-        else:
+        elif hasattr(file, "encoding"):  # text mode, including wrapped streams
             file.write(content)
+        else:
+            file.write(content.encode("utf-8"))
 
-    def loadState(self, file: str | t.IO) -> None:
+    def loadState(self, file: str | os.PathLike | t.IO) -> None:
         """
         Load the states written by :meth:`saveState` and synchronize the contexts.
 
         Parameters
         ----------
         file
-            A file name or an open file object.
+            A file name or path, or a file object open in text or binary mode.
         """
-        if isinstance(file, str):
+        if isinstance(file, (str, os.PathLike)):
             with open(file, encoding="utf-8") as stream:
                 content = stream.read()
         else:
             content = file.read()
+            if isinstance(content, bytes):
+                content = content.decode("utf-8")
         physical, _, extension = content.partition(STRING_SEPARATOR)
         self.context.setState(mm.XmlSerializer.deserialize(physical))
         if extension:

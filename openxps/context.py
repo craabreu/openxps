@@ -51,15 +51,12 @@ class ExtendedSpaceContext(mm.Context):
     >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
     >>> kappa = 1000 * unit.kilojoule_per_mole / unit.radian**2
     >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)
-    >>> harmonic_force = xps.HarmonicCoupling(phi, phi0, kappa)
     >>> temp = 300 * unit.kelvin
     >>> integrator = openmm.LangevinMiddleIntegrator(
     ...     temp, 1 / unit.picosecond, 4 * unit.femtosecond
     ... )
     >>> integrator.setRandomNumberSeed(1234)
     >>> platform = openmm.Platform.getPlatformByName("Reference")
-    >>> height = 2 * unit.kilojoule_per_mole
-    >>> sigma = 18 * unit.degree
     >>> context = xps.ExtendedSpaceContext(
     ...     xps.ExtendedSpaceSystem(model.system, harmonic_force),
     ...     xps.LockstepIntegrator(integrator),
@@ -270,8 +267,10 @@ class ExtendedSpaceContext(mm.Context):
         Parameters
         ----------
         values
-            A sequence of quantities containing the values and units of all extra
-            degrees of freedom.
+            The values of all dynamical variables, in the order of
+            :meth:`ExtendedSpaceSystem.getDynamicalVariables`. As in OpenMM, a value
+            given without units is taken in MD units (e.g. radians for angles, even
+            if the dynamical variable was declared in degrees).
         """
         values = list(values)
         if len(values) != len(self._dvs):
@@ -296,7 +295,9 @@ class ExtendedSpaceContext(mm.Context):
         Returns
         -------
         t.Tuple[mmunit.Quantity]
-            A tuple containing the values of the dynamical variables.
+            The values of the dynamical variables, in the order of
+            :meth:`ExtendedSpaceSystem.getDynamicalVariables`. They are given in MD
+            units, whatever unit each dynamical variable was declared in.
         """
         state = mmswig.Context_getState(self._extension_context, mm.State.Positions)
         positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
@@ -315,8 +316,10 @@ class ExtendedSpaceContext(mm.Context):
         Parameters
         ----------
         velocities
-            A sequence of quantities containing the velocities of the dynamical
-            variables.
+            The velocities of all dynamical variables, in the order of
+            :meth:`ExtendedSpaceSystem.getDynamicalVariables`. As in OpenMM, a
+            velocity given without units is taken in MD units (e.g. radians per
+            picosecond for angles).
         """
         velocities = list(velocities)
         if len(velocities) != len(self._dvs):
@@ -355,7 +358,9 @@ class ExtendedSpaceContext(mm.Context):
         Returns
         -------
         t.Tuple[mmunit.Quantity]
-            A tuple containing the velocities of the dynamical variables.
+            The velocities of the dynamical variables, in the order of
+            :meth:`ExtendedSpaceSystem.getDynamicalVariables`. They are given in MD
+            units, whatever unit each dynamical variable was declared in.
         """
         state = mmswig.Context_getState(
             self._extension_context, mm.State.Positions | mm.State.Velocities
@@ -379,7 +384,7 @@ class ExtendedSpaceContext(mm.Context):
         """
         return self._extension_context
 
-    def createCheckpoint(self) -> str:
+    def createCheckpoint(self) -> bytes:
         r"""Create a checkpoint recording the current state of the Context.
 
         This should be treated as an opaque block of binary data. See
@@ -387,8 +392,8 @@ class ExtendedSpaceContext(mm.Context):
 
         Returns
         -------
-        str
-            A string containing the checkpoint data
+        bytes
+            The checkpoint data
 
         """
         return (
@@ -397,7 +402,7 @@ class ExtendedSpaceContext(mm.Context):
             + mmswig.Context_createCheckpoint(self._extension_context)
         )
 
-    def loadCheckpoint(self, checkpoint):
+    def loadCheckpoint(self, checkpoint: bytes) -> None:
         r"""Load a checkpoint that was written by :meth:`createCheckpoint`.
 
         See :OpenMM:`Context` for more details.

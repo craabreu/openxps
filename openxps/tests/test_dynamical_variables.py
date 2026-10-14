@@ -23,9 +23,36 @@ def test_dv_initialization():
     assert isinstance(dv.bounds, PeriodicBounds)
 
 
+@pytest.mark.parametrize(
+    "name",
+    ["my-var", "1phi", "phi s", "f(x)", "lambda.vdw", "x'", "a<b", "a=b", "x²", "", 3],
+)
+def test_dv_invalid_name(name):
+    """Names must be identifiers, as in Python."""
+    with pytest.raises(ValueError, match="Invalid name"):
+        DynamicalVariable(
+            name,
+            mmunit.radian,
+            3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
+            NoBounds(0, 1, mmunit.radian),
+        )
+
+
+@pytest.mark.parametrize("name", ["phi", "_x1", "λ", "λ_vdw", "θ1"])
+def test_dv_valid_name(name):
+    """Identifiers may contain non-ASCII letters."""
+    dv = DynamicalVariable(
+        name,
+        mmunit.radian,
+        3 * mmunit.dalton * (mmunit.nanometer / mmunit.radian) ** 2,
+        NoBounds(0, 1, mmunit.radian),
+    )
+    assert yaml.safe_load(yaml.safe_dump(dv)).name == name
+
+
 def test_dv_invalid_unit():
     """Test DynamicalVariable initialization with an invalid unit."""
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(TypeError) as excinfo:
         DynamicalVariable(
             "phi",
             "not_a_unit",
@@ -39,7 +66,7 @@ def test_dv_mass_without_unit():
     """Test DynamicalVariable initialization with mass missing a unit."""
     with pytest.raises(TypeError) as excinfo:
         DynamicalVariable("phi", mmunit.radian, 3, NoBounds(0, 1, mmunit.radian))
-    assert "Mass must be have units of measurement." in str(excinfo.value)
+    assert "Mass must have units of measurement." in str(excinfo.value)
 
 
 def test_dv_incompatible_mass_unit():
@@ -136,7 +163,7 @@ def test_dv_distance_method():
                 NoBounds(0, 1, mmunit.radian),
             )
         )
-    assert "Incompatible boundary conditions." in str(excinfo.value)
+    assert "Incompatible boundary conditions" in str(excinfo.value)
 
     distance0 = DynamicalVariable(
         "distance0",

@@ -130,7 +130,15 @@ def preprocess_args(func: t.Callable) -> t.Callable:
     return wrapper
 
 
-IDENTIFIER_PATTERN = re.compile(r"\b[A-Za-z_][A-Za-z0-9_]*\b")
+# Lepton splits expressions at ASCII whitespace and at these delimiters, and a token
+# that is an identifier (str.isidentifier) is a name
+TOKEN_PATTERN = re.compile(r"[^\s+\-*/^(),;=]+", re.ASCII)
+
+
+def _names(expression: str) -> set[str]:
+    return {
+        token for token in TOKEN_PATTERN.findall(expression) if token.isidentifier()
+    }
 
 
 class Function(Serializable):
@@ -200,7 +208,7 @@ class Function(Serializable):
         given_parameters = set(given_parameters.keys())
         _, *definitions = self._expression.split(";")
         defined = {definition.partition("=")[0].strip() for definition in definitions}
-        identifiers = set(IDENTIFIER_PATTERN.findall(self._expression))
+        identifiers = _names(self._expression)
         dependencies = identifiers - LEPTON_FUNCTIONS - defined
         return dependencies - given_parameters, dependencies & given_parameters
 
@@ -255,7 +263,8 @@ class Function(Serializable):
         >>> for _ in range(2):
         ...     _ = system.addParticle(1.0)
         >>> cv.addToSystem(system)
-        >>> context = mm.Context(system, mm.VerletIntegrator(0.0))
+        >>> platform = mm.Platform.getPlatformByName("Reference")
+        >>> context = mm.Context(system, mm.VerletIntegrator(0.0), platform)
         >>> x, y = 2, 1
         >>> exp(-x)*cos(2*pi*y)
         0.13533528...
@@ -273,7 +282,7 @@ class Function(Serializable):
         >>> system = mm.System()
         >>> _ = system.addParticle(1.0)
         >>> cv.addToSystem(system)
-        >>> context = mm.Context(system, mm.VerletIntegrator(0.0))
+        >>> context = mm.Context(system, mm.VerletIntegrator(0.0), platform)
         >>> context.setPositions([mm.Vec3(1.2, 0.0, 0.0)])
         >>> print(context.getState(getEnergy=True).getPotentialEnergy())
         0.64... kJ/mol
@@ -289,7 +298,7 @@ class Function(Serializable):
         # would shadow a coordinate that another definition refers to. Wrapped
         # variables also need a private raw name, from which the bounds expression
         # derives helper names such as "scaled_<raw>".
-        taken = set(IDENTIFIER_PATTERN.findall(self._expression))
+        taken = _names(self._expression)
         counter = 0
 
         def fresh(prefix: str, *derived: str) -> str:
@@ -303,7 +312,7 @@ class Function(Serializable):
                     return name
 
         aliases = {variable: fresh("openxps_var") for variable in variables}
-        expression = IDENTIFIER_PATTERN.sub(
+        expression = TOKEN_PATTERN.sub(
             lambda match: aliases.get(match.group(0), match.group(0)),
             self._expression,
         )

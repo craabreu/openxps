@@ -1,5 +1,5 @@
 """
-.. module:: openxps.rbf
+.. module:: openxps.regression
    :platform: Linux, MacOS, Windows
    :synopsis: Radial basis function regressor for free energy surface fitting.
 
@@ -7,6 +7,8 @@
 
 """
 
+import contextlib
+import logging
 import tempfile
 import typing as t
 
@@ -200,7 +202,25 @@ class _LearningCurveRecorder(pl.Callback):
 
     def to_frame(self) -> pd.DataFrame:
         """Return the recorded losses with one row per epoch."""
-        return pd.DataFrame(list(self._records.values()))
+        records = list(self._records.values())
+        columns = ["epoch", "train_loss"]
+        if any("val_loss" in record for record in records):
+            columns.append("val_loss")
+        return pd.DataFrame(records, columns=columns)
+
+
+@contextlib.contextmanager
+def _quiet_lightning() -> t.Iterator[None]:
+    """Silence Lightning's informational log messages."""
+    loggers = [logging.getLogger(name) for name in ("lightning.pytorch", "lightning")]
+    levels = [logger.level for logger in loggers]
+    try:
+        for logger in loggers:
+            logger.setLevel(logging.WARNING)
+        yield
+    finally:
+        for logger, level in zip(loggers, levels):
+            logger.setLevel(level)
 
 
 class ForceMatchingRegressor:
@@ -228,9 +248,10 @@ class ForceMatchingRegressor:
     are adjusted by minimizing the mean squared error loss:
 
     .. math::
-        L = \frac{1}{N} \sum_{i=1}^N \left\| {\bf f}({\bf s}_i) - {\bf F}_i \right\|^2,
+        L = \frac{1}{Nd} \sum_{i=1}^N \left\|{\bf f}({\bf s}_i) - {\bf F}_i\right\|^2,
 
-    where :math:`{\bf f}({\bf s}) = -\nabla_{\bf s} U({\bf s})` is the predicted force.
+    where :math:`d` is the number of dynamical variables and
+    :math:`{\bf f}({\bf s}) = -\nabla_{\bf s} U({\bf s})` is the predicted force.
 
     Parameters
     ----------
@@ -263,6 +284,9 @@ class ForceMatchingRegressor:
         default of 1 avoids launching distributed training on multi-GPU hosts.
     num_workers
         The number of data loading workers to be used for training.
+    verbose
+        Whether :meth:`fit` shows Lightning's progress bar, model summary and
+        informational messages.
     """
 
     def __init__(  # noqa: PLR0913
@@ -279,6 +303,7 @@ class ForceMatchingRegressor:
         accelerator: str = "auto",
         devices: int | str = 1,
         num_workers: int = 0,
+        verbose: bool = False,
     ):
         if not 0 <= validation_fraction < 1:
             raise ValueError("validation_fraction must be in the interval [0, 1).")
@@ -294,6 +319,7 @@ class ForceMatchingRegressor:
         self._accelerator = accelerator
         self._devices = devices
         self._num_workers = num_workers
+        self._verbose = verbose
         self._M = num_kernels
         self._model = None
         self._metrics = None
@@ -404,14 +430,15 @@ class ForceMatchingRegressor:
         )
         recorder = _LearningCurveRecorder()
 
-        with tempfile.TemporaryDirectory() as tmp_dir:
+        quiet = contextlib.nullcontext() if self._verbose else _quiet_lightning()
+        with quiet, tempfile.TemporaryDirectory() as tmp_dir:
             trainer_kwargs = {
                 "max_epochs": self._num_epochs,
                 "accelerator": self._accelerator,
                 "devices": self._devices,
                 "logger": False,
-                "enable_progress_bar": True,
-                "enable_model_summary": True,
+                "enable_progress_bar": self._verbose,
+                "enable_model_summary": self._verbose,
                 "callbacks": [recorder],
             }
             if val_dl is None:

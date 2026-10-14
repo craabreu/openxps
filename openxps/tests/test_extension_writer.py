@@ -561,6 +561,64 @@ def test_extension_writer_temperature_is_physical():
     assert abs(np.mean(temperatures) - 300) < 60
 
 
+def _regulated_simulation():
+    """A simulation whose extension integrator is a RegulatedNHLIntegrator."""
+    model = testsystems.AlanineDipeptideVacuum(constraints=None)
+    mass = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
+    phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
+    phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2
+    integrator = xps.RegulatedNHLIntegrator(
+        300 * unit.kelvin, 10 * unit.femtosecond, 1 * unit.femtosecond, forceFirst=True
+    )
+    simulation = xps.ExtendedSpaceSimulation(
+        model.topology,
+        xps.ExtendedSpaceSystem(model.system, xps.HarmonicCoupling(phi, phi0, kappa)),
+        xps.LockstepIntegrator(integrator),
+        openmm.Platform.getPlatformByName("Reference"),
+    )
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    simulation.context.setDynamicalVariableValues([180 * unit.degree])
+    simulation.context.setDynamicalVariableVelocitiesToTemperature(
+        300 * unit.kelvin, 1234
+    )
+    return simulation
+
+
+def test_extension_writer_temperature_with_regulated_nhl():
+    """With regulated NHL, the reported kinetic energy is the regulated one."""
+    simulation = _regulated_simulation()
+    writer = xps.ExtensionWriter(kinetic=True, temperature=True)
+    writer.initialize(simulation)
+    kt = (unit.MOLAR_GAS_CONSTANT_R * 300 * unit.kelvin).value_in_unit(
+        unit.kilojoules_per_mole
+    )
+    c = np.sqrt(kt / 3)
+    simulation.step(500)
+    temperatures = []
+    for _ in range(1000):
+        simulation.step(10)
+        kinetic, temperature = writer.getValues(simulation)
+        temperatures.append(temperature)
+        (rate,) = simulation.context.getDynamicalVariableVelocities()
+        v = rate.value_in_unit(unit.radian / unit.picosecond)
+        assert kinetic == pytest.approx(0.5 * 3 * v * c * np.tanh(v / c), rel=1e-6)
+    assert abs(np.mean(temperatures) - 300) < 60
+
+
+def test_extension_writer_reinitialized_without_regulated_nhl():
+    """Re-initializing with another integrator drops the regulated kinetic energy."""
+    writer = xps.ExtensionWriter(kinetic=True)
+    writer.initialize(_regulated_simulation())
+    simulation = create_test_simulation()
+    writer.initialize(simulation)
+    (kinetic,) = writer.getValues(simulation)
+    (rate,) = simulation.context.getDynamicalVariableVelocities()
+    v = rate.value_in_unit(unit.radian / unit.picosecond)
+    assert kinetic == pytest.approx(0.5 * 3 * v**2, rel=1e-6)
+
+
 def test_extension_writer_headers_independent_of_flags():
     """Getters work after initialize() regardless of which columns are enabled."""
     simulation = create_test_simulation()
@@ -597,6 +655,9 @@ def test_extension_writer_coupling_function_order_is_deterministic():
     class _Context:
         def getSystem(self):
             return type("System", (), {"getCoupling": lambda _: _Coupling()})()
+
+        def getIntegrator(self):
+            return type("Integrator", (), {"getExtensionIntegrator": lambda _: None})()
 
     simulation = type("Simulation", (), {"extended_space_context": _Context()})()
     writer = xps.ExtensionWriter(kinetic=False, coupling_functions=True)

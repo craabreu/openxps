@@ -7,11 +7,13 @@ with respect to that variable.
 """
 
 import math
+from copy import copy, deepcopy
 
 import cvpack
 import numpy as np
 import openmm as mm
 import pytest
+import yaml
 from openmm import unit as mmunit
 
 import openxps as xps
@@ -228,6 +230,40 @@ def test_sum_merges_inner_product_couplings():
     assert first.getForceGroups() == set() and second.getForceGroups() == set()
 
 
+def test_sum_order_survives_copy_and_yaml():
+    """Merging interleaved inner product couplings does not reorder the variables."""
+    b = xps.DynamicalVariable(
+        "b", mmunit.nanometer, 1 * mmunit.dalton, NoBounds(0, 1, mmunit.nanometer)
+    )
+    harmonic = xps.HarmonicCoupling(
+        cvpack.Distance(0, 1, name="d"),
+        b,
+        100 * mmunit.kilojoule_per_mole / mmunit.nanometer**2,
+    )
+    total = _ipc("a*r", ["a"], [_dv("a")]) + harmonic + _ipc("c*r^2", ["c"], [_dv("c")])
+    clones = {
+        "copy": copy(total),
+        "deepcopy": deepcopy(total),
+        "yaml": yaml.safe_load(yaml.safe_dump(total)),
+    }
+    for kind, coupling in {"original": total, **clones}.items():
+        names = [dv.name for dv in coupling.getDynamicalVariables()]
+        assert names == ["a", "b", "c"], kind
+    nested = deepcopy(total) + _ipc("e*r", ["e"], [_dv("e")])
+    assert [dv.name for dv in nested.getDynamicalVariables()] == ["a", "b", "c", "e"]
+
+
+@pytest.mark.parametrize("name", ["λ", "λ_vdw"])
+def test_non_ascii_dv_names(name):
+    """Non-ASCII identifiers work as parameters and in functions."""
+    direct = _context(_ipc(f"{name}*10*r^2", [name], [_dv(name)]))
+    assert _physical_energy(direct, [0.3]) == pytest.approx(0.3 * 10 * 0.7**2)
+    function = _context(
+        _ipc("s*10*r^2", ["s"], [_dv(name)], {"s": f"{name}^2"}),
+    )
+    assert _physical_energy(function, [0.3]) == pytest.approx(0.3**2 * 10 * 0.7**2)
+
+
 def test_sum_rejects_conflicting_function_definitions():
     first = _ipc("scaling*10*r^2", ["scaling"], [_dv("lam")], {"scaling": "lam"})
     second = _ipc("scaling*3*r", ["scaling"], [_dv("lam")], {"scaling": "lam^2"})
@@ -239,6 +275,14 @@ def test_sum_rejects_conflicting_parameter_values():
     first = _ipc("a*r", ["a"], [_dv("lam")], {"a": "k*lam"}, k=1.0)
     second = _ipc("b*r", ["b"], [_dv("lam")], {"b": "k*lam^2"}, k=2.0)
     with pytest.raises(ValueError, match='parameter "k" has conflicting'):
+        _ = first + second
+
+
+def test_sum_rejects_conflicting_dynamical_variables():
+    first = _ipc("scaling*10*r^2", ["scaling"], [_dv("lam")], {"scaling": "lam"})
+    other_lam = _dv("lam", ReflectiveBounds(0.0, 2.0, mmunit.dimensionless))
+    second = _ipc("scaling*3*r", ["scaling"], [other_lam], {"scaling": "lam"})
+    with pytest.raises(ValueError, match='variable "lam" has conflicting'):
         _ = first + second
 
 

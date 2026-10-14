@@ -2,6 +2,7 @@
 Unit tests for the openxps.regression module.
 """
 
+import logging
 import warnings
 
 import numpy as np
@@ -443,7 +444,7 @@ class TestFitBehavior:
         regressor.fit(positions, forces, seed=1)
         curve = regressor.get_learning_curve()
         assert list(curve.epoch) == [0, 1, 2]
-        assert {"train_loss", "val_loss"} <= set(curve.columns)
+        assert list(curve.columns) == ["epoch", "train_loss", "val_loss"]
         assert np.all(np.isfinite(regressor.predict(positions)))
 
     @pytest.mark.parametrize(
@@ -653,7 +654,28 @@ def test_learning_curve_recorder_tolerates_nan_validation_loss():
         trainer = _FakeTrainer(epoch, {"train_loss": torch.tensor(1.0 / (epoch + 1))})
         recorder.on_train_epoch_end(trainer, None)
     frame = recorder.to_frame()
-    assert list(frame.columns) == ["epoch", "val_loss", "train_loss"]
+    assert list(frame.columns) == ["epoch", "train_loss", "val_loss"]
     assert list(frame.epoch) == [0, 1, 2]
     assert np.isnan(frame.val_loss[1])
     assert frame.train_loss[2] == pytest.approx(1 / 3)
+
+
+@pytest.mark.parametrize("verbose", [False, True])
+def test_fit_verbosity(capfd, caplog, verbose):
+    """fit() prints progress and Lightning messages only when verbose."""
+    regressor = ForceMatchingRegressor(
+        create_test_dynamical_variables(),
+        num_kernels=3,
+        num_epochs=1,
+        validation_fraction=0.0,
+        accelerator="cpu",
+        verbose=verbose,
+    )
+    rng = np.random.default_rng(0)
+    with caplog.at_level(logging.INFO):
+        regressor.fit(rng.standard_normal((20, 2)), rng.standard_normal((20, 2)))
+    output = capfd.readouterr()
+    shown = output.out + output.err + caplog.text
+    assert ("Epoch 0" in shown) == verbose
+    assert ("GPU available" in caplog.text) == verbose
+    assert list(regressor.get_learning_curve().columns) == ["epoch", "train_loss"]

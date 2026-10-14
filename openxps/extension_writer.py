@@ -14,6 +14,7 @@ from cvpack.reporting.custom_writer import CustomWriter
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
+from .integrators import RegulatedNHLIntegrator
 from .simulation import ExtendedSpaceSimulation
 
 
@@ -30,7 +31,9 @@ class ExtensionWriter(CustomWriter):
     ----------
     kinetic : bool, optional, default=False
         If ``True``, the kinetic energy of the dynamical variables will be reported
-        in units of kJ/mol.
+        in units of kJ/mol. If the extension integrator is a
+        :class:`RegulatedNHLIntegrator`, its regulated kinetic energy is reported
+        instead, so that equipartition holds for the reported temperature.
     temperature : bool, optional, default=False
         If ``True``, the temperature of the dynamical variables, with one degree of
         freedom per variable, will be reported in units of Kelvin.
@@ -127,6 +130,7 @@ class ExtensionWriter(CustomWriter):
         self._temp_factor = 0.0
         self._dv_objects = []
         self._masses = np.empty(0)
+        self._regulated_integrator = None
         self._meta_cvs = []
         self._function_names = []
         self._inner_cvs = []
@@ -138,6 +142,10 @@ class ExtensionWriter(CustomWriter):
         coupling = context.getSystem().getCoupling()
         self._dv_objects = coupling.getDynamicalVariables()
         self._masses = np.array([dv.mass / dv.mass.unit for dv in self._dv_objects])
+        integrator = context.getIntegrator().getExtensionIntegrator()
+        self._regulated_integrator = (
+            integrator if isinstance(integrator, RegulatedNHLIntegrator) else None
+        )
         kb = mmunit.MOLAR_GAS_CONSTANT_R.value_in_unit(
             mmunit.kilojoules_per_mole / mmunit.kelvin
         )
@@ -239,6 +247,14 @@ class ExtensionWriter(CustomWriter):
             headers.extend(self._function_names)
         return headers
 
+    def _kineticEnergy(self, rates: np.ndarray) -> float:
+        if self._regulated_integrator is None:
+            return 0.5 * float(np.dot(self._masses, rates * rates))
+        integrator = self._regulated_integrator
+        kt = integrator.getGlobalVariableByName("kT")
+        c = np.sqrt(integrator.getRegulationParameter() * kt / self._masses)
+        return 0.5 * float(np.dot(self._masses, rates * c * np.tanh(rates / c)))
+
     def getValues(self, simulation: ExtendedSpaceSimulation) -> list[float]:  # noqa: PLR0912
         context = simulation.extended_space_context
         extension_context = context.getExtensionContext()
@@ -250,7 +266,7 @@ class ExtensionWriter(CustomWriter):
         if self._needs_velocities:
             velocities = mmswig.State__getVectorAsVec3(state, mm.State.Velocities)
             rates = np.array([velocity.x for velocity in velocities])
-            kinetic_energy = 0.5 * float(np.dot(self._masses, rates * rates))
+            kinetic_energy = self._kineticEnergy(rates)
         if self._needs_positions:
             positions = mmswig.State__getVectorAsVec3(state, mm.State.Positions)
         if self._forces:

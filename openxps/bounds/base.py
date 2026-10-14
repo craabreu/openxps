@@ -33,7 +33,7 @@ class Bounds(Serializable):
     upper
         The upper bound for the dynamical variable.
     unit
-        The unity of measurement of the bounds. If the bounds do not have a unit, use
+        The unit of measurement of the bounds. If the bounds do not have a unit, use
         ``dimensionless``.
     """
 
@@ -180,7 +180,7 @@ class Bounds(Serializable):
         scaled_y=(y-1.0)/18.0
         """
         raise NotImplementedError(
-            "The method transformation must be implemented in subclasses."
+            "The method leptonExpression must be implemented in subclasses."
         )
 
     def wrap(self, value: float, rate: float) -> tuple[float, float]:

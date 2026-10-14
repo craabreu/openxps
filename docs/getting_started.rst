@@ -4,6 +4,11 @@ Getting Started
 Introduction
 ------------
 
+OpenXPS runs extended phase-space (XPS) simulations with OpenMM. It adds dynamical
+variables to a physical system and couples them to collective variables or to force
+parameters, as in driven adiabatic free-energy dynamics (d-AFED) and
+temperature-accelerated molecular dynamics (TAMD).
+
 
 Installation
 ------------

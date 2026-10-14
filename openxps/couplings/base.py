@@ -117,7 +117,7 @@ class Coupling(Serializable):
         Returns
         -------
         list[DynamicalVariable]
-            A list of DynamicalVariable objects contained within this coupling.
+            The dynamical variables of this coupling, converted to MD units.
         """
         return self._dynamical_variables
 
@@ -221,7 +221,7 @@ class Coupling(Serializable):
         ...     xps.CircularBounds()
         ... )
         >>> coupling = xps.CollectiveVariableCoupling(
-        ...     "0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
+        ...     f"0.5*kappa*min(delta,{2*pi}-delta)^2; delta=abs(phi-phi0)",
         ...     [phi],
         ...     [phi0],
         ...     kappa=1000 * unit.kilojoules_per_mole / unit.radian**2,
@@ -306,6 +306,10 @@ class Coupling(Serializable):
 class CouplingSum(Coupling):
     """A sum of couplings.
 
+    The dynamical variables of the sum are ordered by first appearance in the
+    summed couplings, and this is the order in which an
+    :class:`ExtendedSpaceContext` expects and reports their values and velocities.
+
     Parameters
     ----------
     couplings
@@ -337,23 +341,21 @@ class CouplingSum(Coupling):
         flattened = []
         for coupling in couplings:
             if isinstance(coupling, CouplingSum):
-                flattened.extend(coupling.getCouplings())
+                flattened.extend(coupling._flattened)
             else:
                 flattened.append(coupling)
-        self._couplings = self._mergeInnerProductCouplings(flattened)
-        forces = []
         dv_dict = {}
-        for coupling in self._couplings:
-            forces.extend(coupling.getForces())
+        for coupling in flattened:
             for dv in coupling.getDynamicalVariables():
-                if dv.name not in dv_dict:
-                    dv_dict[dv.name] = dv
-                elif dv_dict[dv.name] != dv:
+                if dv_dict.setdefault(dv.name, dv) != dv:
                     raise ValueError(
                         f'The dynamical variable "{dv.name}" has '
                         "conflicting definitions in the couplings."
                     )
-        super().__init__(forces, sorted(dv_dict.values(), key=lambda dv: dv.name))
+        self._flattened = flattened
+        self._couplings = self._mergeInnerProductCouplings(flattened)
+        forces = [force for c in self._couplings for force in c.getForces()]
+        super().__init__(forces, list(dv_dict.values()))
         self._checkCollectiveVariables()
 
     @staticmethod
@@ -387,7 +389,9 @@ class CouplingSum(Coupling):
         return new
 
     def __getstate__(self) -> dict[str, t.Any]:
-        return {"couplings": self._couplings}
+        # The couplings before merging, so that a rebuilt sum keeps the order of
+        # its dynamical variables
+        return {"couplings": self._flattened}
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self.__init__(state["couplings"])

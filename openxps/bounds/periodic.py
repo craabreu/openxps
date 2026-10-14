@@ -26,7 +26,7 @@ class PeriodicBounds(Bounds):
     upper
         The upper bound for the dynamical variable.
     unit
-        The unity of measurement of the bounds. If the bounds do not have a unit, use
+        The unit of measurement of the bounds. If the bounds do not have a unit, use
         ``dimensionless``.
 
     Example
