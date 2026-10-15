@@ -408,7 +408,7 @@ extlinks = {
         "openmm.%s",
     ),
     "CVPack": (
-        "https://redesignscience.github.io/cvpack/latest/api/%s.html",
+        "https://craabreu.github.io/cvpack/latest/api/%s.html",
         "cvpack.%s",
     ),
 }
