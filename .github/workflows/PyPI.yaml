@@ -1,14 +1,21 @@
 name: PyPI
 
 on:
-  push:
-    tags:
-      - v*
+  release:
+    types: [published]
+  # Rebuild and upload the distribution of an existing release tag
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to build, such as v0.2.0"
+        required: true
 
 jobs:
   test:
     name: Build on ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    # Prereleases are not deployed
+    if: github.event_name != 'release' || !github.event.release.prerelease
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -16,6 +23,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
 
       - name: Additional info about the build
         shell: bash
@@ -40,8 +50,8 @@ jobs:
       - name: PyPI Build and Upload
         shell: bash -l {0}
         run: |
-          export OPENXPS_VERSION=${{ github.ref_name }}
+          export OPENXPS_VERSION=${{ inputs.tag || github.event.release.tag_name }}
           echo "::group::Building PyPI distribution for openxps $OPENXPS_VERSION"
           python -m build
-          python -m twine upload -u __token__ -p ${{ secrets.PYPI_TOKEN }} --repository pypi dist/*
+          python -m twine upload -u __token__ -p ${{ secrets.PYPI_TOKEN }} --repository pypi --skip-existing dist/*
           echo "::endgroup::"

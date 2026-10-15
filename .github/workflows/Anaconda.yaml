@@ -1,9 +1,8 @@
 name: Anaconda
 
 on:
-  push:
-    tags:
-      - v*
+  release:
+    types: [published]
   # Rebuild and upload the package of an existing release tag
   workflow_dispatch:
     inputs:
@@ -15,6 +14,8 @@ jobs:
   test:
     name: Build on ${{ matrix.os }}, Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    # Prereleases are not deployed
+    if: github.event_name != 'release' || !github.event.release.prerelease
     strategy:
       matrix:
         os: [ubuntu-latest]
@@ -50,7 +51,7 @@ jobs:
         shell: bash -l {0}
         working-directory: ./devtools/conda-recipes/anaconda
         run: |
-          export OPENXPS_VERSION=${{ inputs.tag || github.ref_name }}
+          export OPENXPS_VERSION=${{ inputs.tag || github.event.release.tag_name }}
           echo "::group::Building conda package for openxps $OPENXPS_VERSION"
           outdir=$(mktemp -d)
           conda build . --no-anaconda-upload -c conda-forge -c mdtools --output-folder $outdir
