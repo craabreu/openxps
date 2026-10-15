@@ -189,7 +189,7 @@ Copyright (c) 2024-2026 [C. Abreu](https://github.com/craabreu)
 
 
 [OpenMM]: https://openmm.org
-[CVPack]: https://github.com/RedesignScience/cvpack
+[CVPack]: https://github.com/craabreu/cvpack
 [OpenMMTools]: https://github.com/choderalab/openmmtools
 [mdtools]: https://anaconda.org/mdtools/openxps
 [GitHub Pages]: https://craabreu.github.io/openxps/latest
