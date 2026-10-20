@@ -201,6 +201,44 @@ def test_extension_energy_equals_coupling_energy_when_linear(case):
     assert extension.getPotentialEnergy()._value == pytest.approx(physical, rel=1e-6)
 
 
+def test_parameter_derivatives_are_requested_with_energy(monkeypatch):
+    """Derivatives are read together with the energy, which some forces require."""
+    requests = []
+    get_state = mm.Context.getState
+
+    def spy(self, *args, **kwargs):
+        requests.append(kwargs)
+        return get_state(self, *args, **kwargs)
+
+    context = _context(
+        _ipc("scaling*10*r^2", ["scaling"], [_dv("lam")], {"scaling": "lam"})
+    )
+    monkeypatch.setattr(mm.Context, "getState", spy)
+    context.synchronize()
+    derivative_requests = [r for r in requests if r.get("getParameterDerivatives")]
+    assert derivative_requests
+    assert all(r.get("getEnergy") for r in derivative_requests)
+
+
+def test_sliced_nonbonded_force_scaling_derivative():
+    """SlicedNonbondedForce returns NaN derivatives unless the energy is requested."""
+    nbs = pytest.importorskip("nonbondedslicing")
+    nonbonded = mm.NonbondedForce()
+    nonbonded.addParticle(1.0, 0.3, 0.0)
+    nonbonded.addParticle(-1.0, 0.3, 0.0)
+    force = nbs.SlicedNonbondedForce(nonbonded, 2)
+    force.setParticleSubset(1, 1)
+    force.addGlobalParameter("scaling", 1.0)
+    force.addScalingParameter("scaling", 0, 1, True, False)
+    force.addEnergyParameterDerivative("scaling")
+    coupling = xps.InnerProductCoupling([force], [_dv("scaling")])
+    context = _context(coupling)
+    context.setDynamicalVariableValues([0.5])
+    state = context.getExtensionContext().getState(getForces=True)
+    coulomb = -138.935456 / 0.7
+    assert state.getForces()._value[0][0] == pytest.approx(-coulomb, rel=1e-6)
+
+
 @pytest.mark.parametrize(
     ("bounds", "raw", "wrapped"),
     [

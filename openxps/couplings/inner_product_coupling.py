@@ -360,8 +360,14 @@ class InnerProductCoupling(Coupling):
         extension_context: mm.Context,
     ) -> None:
         groups = sum(1 << group for group in self._force_groups) or -1
+        # Some forces compute parameter derivatives only along with the energy. For
+        # instance, SlicedNonbondedForce (openmm-nonbonded-slicing) returns NaN for
+        # the derivatives of its scaling parameters when the energy is not requested.
         state = mm.Context.getState(
-            physical_context, getParameterDerivatives=True, groups=groups
+            physical_context,
+            getEnergy=True,
+            getParameterDerivatives=True,
+            groups=groups,
         )
         for name, value in state.getEnergyParameterDerivatives().items():
             if name in self._dynamic_parameters:
