@@ -66,10 +66,18 @@ integrator is used with half the step size of the physical integrator.</p></li>
 to be symmetric in terms of operator splitting. Use this at your own risk if
 you know your integrators are compatible but are not in the known list.
 Default is False.</p></li>
+<li><p><strong>substeps</strong> (<em>When the physical integrator takes the</em>)</p></li>
+<li><p><strong>needs</strong> (<em>the extension context only</em>)</p></li>
+<li><p><strong>step</strong> (<em>updating before each extension</em>)</p></li>
+<li><p><strong>a</strong> (<em>so the update after the second half of</em>)</p></li>
 </ul>
 </dd>
-<dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>ValueError</strong> – If the physical and extension integrators are not symmetric in terms of
+</dl>
+<p>:param step is done in the last step of a call to <a class="reference internal" href="#openxps.SplitIntegrator.step" title="openxps.SplitIntegrator.step"><code class="xref py py-meth docutils literal notranslate"><span class="pre">step()</span></code></a> only:
+:param for observers.:</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If the physical and extension integrators are not symmetric in terms of
     operator splitting, or do not have a step size ratio equal to an even integer
     number.</p>
 </dd>
@@ -228,7 +236,7 @@ extension systems in lockstep over a specified number of time steps.</p>
       &#169;2024-2026 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.1</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.2.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
       |

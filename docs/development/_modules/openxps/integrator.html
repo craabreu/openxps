@@ -423,6 +423,10 @@
 <span class="sd">        you know your integrators are compatible but are not in the known list.</span>
 <span class="sd">        Default is False.</span>
 
+<span class="sd">    When the physical integrator takes the substeps, the extension context only needs</span>
+<span class="sd">    updating before each extension step, so the update after the second half of a</span>
+<span class="sd">    step is done in the last step of a call to :meth:`step` only, for observers.</span>
+
 <span class="sd">    Raises</span>
 <span class="sd">    ------</span>
 <span class="sd">    ValueError</span>
@@ -534,6 +538,9 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span>
             <span class="n">ratio</span> <span class="o">=</span> <span class="n">extension_step_size</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">physical_step_size</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">rint</span><span class="p">(</span><span class="n">ratio</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_physical_takes_substeps</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span> <span class="ow">is</span> <span class="bp">self</span><span class="o">.</span><span class="n">_physical_integrator</span>
+        <span class="p">)</span>
 
 <div class="viewcode-block" id="SplitIntegrator.configure">
 <a class="viewcode-back" href="../../api/SplitIntegrator.html#openxps.SplitIntegrator.configure">[docs]</a>
@@ -577,13 +584,18 @@
 <span class="sd">            The number of time steps to advance the simulation.</span>
 <span class="sd">        """</span>
         <span class="n">step_count</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="o">.</span><span class="n">getStepCount</span><span class="p">()</span>
-        <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
+        <span class="n">contexts</span> <span class="o">=</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">steps</span><span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">(</span><span class="o">*</span><span class="n">contexts</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_middle_integrator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_update_end_context</span><span class="p">(</span><span class="o">*</span><span class="n">contexts</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_end_integrator</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_num_substeps</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extension_context</span><span class="p">)</span>
+            <span class="c1"># When the physical integrator takes the substeps, the extension update</span>
+            <span class="c1"># here only serves observers: the next step redoes it before the</span>
+            <span class="c1"># extension system moves again. It is done once, at the end of the call.</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">==</span> <span class="n">steps</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_physical_takes_substeps</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_update_middle_context</span><span class="p">(</span><span class="o">*</span><span class="n">contexts</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_physical_context</span><span class="o">.</span><span class="n">setStepCount</span><span class="p">(</span><span class="n">step_count</span> <span class="o">+</span> <span class="n">steps</span><span class="p">)</span></div>
 </div>
 
@@ -632,7 +644,7 @@
       &#169;2024-2026 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.1</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.2.0</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>
