@@ -22,8 +22,9 @@ or from PyPI::
 
     pip install openxps
 
-PyTorch and Lightning, which :class:`~openxps.ForceMatchingRegressor` uses, are
-installed as dependencies.
+:class:`~openxps.ForceMatchingRegressor` also needs PyTorch, Lightning and pandas, which
+are not installed by default. Add them with ``pip install openxps[regression]`` or
+``conda install -c conda-forge pytorch lightning pandas``.
 
 Usage
 -----

@@ -6,15 +6,17 @@ import logging
 import warnings
 
 import numpy as np
-import pandas as pd
 import pytest
-import torch
-from lightning import pytorch as pl
-from openmm import unit as mmunit
 
-import openxps as xps
-from openxps.bounds import NoBounds, PeriodicBounds
-from openxps.regression import (
+pd = pytest.importorskip("pandas")
+torch = pytest.importorskip("torch")
+pl = pytest.importorskip("lightning.pytorch")
+
+from openmm import unit as mmunit  # noqa: E402
+
+import openxps as xps  # noqa: E402
+from openxps.bounds import NoBounds, PeriodicBounds  # noqa: E402
+from openxps.regression import (  # noqa: E402
     ForceMatchingRegressor,
     GradMatch,
     RBFPotential,
