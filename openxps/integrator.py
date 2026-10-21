@@ -136,6 +136,7 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         self._physical_context = None
         self._dynamical_variables = None
         self._coupling = None
+        self._capture_point = None
 
     def configure(
         self,
@@ -168,6 +169,36 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         self._extension_context = extension_context
         self._coupling = coupling
         self._dynamical_variables = coupling.getDynamicalVariables()
+        self._capture_point = None
+        physical = self._physical_integrator
+        if (
+            isinstance(physical, IntegratorMixin)
+            and physical.getEnergyDerivativeNames()
+        ):
+            captured = set(physical.getEnergyDerivativeNames())
+            required = set(coupling.getEnergyDerivativeNames())
+            if captured != required:
+                raise ValueError(
+                    "The energyDerivatives of the physical integrator, "
+                    f"{sorted(captured)}, must be the parameters whose derivatives "
+                    f"the coupling reads, {sorted(required)}."
+                )
+            self._checkCapturePoint(physical.getCapturePoint())
+            self._capture_point = physical.getCapturePoint()
+
+    def _checkCapturePoint(self, point: str) -> None:
+        """Raise if the integration scheme cannot use derivatives captured there."""
+
+    def _updateExtensionFromCapture(
+        self, physical_context: mm.Context, extension_context: mm.Context
+    ) -> None:
+        """Do what ``updateExtensionContext`` does, with the captured derivatives."""
+        self._coupling.updateExtensionCollectiveVariables(
+            physical_context, extension_context
+        )
+        self._coupling.updateExtensionDerivatives(
+            extension_context, self._physical_integrator.getCapturedDerivatives()
+        )
 
     def getPhysicalIntegrator(self) -> mm.Integrator:
         """Get the integrator for the physical system.
@@ -258,6 +289,11 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
         to follow a force-first scheme. Use this at your own risk if you know your
         integrators are compatible. Default is False.
 
+    If the physical integrator is one of the integrators in :mod:`openxps.integrators`
+    built with ``energyDerivatives``, the derivatives read by the coupling are taken
+    from the force evaluation of each physical step instead of a separate evaluation.
+    The names must be those returned by the coupling's ``getEnergyDerivativeNames``.
+
     Raises
     ------
     ValueError
@@ -333,13 +369,35 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
         steps
             The number of time steps to advance the simulation.
         """
+        capture = self._capture_point
         for _ in range(steps):
             self._physical_integrator.step(1)
+            if capture == "start":
+                # Derivatives at the positions this extension step must see
+                self._coupling.updateExtensionDerivatives(
+                    self._extension_context,
+                    self._physical_integrator.getCapturedDerivatives(),
+                )
             self._extension_integrator.step(1)
             self._coupling.updatePhysicalContext(
                 self._physical_context,
                 self._extension_context,
             )
+            if capture is None:
+                self._coupling.updateExtensionContext(
+                    self._physical_context,
+                    self._extension_context,
+                )
+            elif capture == "end":
+                self._updateExtensionFromCapture(
+                    self._physical_context, self._extension_context
+                )
+            else:
+                self._coupling.updateExtensionCollectiveVariables(
+                    self._physical_context, self._extension_context
+                )
+        if capture == "start" and steps > 0:
+            # Leave the extension context at the final configuration for observers
             self._coupling.updateExtensionContext(
                 self._physical_context,
                 self._extension_context,
@@ -377,6 +435,12 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         to be symmetric in terms of operator splitting. Use this at your own risk if
         you know your integrators are compatible but are not in the known list.
         Default is False.
+
+    If the physical integrator is one of the integrators in :mod:`openxps.integrators`
+    built with ``energyDerivatives``, the derivatives read by the coupling are taken
+    from the force evaluation at the end of its steps instead of a separate
+    evaluation. When the physical integrator takes several substeps, every substep
+    computes the energy and only the last value is used.
 
     Raises
     ------
@@ -476,6 +540,14 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             raise ValueError("Division by zero is not allowed.")
         return np.isclose(a / b - round(a / b), 0) and int(round(a / b)) % 2 == 0
 
+    def _checkCapturePoint(self, point: str) -> None:
+        if point != "end":
+            raise ValueError(
+                "SplitIntegrator can only use energy derivatives captured at the end "
+                "of a physical step; use a symmetric (non-force-first) physical "
+                "integrator."
+            )
+
     def _initialize(self) -> None:
         super()._initialize()
         physical_step_size = mmswig.Integrator_getStepSize(self._physical_integrator)
@@ -503,6 +575,11 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         else:
             self._update_middle_context = self._coupling.updateExtensionContext
             self._update_end_context = self._coupling.updatePhysicalContext
+        if self._capture_point is not None:
+            if self._middle_integrator is self._physical_integrator:
+                self._update_end_context = self._updateExtensionFromCapture
+            else:
+                self._update_middle_context = self._updateExtensionFromCapture
 
     def getNumSubsteps(self) -> int:
         """Get the number of substeps for the integrator.

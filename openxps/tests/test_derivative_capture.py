@@ -7,6 +7,7 @@ import re
 from copy import deepcopy
 
 import cvpack
+import numpy as np
 import openmm as mm
 import pytest
 from openmm import unit as mmunit
@@ -283,3 +284,164 @@ def test_capture_survives_copy_and_pickle(duplicate):
     assert integrator.getEnergyDerivativeNames() == ("scaling",)
     assert len(_capture_indices(integrator)) == 1
     assert integrator.getCapturePoint() == "start"
+
+
+NAMES = ("scaling",)
+
+
+def _csvr(names=()):
+    return INTEGRATORS["CSVR-first"](names)
+
+
+def _ggmt(names=()):
+    # Deterministic, unlike CSVR, so that trajectories can be compared
+    return INTEGRATORS["MassiveGGMT-first"](names)
+
+
+def _verlet(step_size, names=()):
+    return xps.integrators.SymmetricVerletIntegrator(
+        step_size * FEMTOSECOND, energyDerivatives=names
+    )
+
+
+CASES = {
+    "lockstep-start": lambda names: xps.LockstepIntegrator(_ggmt(names), _ggmt()),
+    "lockstep-end": lambda names: xps.LockstepIntegrator(
+        _verlet(1, names), _ggmt(), assume_force_first=True
+    ),
+    "split-physical-middle": lambda names: xps.SplitIntegrator(
+        _verlet(2, names), _verlet(1)
+    ),
+    "split-one-substep": lambda names: xps.SplitIntegrator(
+        _verlet(1, names), _verlet(2)
+    ),
+    "split-two-substeps": lambda names: xps.SplitIntegrator(
+        _verlet(1, names), _verlet(4)
+    ),
+}
+CAPTURE_POINTS = {
+    "lockstep-start": "start",
+    "lockstep-end": "end",
+    "split-physical-middle": "end",
+    "split-one-substep": "end",
+    "split-two-substeps": "end",
+}
+
+
+def _context(coupling, integrator, system=None):
+    context = xps.ExtendedSpaceContext(
+        xps.ExtendedSpaceSystem(system or _system(), coupling), integrator, REFERENCE
+    )
+    context.setPositions(POSITIONS)
+    context.setVelocities(VELOCITIES)
+    count = len(coupling.getDynamicalVariables())
+    context.setDynamicalVariableValues([0.3] * count)
+    context.setDynamicalVariableVelocities([0.5] * count)
+    return context
+
+
+def _trajectory(context, steps=100, chunks=4):
+    for _ in range(chunks):
+        context.getIntegrator().step(steps // chunks)
+    state = context.getState(getPositions=True)
+    positions = state.getPositions(asNumpy=True).value_in_unit(mmunit.nanometer)
+    values = [value / value.unit for value in context.getDynamicalVariableValues()]
+    return np.concatenate([positions.ravel(), values])
+
+
+@pytest.mark.parametrize(
+    "coupling", [_inner, lambda: _inner() + _harmonic()], ids=["inner", "sum"]
+)
+@pytest.mark.parametrize("case", list(CASES))
+def test_capture_reproduces_current_path(case, coupling):
+    captured = _context(coupling(), CASES[case](NAMES))
+    current = _context(coupling(), CASES[case](()))
+    assert captured.getIntegrator()._capture_point == CAPTURE_POINTS[case]
+    assert current.getIntegrator()._capture_point is None
+    np.testing.assert_allclose(
+        _trajectory(captured), _trajectory(current), rtol=1e-10, atol=1e-12
+    )
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        lambda: xps.LockstepIntegrator(mm.LangevinMiddleIntegrator(300, 1, 0.001)),
+        lambda: xps.LockstepIntegrator(_csvr(), _csvr()),
+        lambda: xps.SplitIntegrator(_verlet(1), _verlet(2)),
+    ],
+    ids=["external", "no-option", "split-no-option"],
+)
+def test_no_capture_without_the_option(make):
+    context = _context(_inner(), make())
+    assert context.getIntegrator()._capture_point is None
+    context.getIntegrator().step(10)
+
+
+@pytest.mark.parametrize(
+    "names", [("wrong",), ("scaling", "extra"), ()], ids=["wrong", "extra", "harmonic"]
+)
+def test_mismatched_names_raise(names):
+    coupling = _harmonic() if names == () else _inner()
+    integrator = xps.LockstepIntegrator(_csvr(names or ("scaling",)), _csvr())
+    with pytest.raises(ValueError, match="energyDerivatives"):
+        xps.ExtendedSpaceContext(
+            xps.ExtendedSpaceSystem(_system(), coupling), integrator, REFERENCE
+        )
+
+
+def test_split_rejects_start_capture():
+    extension = xps.integrators.CSVRIntegrator(
+        300 * mmunit.kelvin, 10 / mmunit.picosecond, FEMTOSECOND / 2, forceFirst=True
+    )
+    integrator = xps.SplitIntegrator(_csvr(NAMES), extension, assume_symmetric=True)
+    with pytest.raises(ValueError, match="end of"):
+        xps.ExtendedSpaceContext(
+            xps.ExtendedSpaceSystem(_system(), _inner()), integrator, REFERENCE
+        )
+
+
+def test_extension_context_is_current_after_step():
+    context = _context(_inner(), CASES["lockstep-start"](NAMES))
+    context.getIntegrator().step(7)
+    extension = context.getExtensionContext()
+    after_step = extension.getParameter("derivative_with_respect_to_scaling")
+    context.synchronize()
+    assert extension.getParameter("derivative_with_respect_to_scaling") == after_step
+
+
+def test_step_zero():
+    context = _context(_inner(), CASES["lockstep-start"](NAMES))
+    extension = context.getExtensionContext()
+    before = extension.getParameter("derivative_with_respect_to_scaling")
+    context.getIntegrator().step(0)
+    assert extension.getParameter("derivative_with_respect_to_scaling") == before
+
+
+def test_non_ascii_parameter_name():
+    def coupling():
+        return xps.InnerProductCoupling([_bond_force("λ")], [_dv("λ")])
+
+    captured = _context(coupling(), xps.LockstepIntegrator(_ggmt(("λ",)), _ggmt()))
+    current = _context(coupling(), xps.LockstepIntegrator(_ggmt(), _ggmt()))
+    assert captured.getIntegrator()._capture_point == "start"
+    np.testing.assert_allclose(
+        _trajectory(captured), _trajectory(current), rtol=1e-10, atol=1e-12
+    )
+
+
+def test_barostat_runs_and_extension_is_current():
+    system = _system()
+    system.setDefaultPeriodicBoxVectors(
+        mm.Vec3(2, 0, 0), mm.Vec3(0, 2, 0), mm.Vec3(0, 0, 2)
+    )
+    system.addForce(mm.MonteCarloBarostat(1 * mmunit.bar, 300 * mmunit.kelvin, 1))
+    coupling = _inner()
+    coupling.getForce(0).setUsesPeriodicBoundaryConditions(True)
+    context = _context(coupling, CASES["lockstep-start"](NAMES), system)
+    context.getIntegrator().step(20)
+    extension = context.getExtensionContext()
+    after_step = extension.getParameter("derivative_with_respect_to_scaling")
+    assert np.isfinite(after_step)
+    context.synchronize()
+    assert extension.getParameter("derivative_with_respect_to_scaling") == after_step
