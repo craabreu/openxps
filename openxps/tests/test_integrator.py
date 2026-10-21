@@ -4,13 +4,21 @@ Unit tests for the openxps.integrator module.
 
 import math
 
+import numpy as np
 import openmm as mm
 import pytest
 from openmm import _openmm as mmswig
 from openmm import unit as mmunit
 
+import openxps as xps
 from openxps import integrators
 from openxps.integrator import LockstepIntegrator, SplitIntegrator
+
+REFERENCE = mm.Platform.getPlatformByName("Reference")
+POSITIONS = [mm.Vec3(0, 0, 0), mm.Vec3(0.2, 0, 0)] * mmunit.nanometer
+VELOCITIES = (
+    [mm.Vec3(0, 0, 0), mm.Vec3(0.3, 0.1, 0)] * mmunit.nanometer / mmunit.picosecond
+)
 
 
 # Helper functions
@@ -367,3 +375,83 @@ def test_split_default_extension_integrator_has_consistent_coefficients():
     split.setStepSize(8 * mmunit.femtosecond)
     assert physical.getGlobalVariableByName("a") == pytest.approx(math.exp(-0.08))
     assert extension.getGlobalVariableByName("a") == pytest.approx(math.exp(-0.04))
+
+
+# SplitIntegrator with a coupling that reads energy derivatives
+
+
+def _inner_coupling():
+    """A bond scaled by a smoothstep of a dynamical variable."""
+    force = mm.CustomBondForce("scaling*500*(r-0.15)^2")
+    force.addGlobalParameter("scaling", 1.0)
+    force.addEnergyParameterDerivative("scaling")
+    force.addBond(0, 1, [])
+    variable = xps.DynamicalVariable(
+        "lam",
+        mmunit.dimensionless,
+        1 * mmunit.dalton * mmunit.nanometer**2,
+        xps.bounds.ReflectiveBounds(0, 1, mmunit.dimensionless),
+    )
+    return xps.InnerProductCoupling(
+        [force], [variable], functions={"scaling": "lam^2*(3-2*lam)"}
+    )
+
+
+def _split_context(coupling, physical_fs, extension_fs):
+    system = mm.System()
+    system.addParticle(12.0)
+    system.addParticle(1.0)
+    integrator = SplitIntegrator(
+        create_symmetric_integrator(physical_fs * mmunit.femtosecond),
+        create_symmetric_integrator(extension_fs * mmunit.femtosecond),
+    )
+    context = xps.ExtendedSpaceContext(
+        xps.ExtendedSpaceSystem(system, coupling), integrator, REFERENCE
+    )
+    context.setPositions(POSITIONS)
+    context.setVelocities(VELOCITIES)
+    context.setDynamicalVariableValues([0.3])
+    context.setDynamicalVariableVelocities([0.5])
+    return context
+
+
+LAYOUTS = {"physical-substeps": (1, 4), "extension-substeps": (4, 1)}
+
+
+@pytest.mark.parametrize("layout", list(LAYOUTS))
+def test_split_updates_extension_only_when_needed(layout):
+    """With the physical integrator taking the substeps, the extension context is
+    updated before each extension step, and after the last step of the call."""
+    coupling = _inner_coupling()
+    calls = []
+    update = coupling.updateExtensionContext
+    coupling.updateExtensionContext = lambda *args: calls.append(update(*args))
+    context = _split_context(coupling, *LAYOUTS[layout])
+    calls.clear()  # the context synchronizes when created
+    context.getIntegrator().step(3)
+    assert len(calls) == (4 if layout == "physical-substeps" else 3)
+
+
+@pytest.mark.parametrize("layout", list(LAYOUTS))
+def test_split_extension_context_is_current_after_step(layout):
+    context = _split_context(_inner_coupling(), *LAYOUTS[layout])
+    context.getIntegrator().step(7)
+    extension = context.getExtensionContext()
+    after_step = extension.getParameter("derivative_with_respect_to_scaling")
+    context.synchronize()
+    assert extension.getParameter("derivative_with_respect_to_scaling") == after_step
+
+
+def _trajectory(context, calls):
+    for steps in calls:
+        context.getIntegrator().step(steps)
+    positions = context.getState(getPositions=True).getPositions(asNumpy=True)
+    values = [value / value.unit for value in context.getDynamicalVariableValues()]
+    return np.concatenate([positions.value_in_unit(mmunit.nanometer).ravel(), values])
+
+
+def test_split_trajectory_does_not_depend_on_call_chunking():
+    """Skipping the observer-only updates leaves the dynamics unchanged."""
+    one_call = _trajectory(_split_context(_inner_coupling(), 1, 4), [12])
+    many_calls = _trajectory(_split_context(_inner_coupling(), 1, 4), [1] * 12)
+    np.testing.assert_allclose(one_call, many_calls, rtol=1e-12, atol=1e-14)

@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- When the physical integrator of a `SplitIntegrator` takes the substeps, the
+  extension context is updated after the second half of a step only in the last step
+  of a call to `step`. The update only serves observers, since the next step redoes
+  it before the extension system moves again. With an `InnerProductCoupling`, this
+  halves the force evaluations spent on its energy derivatives.
+
+### Fixed
+- `InnerProductCoupling` works with forces that compute parameter derivatives only
+  along with the energy, such as `SlicedNonbondedForce` from openmm-nonbonded-slicing,
+  which gave NaN forces on the dynamical variables (#68).
+- `ForceMatchingRegressor.fit` no longer shows Lightning warnings that don't apply
+  to it, about data loader workers, a missing validation set, SLURM, and Lightning's
+  use of a deprecated PyTorch API (#70).
+
 ## 0.2.0
 
 This release rewrites most of the package, so code written for 0.1.0 needs to be
