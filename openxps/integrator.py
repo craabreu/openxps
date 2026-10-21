@@ -378,6 +378,10 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         you know your integrators are compatible but are not in the known list.
         Default is False.
 
+    When the physical integrator takes the substeps, the extension context only needs
+    updating before each extension step, so the update after the second half of a
+    step is done in the last step of a call to :meth:`step` only, for observers.
+
     Raises
     ------
     ValueError
@@ -489,6 +493,9 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             self._end_integrator = self._physical_integrator
             ratio = extension_step_size / (2 * physical_step_size)
         self._num_substeps = int(np.rint(ratio))
+        self._physical_takes_substeps = (
+            self._end_integrator is self._physical_integrator
+        )
 
     def configure(
         self,
@@ -524,11 +531,16 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             The number of time steps to advance the simulation.
         """
         step_count = self._physical_context.getStepCount()
-        for _ in range(steps):
+        contexts = (self._physical_context, self._extension_context)
+        for i in range(steps):
             self._end_integrator.step(self._num_substeps)
-            self._update_middle_context(self._physical_context, self._extension_context)
+            self._update_middle_context(*contexts)
             self._middle_integrator.step(1)
-            self._update_end_context(self._physical_context, self._extension_context)
+            self._update_end_context(*contexts)
             self._end_integrator.step(self._num_substeps)
-            self._update_middle_context(self._physical_context, self._extension_context)
+            # When the physical integrator takes the substeps, the extension update
+            # here only serves observers: the next step redoes it before the
+            # extension system moves again. It is done once, at the end of the call.
+            if i == steps - 1 or not self._physical_takes_substeps:
+                self._update_middle_context(*contexts)
         self._physical_context.setStepCount(step_count + steps)
