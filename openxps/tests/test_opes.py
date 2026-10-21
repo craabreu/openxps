@@ -353,3 +353,64 @@ def test_combined_opes_matches_plain_combined_opes():
     plain.step(_Replay(context, values, frequency), frequency * len(values))
     assert plain.getNumKernels() == sampler.getNumKernels()
     np.testing.assert_allclose(plain.getBias(), sampler.getBias(), rtol=1e-10)
+
+
+def test_samplers_step_together_on_their_own_schedules():
+    dv = _circular_dv()
+    model, system = _alanine_system(dv)
+    variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)
+    opes = _opes(system, [variable], frequency=10)
+    combined = _combined(system, [variable], frequency=20)
+    groups = {opes._force.getForceGroup(), combined._force.getForceGroup()}
+    assert len(groups) == 2
+    simulation = _simulation(model, system)
+    xps.ExtendedSpaceOPES.stepTogether(simulation, [opes, combined], 60)
+    assert simulation.currentStep == 60
+    assert opes.getNumKernels() >= 1
+    assert all(n >= 1 for n in combined.getNumKernels())
+    # Each sampler's bias is in its own group, so they add up in the extension context
+    extension = simulation.context.getExtensionContext()
+    both = extension.getState(getEnergy=True, groups=groups).getPotentialEnergy()
+    sum_of_parts = opes.getBiasEnergy(simulation.context) + opes.barrier
+    sum_of_parts += combined.getBiasEnergy(simulation.context)
+    sum_of_parts += combined.barrier + combined.exploreBarrier
+    assert both.value_in_unit(unit.kilojoules_per_mole) == pytest.approx(
+        sum_of_parts.value_in_unit(unit.kilojoules_per_mole), abs=1e-9
+    )
+
+
+def test_state_round_trip_restores_the_bias():
+    dv = _circular_dv()
+    model, system = _alanine_system(dv)
+    variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)
+    sampler = _opes(system, [variable])
+    sampler.step(_simulation(model, system), 40)
+    state = sampler.getState()
+    _, fresh_system = _alanine_system(dv)
+    restored = _opes(fresh_system, [variable])
+    restored.setState(state)
+    assert restored.getNumKernels() == sampler.getNumKernels()
+    np.testing.assert_allclose(restored.getBias(), sampler.getBias())
+
+
+def test_two_walkers_share_a_bias(tmp_path):
+    dv = _circular_dv()
+    walkers = []
+    for walker_id in (1, 2):
+        model, system = _alanine_system(dv)
+        sampler = _opes(
+            system,
+            [xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)],
+            saveFrequency=20,
+            biasDir=str(tmp_path),
+            walkerId=walker_id,
+            compressionThreshold=0,  # no merging, so kernel counts add up
+        )
+        walkers.append((sampler, _simulation(model, system, seed=walker_id)))
+    for sampler, simulation in walkers:
+        sampler.step(simulation, 40)
+    for sampler, simulation in walkers:
+        sampler.step(simulation, 20)  # syncs at step 60 and reads the other's file
+    # Each walker deposited 6 kernels of its own; the rest came from its peer
+    for sampler, _ in walkers:
+        assert sampler.getNumKernels() > 6
