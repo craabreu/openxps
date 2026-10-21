@@ -7,6 +7,8 @@
 
 """
 
+import warnings
+
 import openmm as mm
 
 from .couplings import Coupling
@@ -71,7 +73,45 @@ class ExtendedSpaceSystem(mm.System):
         coupling.addToExtensionSystem(self._extension_system)
         self._checkOtherForces(system)
         coupling.addToPhysicalSystem(system)
+        self._warnAboutLongRangeCorrections(system)
         self.this = system.this
+
+    def _warnAboutLongRangeCorrections(self, system: mm.System) -> None:
+        """Warn about long-range corrections that depend on the coupling parameters.
+
+        OpenMM computes the long-range correction of a CustomNonbondedForce on the
+        CPU whenever one of the force's global parameters changes. The coupling
+        changes its parameters at every step, which can make the correction cost
+        more than the step itself.
+        """
+        protected = self._coupling.getProtectedParameters()
+        forces = list(system.getForces())
+        while forces:
+            force = forces.pop()
+            if isinstance(force, mm.CustomCVForce):
+                forces.extend(
+                    force.getCollectiveVariable(index)
+                    for index in range(force.getNumCollectiveVariables())
+                )
+            if not (
+                isinstance(force, mm.CustomNonbondedForce)
+                and force.getUseLongRangeCorrection()
+            ):
+                continue
+            names = {
+                force.getGlobalParameterName(index)
+                for index in range(force.getNumGlobalParameters())
+            }
+            if shared := names & protected:
+                warnings.warn(
+                    f"Force {force.getName()} uses a long-range correction and depends "
+                    "on parameters that change at every step: "
+                    + ", ".join(sorted(shared))
+                    + ". OpenMM then recomputes the correction on the CPU at every "
+                    "step, which can take longer than the step itself. Unless it is "
+                    "needed, call setUseLongRangeCorrection(False) on this force.",
+                    stacklevel=3,
+                )
 
     def _checkOtherForces(self, system: mm.System) -> None:
         """Reject forces outside the coupling that depend on its parameters.

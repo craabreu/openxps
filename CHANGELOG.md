@@ -13,6 +13,12 @@
   it before the extension system moves again. With an `InnerProductCoupling`, this
   halves the force evaluations spent on its energy derivatives.
 
+### New
+- `ExtendedSpaceSystem` warns when a `CustomNonbondedForce` in the physical system uses
+  a long-range correction and depends on a parameter the coupling changes at every
+  step. OpenMM then recomputes the correction on the CPU at every step, which in a
+  1,500-atom system took longer than the step itself.
+
 ### Fixed
 - `InnerProductCoupling` works with forces that compute parameter derivatives only
   along with the energy, such as `SlicedNonbondedForce` from openmm-nonbonded-slicing,
