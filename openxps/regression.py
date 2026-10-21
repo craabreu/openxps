@@ -11,6 +11,7 @@ import contextlib
 import logging
 import tempfile
 import typing as t
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -209,6 +210,19 @@ class _LearningCurveRecorder(pl.Callback):
         return pd.DataFrame(records, columns=columns)
 
 
+#: Lightning warnings that don't apply to fitting a small in-memory data set
+_BENIGN_LIGHTNING_WARNINGS = (
+    # The data loaders use few workers on purpose: the data are small tensors in memory
+    r"The '\w+' does not have many workers",
+    # A validation step is always defined, but validation_fraction=0 means no data
+    r"You defined a `validation_step` but have no `val_dataloader`",
+    # Raised on any machine with SLURM installed, even when it is not being used
+    r"The `srun` command is available on your system but is not used",
+    # Lightning's own use of an API deprecated by recent PyTorch versions
+    r"`isinstance\(treespec, LeafSpec\)` is deprecated",
+)
+
+
 @contextlib.contextmanager
 def _quiet_lightning() -> t.Iterator[None]:
     """Silence Lightning's informational log messages."""
@@ -221,6 +235,15 @@ def _quiet_lightning() -> t.Iterator[None]:
     finally:
         for logger, level in zip(loggers, levels):
             logger.setLevel(level)
+
+
+@contextlib.contextmanager
+def _ignore_benign_lightning_warnings() -> t.Iterator[None]:
+    """Ignore Lightning warnings that don't apply to this regressor."""
+    with warnings.catch_warnings():
+        for message in _BENIGN_LIGHTNING_WARNINGS:
+            warnings.filterwarnings("ignore", message=message)
+        yield
 
 
 class ForceMatchingRegressor:
@@ -431,7 +454,11 @@ class ForceMatchingRegressor:
         recorder = _LearningCurveRecorder()
 
         quiet = contextlib.nullcontext() if self._verbose else _quiet_lightning()
-        with quiet, tempfile.TemporaryDirectory() as tmp_dir:
+        with (
+            quiet,
+            _ignore_benign_lightning_warnings(),
+            tempfile.TemporaryDirectory() as tmp_dir,
+        ):
             trainer_kwargs = {
                 "max_epochs": self._num_epochs,
                 "accelerator": self._accelerator,
