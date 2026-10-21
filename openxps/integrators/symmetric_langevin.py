@@ -7,6 +7,8 @@
 
 """
 
+import typing as t
+
 import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
@@ -29,6 +31,10 @@ class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
         The friction coefficient which couples the system to the heat bath.
     stepSize
         The step size with which to integrate the system.
+    energyDerivatives
+        Names of global parameters whose energy derivatives are computed in the force
+        evaluation of each step, for :class:`~openxps.InnerProductCoupling`. See
+        :meth:`~openxps.integrators.utils.IntegratorMixin.getCapturedDerivatives`.
 
     Example
     -------
@@ -63,12 +69,15 @@ class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
         temperature: mmunit.Quantity,
         frictionCoeff: mmunit.Quantity,
         stepSize: mmunit.Quantity,
+        energyDerivatives: t.Iterable[str] = (),
     ) -> None:
         super().__init__(stepSize)
         self._init_temperature(temperature)
         self._init_friction_coefficient(frictionCoeff)
+        self._init_energy_derivatives(energyDerivatives)
         self._add_variables()
         self.addUpdateContextState()
+        self._add_derivative_capture("start")
         self.addComputePerDof("v", "v + 0.5*dt*f/m")
         self.addConstrainVelocities()
         self.addComputePerDof("x", "x + 0.5*dt*v")
@@ -76,6 +85,7 @@ class SymmetricLangevinIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.addComputePerDof("x", "x + 0.5*dt*v")
         self.addComputePerDof("x1", "x")
         self.addConstrainPositions()
+        self._add_derivative_capture("end")
         self.addComputePerDof("v", "v + (x-x1)/dt + 0.5*dt*f/m")
         self.addConstrainVelocities()
 

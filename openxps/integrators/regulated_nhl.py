@@ -7,6 +7,8 @@
 
 """
 
+import typing as t
+
 import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
@@ -49,6 +51,10 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
     forceFirst
         If True, the integrator will apply a force-first scheme. Otherwise, it will
         apply a symmetric operator splitting scheme.
+    energyDerivatives
+        Names of global parameters whose energy derivatives are computed in the force
+        evaluation of each step, for :class:`~openxps.InnerProductCoupling`. See
+        :meth:`~openxps.integrators.utils.IntegratorMixin.getCapturedDerivatives`.
 
     Example
     -------
@@ -108,9 +114,11 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
         *,
         regulationParameter: float = 1,
         forceFirst: bool = False,
+        energyDerivatives: t.Iterable[str] = (),
     ) -> None:
         super().__init__(stepSize)
         self._forceFirst = forceFirst
+        self._init_energy_derivatives(energyDerivatives)
         self._regulation_parameter = regulationParameter
         self._init_temperature(temperature)
         self._init_time_constant(timeConstant)
@@ -120,10 +128,12 @@ class RegulatedNHLIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self.setKineticEnergyExpression(
             f"0.5*m*v*c*tanh(v/c); c=sqrt({self._regulation_parameter}*kT/m)"
         )
+        self._add_derivative_capture("start")
         self._add_boost(1 if forceFirst else 0.5)
         self._add_translation(0.5)
         self._add_thermostat(1)
         self._add_translation(0.5)
+        self._add_derivative_capture("end")
         if not forceFirst:
             self._add_boost(0.5)
 

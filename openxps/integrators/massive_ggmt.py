@@ -7,6 +7,8 @@
 
 """
 
+import typing as t
+
 import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
@@ -54,6 +56,10 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
     forceFirst
         If True, the integrator will apply a force-first scheme. Otherwise, it will
         apply a symmetric operator splitting scheme.
+    energyDerivatives
+        Names of global parameters whose energy derivatives are computed in the force
+        evaluation of each step, for :class:`~openxps.InnerProductCoupling`. See
+        :meth:`~openxps.integrators.utils.IntegratorMixin.getCapturedDerivatives`.
     halleyIterations
         The number of Halley iterations used to solve the hyperbolic Kepler equation
         of the Coulomb sub-step (see Notes). The default reaches double precision.
@@ -131,11 +137,13 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         stochastic: bool = False,
         forceFirst: bool = False,
         halleyIterations: int = 3,
+        energyDerivatives: t.Iterable[str] = (),
     ) -> None:
         if halleyIterations < 1:
             raise ValueError("The number of Halley iterations must be at least 1.")
         super().__init__(stepSize)
         self._forceFirst = forceFirst
+        self._init_energy_derivatives(energyDerivatives)
         self._halley_iterations = halleyIterations
         self._init_temperature(temperature)
         self._init_time_constant(timeConstant)
@@ -143,10 +151,12 @@ class MassiveGGMTIntegrator(IntegratorMixin, mm.CustomIntegrator):
         self._stochastic = stochastic
         self._add_variables()
         self.addUpdateContextState()
+        self._add_derivative_capture("start")
         self._add_boost(1 if forceFirst else 0.5)
         self._add_translation(0.5)
         self._add_thermostat()
         self._add_translation(0.5)
+        self._add_derivative_capture("end")
         if not forceFirst:
             self._add_boost(0.5)
 

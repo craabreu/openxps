@@ -7,6 +7,8 @@
 
 """
 
+import typing as t
+
 import numpy as np
 import openmm as mm
 from openmm import unit as mmunit
@@ -44,6 +46,10 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
     forceFirst
         If True, the integrator will apply a force-first scheme rather than a
         symmetric operator splitting scheme.
+    energyDerivatives
+        Names of global parameters whose energy derivatives are computed in the force
+        evaluation of each step, for :class:`~openxps.InnerProductCoupling`. See
+        :meth:`~openxps.integrators.utils.IntegratorMixin.getCapturedDerivatives`.
 
     Example
     -------
@@ -120,19 +126,23 @@ class CSVRIntegrator(IntegratorMixin, mm.CustomIntegrator):
         frictionCoeff: mmunit.Quantity,
         stepSize: mmunit.Quantity,
         forceFirst: bool = False,
+        energyDerivatives: t.Iterable[str] = (),
     ) -> None:
         super().__init__(stepSize)
         self._init_temperature(temperature)
         self._init_friction_coefficient(frictionCoeff)
         self._forceFirst = forceFirst
+        self._init_energy_derivatives(energyDerivatives)
         self._num_dof = None
         self._rng = np.random.default_rng(None)
         self._add_variables()
         self.addUpdateContextState()
+        self._add_derivative_capture("start")
         self._add_boost(1 if forceFirst else 0.5)
         self._add_translation(0.5)
         self._add_rescaling(1)
         self._add_translation(0.5)
+        self._add_derivative_capture("end")
         if not forceFirst:
             self._add_boost(0.5)
 

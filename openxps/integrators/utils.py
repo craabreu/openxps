@@ -19,6 +19,9 @@ from openxps.utils import preprocess_args
 BLOCK_START = (6, 7)
 BLOCK_END = 8
 
+#: Prefix of the global variables that hold captured energy derivatives.
+CAPTURE_PREFIX = "xpsEnergyDerivative"
+
 T = t.TypeVar("T")
 
 
@@ -26,6 +29,7 @@ class IntegratorMixin:
     """A mixin for integrators that provides extra functionality."""
 
     _forceFirst: bool = False
+    _energy_derivatives: tuple[str, ...] = ()
 
     def __repr__(self) -> str:
         """Return a human-readable version of each integrator step."""
@@ -145,6 +149,60 @@ class IntegratorMixin:
             True if the integrator is force-first, False otherwise.
         """
         return self._forceFirst
+
+    def getEnergyDerivativeNames(self) -> tuple[str, ...]:
+        """Get the parameters whose energy derivatives each step computes.
+
+        Returns
+        -------
+        tuple[str, ...]
+            The names given as ``energyDerivatives`` at construction.
+        """
+        return self._energy_derivatives
+
+    def getCapturePoint(self) -> str:
+        """Get where in a step the energy derivatives are computed.
+
+        They are computed in the force evaluation the integrator already does: at
+        the start of the step for force-first integrators, at the end otherwise.
+
+        Returns
+        -------
+        str
+            ``"start"`` or ``"end"``.
+        """
+        return "start" if self._forceFirst else "end"
+
+    def getCapturedDerivatives(self) -> dict[str, float]:
+        """Get the energy derivatives computed in the last step.
+
+        Returns
+        -------
+        dict[str, float]
+            The derivatives, in MD units, keyed by parameter name.
+        """
+        return {
+            name: self.getGlobalVariableByName(f"{CAPTURE_PREFIX}{index}")
+            for index, name in enumerate(self._energy_derivatives)
+        }
+
+    def _init_energy_derivatives(self, names: t.Iterable[str]) -> None:
+        self._energy_derivatives = tuple(names)
+
+    def _add_derivative_capture(self, point: str) -> None:
+        """Add the derivative computations if ``point`` is the capture point.
+
+        Each integrator calls this right after ``addUpdateContextState`` with
+        ``"start"`` and, with ``"end"``, after its last position update and position
+        constraint and before its last use of ``f``, so that OpenMM computes the
+        energy and the forces in a single evaluation.
+        """
+        if point != self.getCapturePoint():
+            return
+        for index, name in enumerate(self._energy_derivatives):
+            variable = f"{CAPTURE_PREFIX}{index}"
+            self.addGlobalVariable(variable, 0)
+            self.addComputeGlobal(variable, f"deriv(energy, {name})")
 
 
 def add_property(property: str, unit: mmunit.Unit) -> t.Callable[[type[T]], type[T]]:

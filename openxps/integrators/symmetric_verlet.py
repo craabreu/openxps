@@ -7,6 +7,8 @@
 
 """
 
+import typing as t
+
 import openmm as mm
 from openmm import unit as mmunit
 
@@ -22,6 +24,10 @@ class SymmetricVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
     ----------
     stepSize
         The step size with which to integrate the system.
+    energyDerivatives
+        Names of global parameters whose energy derivatives are computed in the force
+        evaluation of each step, for :class:`~openxps.InnerProductCoupling`. See
+        :meth:`~openxps.integrators.utils.IntegratorMixin.getCapturedDerivatives`.
 
     Example
     -------
@@ -42,13 +48,18 @@ class SymmetricVerletIntegrator(IntegratorMixin, mm.CustomIntegrator):
     """
 
     @preprocess_args
-    def __init__(self, stepSize: mmunit.Quantity):
+    def __init__(
+        self, stepSize: mmunit.Quantity, energyDerivatives: t.Iterable[str] = ()
+    ):
         super().__init__(stepSize)
+        self._init_energy_derivatives(energyDerivatives)
         self.addPerDofVariable("x1", 0)
         self.addUpdateContextState()
+        self._add_derivative_capture("start")
         self.addComputePerDof("v", "v + 0.5*dt*f/m")
         self.addComputePerDof("x", "x + dt*v")
         self.addComputePerDof("x1", "x")
         self.addConstrainPositions()
+        self._add_derivative_capture("end")
         self.addComputePerDof("v", "v + (x-x1)/dt + 0.5*dt*f/m")
         self.addConstrainVelocities()
