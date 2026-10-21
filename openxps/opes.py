@@ -15,13 +15,15 @@ from openmm import app as mmapp
 
 from .bounds import NoBounds, ReflectiveBounds
 from .context import ExtendedSpaceContext
-from .metadynamics import ExtendedSpaceBiasVariable, _SimulationWrapper
+from .metadynamics import ExtendedSpaceBiasVariable
 from .system import ExtendedSpaceSystem
+from .utils import ExtensionSimulation
 
 
 def _biasVariables(
     system: ExtendedSpaceSystem,
     variables: t.Sequence[ExtendedSpaceBiasVariable],
+    kwargs: t.Mapping[str, t.Any] | None = None,
 ) -> tuple[list[mmapp.BiasVariable], bool]:
     """Bias variables on the extension particles, and whether any is reflective.
 
@@ -29,8 +31,13 @@ def _biasVariables(
     units, must belong to the system and have bounds, since the bias lives on a
     finite grid. ``bounded`` is True if any variable has reflective bounds; with
     unbounded variables rejected, the non-periodic variables are exactly the
-    reflective ones.
+    reflective ones. It must not be given in ``kwargs``, the keyword arguments a
+    sampler forwards to openmm-opes.
     """
+    if kwargs and "bounded" in kwargs:
+        raise TypeError(
+            "bounded is set from the bounds of the dynamical variables; do not pass it"
+        )
     system_dvs = system.getDynamicalVariables()
     bias_variables = []
     bounded = False
@@ -65,9 +72,14 @@ def _extensionSimulation(simulation):
     openmm-opes calls back into the sampler with the object it was given, so an
     already converted simulation is returned unchanged.
     """
-    if isinstance(simulation, _SimulationWrapper):
+    if isinstance(simulation, ExtensionSimulation):
         return simulation
-    return _SimulationWrapper(simulation)
+    if not isinstance(getattr(simulation, "context", None), ExtendedSpaceContext):
+        raise TypeError(
+            "Expected an ExtendedSpaceSimulation, whose context holds the extension "
+            f"system, not {type(simulation).__name__}"
+        )
+    return ExtensionSimulation(simulation)
 
 
 def _extensionContext(context: mm.Context) -> mm.Context:
@@ -113,6 +125,12 @@ class ExtendedSpaceOPES(openmm_opes.OPES):
     .. note::
         ``extraBias`` entries are evaluated in the extension context, so they must
         be forces of the extension system, such as other samplers on it.
+
+    .. note::
+        To restart, save the sampler with ``getState()`` alongside the simulation's
+        state, and after ``setState()`` on a new sampler call ``updateContext()`` on
+        the new context (or take a step): until then, the context holds no bias and
+        ``getBiasEnergy()`` returns minus the barrier.
 
     Example
     -------
@@ -163,12 +181,7 @@ class ExtendedSpaceOPES(openmm_opes.OPES):
         variables: t.Sequence[ExtendedSpaceBiasVariable],
         **kwargs,
     ) -> None:
-        if "bounded" in kwargs:
-            raise TypeError(
-                "bounded is set from the bounds of the dynamical variables; "
-                "do not pass it"
-            )
-        bias_variables, bounded = _biasVariables(system, variables)
+        bias_variables, bounded = _biasVariables(system, variables, kwargs)
         super().__init__(
             system.getExtensionSystem(), bias_variables, bounded=bounded, **kwargs
         )
@@ -274,12 +287,7 @@ class ExtendedSpaceCombinedOPES(openmm_opes.CombinedOPES):
         variables: t.Sequence[ExtendedSpaceBiasVariable],
         **kwargs,
     ) -> None:
-        if "bounded" in kwargs:
-            raise TypeError(
-                "bounded is set from the bounds of the dynamical variables; "
-                "do not pass it"
-            )
-        bias_variables, bounded = _biasVariables(system, variables)
+        bias_variables, bounded = _biasVariables(system, variables, kwargs)
         super().__init__(
             system.getExtensionSystem(), bias_variables, bounded=bounded, **kwargs
         )

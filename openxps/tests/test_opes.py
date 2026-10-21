@@ -445,3 +445,65 @@ def test_two_walkers_share_a_bias(tmp_path):
     # Each walker deposited 6 kernels of its own; the rest came from its peer
     for sampler, _ in walkers:
         assert sampler.getNumKernels() > 6
+
+
+def test_bias_variables_convert_declared_units_to_md_units():
+    """A variable declared in degrees gets radian limits and width."""
+    dv = xps.DynamicalVariable(
+        "phi0",
+        unit.degree,
+        3 * unit.dalton * (unit.nanometer / unit.degree) ** 2,
+        xps.PeriodicBounds(-180, 180, unit.degree),
+    )
+    _, system = _alanine_system(dv)
+    variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)
+    (bias_variable,), _ = _biasVariables(system, [variable])
+    assert bias_variable.periodic
+    assert bias_variable.minValue == pytest.approx(-np.pi)
+    assert bias_variable.maxValue == pytest.approx(np.pi)
+    assert bias_variable.biasWidth == pytest.approx(np.radians(18))
+    length = xps.DynamicalVariable(
+        "s", unit.angstrom, 1 * unit.dalton, xps.ReflectiveBounds(0, 10, unit.angstrom)
+    )
+    _, system = _alanine_system(length, cv=cvpack.Distance(0, 1, name="d"))
+    (bias_variable,), bounded = _biasVariables(
+        system, [xps.ExtendedSpaceBiasVariable(length, 0.5 * unit.angstrom)]
+    )
+    assert bounded
+    assert (bias_variable.minValue, bias_variable.maxValue) == pytest.approx((0, 1))
+    assert bias_variable.biasWidth == pytest.approx(0.05)
+
+
+def test_plain_simulation_is_rejected_with_a_clear_error():
+    model = testsystems.AlanineDipeptideVacuum()
+    plain = app.Simulation(
+        model.topology, model.system, openmm.VerletIntegrator(0.001), REFERENCE
+    )
+    with pytest.raises(TypeError, match="ExtendedSpaceSimulation"):
+        _extensionSimulation(plain)
+
+
+def test_restored_bias_reaches_the_context_after_update():
+    """The documented restart recipe: setState, then updateContext."""
+    dv = _circular_dv()
+    model, system = _alanine_system(dv)
+    variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)
+    sampler = _opes(system, [variable])
+    simulation = _simulation(model, system)
+    sampler.step(simulation, 40)
+    energy = sampler.getBiasEnergy(simulation.context)
+    assert energy != -sampler.barrier
+
+    fresh_model, fresh_system = _alanine_system(dv)
+    restored = _opes(fresh_system, [variable])
+    restored.setState(sampler.getState())
+    fresh = _simulation(fresh_model, fresh_system)
+    fresh.context.setState(simulation.context.getState(getPositions=True))
+    fresh.context.setDynamicalVariableValues(
+        simulation.context.getDynamicalVariableValues()
+    )
+    assert restored.getBiasEnergy(fresh.context) == -restored.barrier  # not yet pushed
+    restored.updateContext(fresh.context)
+    assert restored.getBiasEnergy(fresh.context).value_in_unit(KJ) == pytest.approx(
+        energy.value_in_unit(KJ), abs=1e-9
+    )
