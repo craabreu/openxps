@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Changed
+- PyTorch, Lightning and pandas are no longer installed with openxps. Only
+  `ForceMatchingRegressor` uses them; install them with `pip install
+  openxps[regression]` or from conda-forge. `import openxps` no longer loads them,
+  which makes it about 2 seconds faster.
 - When the physical integrator of a `SplitIntegrator` takes the substeps, the
   extension context is updated after the second half of a step only in the last step
   of a call to `step`. The update only serves observers, since the next step redoes

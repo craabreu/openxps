@@ -10,7 +10,6 @@ dependencies:
   - numpy
   - cvpack
   - pyyaml
-  - pandas
   - typing-extensions
 
     # Testing
@@ -18,6 +17,7 @@ dependencies:
   - pytest
   - pytest-cov
 
-    # Machine learning dependencies
+    # Optional, for ForceMatchingRegressor
   - pytorch
   - lightning
+  - pandas
