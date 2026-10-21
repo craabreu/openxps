@@ -72,6 +72,36 @@ class IntegratorMixin:
             readable_lines.append(line)
         return "\n".join(readable_lines)
 
+    def __getstate__(self) -> dict[str, t.Any]:
+        """Get the state of the integrator for pickling.
+
+        OpenMM pickles an integrator as its XML serialization only, which loses the
+        Python attributes of these classes, such as the temperature, ``forceFirst``
+        and the random generator of :class:`CSVRIntegrator`.
+        """
+        attributes = {
+            key: value.in_unit_system(mmunit.md_unit_system)
+            if mmunit.is_quantity(value)
+            else value
+            for key, value in vars(self).items()
+            if key != "this"
+        }
+        return {"xml": mm.XmlSerializer.serialize(self), "attributes": attributes}
+
+    def __setstate__(self, state: dict[str, t.Any] | str) -> None:
+        """Restore the integrator from its pickled state."""
+        if isinstance(state, str):
+            # The XML-only state of pickles written before attributes were kept
+            self.this = mm.XmlSerializer.deserialize(state).this
+            return
+        self.this = mm.XmlSerializer.deserialize(state["xml"]).this
+        self.__dict__.update(
+            {
+                key: Quantity(value) if mmunit.is_quantity(value) else value
+                for key, value in state["attributes"].items()
+            }
+        )
+
     def setStepSize(self, size: mmunit.Quantity | float) -> None:
         """Set the step size and refresh any step-size-dependent global variables."""
         super().setStepSize(size)

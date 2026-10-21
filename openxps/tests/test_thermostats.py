@@ -551,3 +551,71 @@ def test_lockstep_extension_ggmt_is_masked():
     state = context.getExtensionContext().getState(getEnergy=True)
     assert np.isfinite(state.getKineticEnergy()._value)
     assert np.isfinite(state.getPotentialEnergy()._value)
+
+
+# Pickling an openxps integrator on its own, through OpenMM's pickle support
+
+STANDALONE = {
+    "SymmetricVerlet": lambda: integrators.SymmetricVerletIntegrator(1 * FS),
+    "SymmetricLangevin": lambda: integrators.SymmetricLangevinIntegrator(
+        300 * KELVIN, 1 / PS, 1 * FS
+    ),
+    "CSVR-first": lambda: integrators.CSVRIntegrator(
+        310 * KELVIN, 10 / PS, 1 * FS, forceFirst=True
+    ),
+    "MassiveGGMT-first": lambda: integrators.MassiveGGMTIntegrator(
+        310 * KELVIN, 0.1 * PS, 1 * FS, forceFirst=True
+    ),
+    "RegulatedNHL-first": lambda: integrators.RegulatedNHLIntegrator(
+        310 * KELVIN, 0.1 * PS, 1 * FS, forceFirst=True
+    ),
+}
+
+
+def _seeded_csvr():
+    integrator = integrators.CSVRIntegrator(300 * KELVIN, 10 / PS, 1 * FS)
+    integrator.setRandomNumberSeed(1234)
+    return integrator
+
+
+@pytest.mark.parametrize("name", list(STANDALONE))
+def test_standalone_pickle_keeps_python_attributes(name):
+    original = STANDALONE[name]()
+    restored = pickle.loads(pickle.dumps(original))
+    assert type(restored) is type(original)
+    assert restored.isForceFirst() == original.isForceFirst()
+    assert sorted(vars(restored)) == sorted(vars(original))
+    if hasattr(original, "getTemperature"):
+        assert restored.getTemperature() == original.getTemperature()
+    assert mm.XmlSerializer.serialize(restored) == mm.XmlSerializer.serialize(original)
+
+
+def test_standalone_pickle_continues_the_csvr_random_stream():
+    original = _seeded_csvr()
+    original.registerWithSystem(_ideal_gas(), False)
+    original._sums_of_squared_gaussians(3)  # advance the stream
+    restored = pickle.loads(pickle.dumps(original))
+    np.testing.assert_array_equal(
+        restored._sums_of_squared_gaussians(5), original._sums_of_squared_gaussians(5)
+    )
+
+
+def test_standalone_pickled_csvr_reproduces_the_original():
+    def velocities(integrator):
+        system = _ideal_gas(20)
+        integrator.registerWithSystem(system, False)
+        context = _context(system, integrator)
+        integrator.step(20)
+        return context.getState(getVelocities=True).getVelocities(asNumpy=True)
+
+    restored = pickle.loads(pickle.dumps(_seeded_csvr()))
+    np.testing.assert_array_equal(velocities(restored), velocities(_seeded_csvr()))
+
+
+def test_unpickles_the_xml_only_state_of_older_pickles():
+    original = integrators.SymmetricVerletIntegrator(2 * FS)
+    restored = integrators.SymmetricVerletIntegrator.__new__(
+        integrators.SymmetricVerletIntegrator
+    )
+    restored.__setstate__(mm.XmlSerializer.serialize(original))
+    assert restored.getStepSize() == original.getStepSize()
