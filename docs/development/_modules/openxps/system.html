@@ -44,6 +44,8 @@
 
 <span class="sd">"""</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+
 <span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mm</span>
 
 <span class="kn">from</span><span class="w"> </span><span class="nn">.couplings</span><span class="w"> </span><span class="kn">import</span> <span class="n">Coupling</span>
@@ -110,7 +112,45 @@
         <span class="n">coupling</span><span class="o">.</span><span class="n">addToExtensionSystem</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_extension_system</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_checkOtherForces</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
         <span class="n">coupling</span><span class="o">.</span><span class="n">addToPhysicalSystem</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_warnAboutLongRangeCorrections</span><span class="p">(</span><span class="n">system</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">this</span> <span class="o">=</span> <span class="n">system</span><span class="o">.</span><span class="n">this</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_warnAboutLongRangeCorrections</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Warn about long-range corrections that depend on the coupling parameters.</span>
+
+<span class="sd">        OpenMM computes the long-range correction of a CustomNonbondedForce on the</span>
+<span class="sd">        CPU whenever one of the force's global parameters changes. The coupling</span>
+<span class="sd">        changes its parameters at every step, which can make the correction cost</span>
+<span class="sd">        more than the step itself.</span>
+<span class="sd">        """</span>
+        <span class="n">protected</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_coupling</span><span class="o">.</span><span class="n">getProtectedParameters</span><span class="p">()</span>
+        <span class="n">forces</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">system</span><span class="o">.</span><span class="n">getForces</span><span class="p">())</span>
+        <span class="k">while</span> <span class="n">forces</span><span class="p">:</span>
+            <span class="n">force</span> <span class="o">=</span> <span class="n">forces</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomCVForce</span><span class="p">):</span>
+                <span class="n">forces</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span>
+                    <span class="n">force</span><span class="o">.</span><span class="n">getCollectiveVariable</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumCollectiveVariables</span><span class="p">())</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span>
+                <span class="nb">isinstance</span><span class="p">(</span><span class="n">force</span><span class="p">,</span> <span class="n">mm</span><span class="o">.</span><span class="n">CustomNonbondedForce</span><span class="p">)</span>
+                <span class="ow">and</span> <span class="n">force</span><span class="o">.</span><span class="n">getUseLongRangeCorrection</span><span class="p">()</span>
+            <span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">names</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">force</span><span class="o">.</span><span class="n">getGlobalParameterName</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">force</span><span class="o">.</span><span class="n">getNumGlobalParameters</span><span class="p">())</span>
+            <span class="p">}</span>
+            <span class="k">if</span> <span class="n">shared</span> <span class="o">:=</span> <span class="n">names</span> <span class="o">&amp;</span> <span class="n">protected</span><span class="p">:</span>
+                <span class="n">warnings</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">"Force </span><span class="si">{</span><span class="n">force</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="si">}</span><span class="s2"> uses a long-range correction and depends "</span>
+                    <span class="s2">"on parameters that change at every step: "</span>
+                    <span class="o">+</span> <span class="s2">", "</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="nb">sorted</span><span class="p">(</span><span class="n">shared</span><span class="p">))</span>
+                    <span class="o">+</span> <span class="s2">". OpenMM then recomputes the correction on the CPU at every "</span>
+                    <span class="s2">"step, which can take longer than the step itself. Unless it is "</span>
+                    <span class="s2">"needed, call setUseLongRangeCorrection(False) on this force."</span><span class="p">,</span>
+                    <span class="n">stacklevel</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span>
+                <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">_checkOtherForces</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">system</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">System</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">"""Reject forces outside the coupling that depend on its parameters.</span>
