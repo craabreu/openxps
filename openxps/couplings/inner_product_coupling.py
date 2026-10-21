@@ -45,6 +45,12 @@ class InnerProductCoupling(Coupling):
     such as :class:`SplitIntegrator`, where the derivatives are held fixed during the
     extension substeps.
 
+    These derivatives are computed in a separate evaluation of the coupling forces
+    after each physical step, unless the physical integrator is one of the
+    integrators in :mod:`openxps.integrators` built with
+    ``energyDerivatives=coupling.getEnergyDerivativeNames()``, in which case they
+    are computed in the force evaluation of the step itself.
+
     Functions receive the dynamical variables wrapped into their bounds, so periodic
     and reflective variables enter them with the same values reported by
     :meth:`ExtendedSpaceContext.getDynamicalVariableValues`.

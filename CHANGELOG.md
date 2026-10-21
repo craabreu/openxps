@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### New
+- The integrators in `openxps.integrators` take `energyDerivatives`, a list of
+  global parameters whose energy derivatives are computed in the force evaluation of
+  each step. With `energyDerivatives=coupling.getEnergyDerivativeNames()` as the
+  physical integrator of a `LockstepIntegrator` or `SplitIntegrator`, an
+  `InnerProductCoupling` no longer evaluates its forces a second time after each
+  physical step.
+- Couplings expose what they send to the extension context as
+  `updateExtensionCollectiveVariables` and `updateExtensionDerivatives`.
+
 ## 0.2.0
 
 This release rewrites most of the package, so code written for 0.1.0 needs to be
