@@ -269,3 +269,87 @@ def test_opes_matches_plain_openmm_opes_on_the_extension_system():
     np.testing.assert_allclose(
         plain.getFreeEnergy(), sampler.getFreeEnergy(), rtol=1e-10
     )
+
+
+def _combined(system, variables, **kwargs):
+    settings = {
+        "temperature": 300 * KELVIN,
+        "barrier": 20 * unit.kilojoules_per_mole,
+        "exploreBarrier": 10 * unit.kilojoules_per_mole,
+        "frequency": 10,
+        "varianceFrequency": None,
+    }
+    settings.update(kwargs)
+    return xps.ExtendedSpaceCombinedOPES(system, variables, **settings)
+
+
+def test_combined_opes_adds_one_force_and_rejects_bounded():
+    dv = _circular_dv()
+    _, system = _alanine_system(dv)
+    variable = xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)
+    before = system.getExtensionSystem().getNumForces()
+    sampler = _combined(system, [variable])
+    assert system.getExtensionSystem().getNumForces() == before + 1
+    assert isinstance(sampler, openmm_opes.CombinedOPES)
+    with pytest.raises(TypeError, match="bounded"):
+        _combined(system, [variable], bounded=False)
+
+
+def test_combined_opes_step_and_component_energies():
+    dv = _circular_dv()
+    model, system = _alanine_system(dv)
+    sampler = _combined(system, [xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)])
+    simulation = _simulation(model, system)
+    sampler.step(simulation, 50)
+    assert simulation.currentStep == 50
+    assert all(n >= 1 for n in sampler.getNumKernels())
+    context = simulation.context
+    extension = context.getExtensionContext()
+    opes, explore = sampler.getComponentBiasEnergies(context)
+    assert (opes, explore) == sampler.getComponentBiasEnergies(extension)
+    total = sampler.getBiasEnergy(context)
+    assert (opes + explore).value_in_unit(unit.kilojoules_per_mole) == pytest.approx(
+        total.value_in_unit(unit.kilojoules_per_mole), abs=1e-9
+    )
+    assert sampler.getCollectiveVariables(simulation) == sampler.getCollectiveVariables(
+        _extensionSimulation(simulation)
+    )
+    sampler.updateContext(context)
+    sampler.updateContext(extension)
+    assert sampler.getFreeEnergy().shape == (sampler.variables[0].gridWidth,)
+
+
+def test_combined_opes_matches_plain_combined_opes():
+    dv = _circular_dv()
+    model, system = _alanine_system(dv)
+    plain_extension = openmm.XmlSerializer.clone(system.getExtensionSystem())
+    frequency = 10
+    sampler = _combined(
+        system,
+        [xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)],
+        frequency=frequency,
+    )
+    simulation = _simulation(model, system)
+    values = []
+    for _ in range(8):
+        sampler.step(simulation, frequency)
+        (value,) = simulation.context.getDynamicalVariableValues()
+        values.append(value.value_in_unit(unit.radian))
+    bias_variable, bounded = _plain_bias_variable(dv, 18 * unit.degree)
+    plain = openmm_opes.CombinedOPES(
+        plain_extension,
+        [bias_variable],
+        temperature=300 * KELVIN,
+        barrier=20 * unit.kilojoules_per_mole,
+        exploreBarrier=10 * unit.kilojoules_per_mole,
+        frequency=frequency,
+        varianceFrequency=None,
+        bounded=bounded,
+    )
+    context = openmm.Context(
+        plain_extension, openmm.VerletIntegrator(1 * unit.femtosecond), REFERENCE
+    )
+    context.setPositions([openmm.Vec3(0, 0, 0)])
+    plain.step(_Replay(context, values, frequency), frequency * len(values))
+    assert plain.getNumKernels() == sampler.getNumKernels()
+    np.testing.assert_allclose(plain.getBias(), sampler.getBias(), rtol=1e-10)

@@ -198,3 +198,110 @@ class ExtendedSpaceOPES(openmm_opes.OPES):
     def updateContext(self, context: mm.Context) -> None:
         """Push the current bias into an :class:`~openxps.ExtendedSpaceContext`."""
         super().updateContext(_extensionContext(context))
+
+
+class ExtendedSpaceCombinedOPES(openmm_opes.CombinedOPES):
+    """OPES and OPES-explore combined (OPES_COM) on dynamical variables.
+
+    This is :OpenMMOPES:`combined-opes` acting on the extension system of an
+    :class:`~openxps.ExtendedSpaceSystem`: both components deposit kernels on the
+    same dynamical variables, and the total bias is their sum. See
+    :class:`ExtendedSpaceOPES` for how the variables are handled; the same notes
+    on kernels and ``extraBias`` apply.
+
+    Parameters
+    ----------
+    system
+        The :class:`~openxps.ExtendedSpaceSystem` to be simulated. The bias force
+        is added to its extension system when this object is created, so it must
+        be created before the simulation or context that uses the system.
+    variables
+        The dynamical variables to bias and their kernel widths, as
+        :class:`~openxps.ExtendedSpaceBiasVariable` objects.
+    **kwargs
+        The remaining arguments of :OpenMMOPES:`combined-opes` (``temperature``,
+        ``barrier``, ``exploreBarrier``, ``frequency``, ``varianceFrequency``, ...),
+        except ``bounded``, which follows from the variables' bounds.
+
+    Example
+    -------
+    >>> import openxps as xps
+    >>> from openmm import unit
+    >>> import cvpack
+    >>> import openmm
+    >>> from openmmtools import testsystems
+    >>> model = testsystems.AlanineDipeptideVacuum()
+    >>> phi = cvpack.Torsion(6, 8, 14, 16, name="phi")
+    >>> mass = 3 * unit.dalton*(unit.nanometer/unit.radian)**2
+    >>> phi0 = xps.DynamicalVariable("phi0", unit.radian, mass, xps.CircularBounds())
+    >>> kappa = 1000 * unit.kilojoules_per_mole / unit.radian**2
+    >>> system = xps.ExtendedSpaceSystem(
+    ...     model.system, xps.HarmonicCoupling(phi, phi0, kappa)
+    ... )
+    >>> opes = xps.ExtendedSpaceCombinedOPES(
+    ...     system,
+    ...     [xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degrees)],
+    ...     temperature=300 * unit.kelvin,
+    ...     barrier=20 * unit.kilojoules_per_mole,
+    ...     exploreBarrier=10 * unit.kilojoules_per_mole,
+    ...     frequency=100,
+    ...     varianceFrequency=None,
+    ... )
+    >>> simulation = xps.ExtendedSpaceSimulation(
+    ...     model.topology,
+    ...     system,
+    ...     xps.LockstepIntegrator(
+    ...         openmm.LangevinMiddleIntegrator(
+    ...             300 * unit.kelvin, 1 / unit.picosecond, 2 * unit.femtosecond
+    ...         )
+    ...     ),
+    ...     openmm.Platform.getPlatformByName("Reference"),
+    ... )
+    >>> context = simulation.context
+    >>> context.setPositions(model.positions)
+    >>> context.setVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    >>> context.setDynamicalVariableValues([180 * unit.degree])
+    >>> context.setDynamicalVariableVelocitiesToTemperature(300 * unit.kelvin, 1234)
+    >>> opes.step(simulation, 200)
+    >>> opes.getNumKernels()  # each component merged its second kernel
+    (1, 1)
+    """
+
+    def __init__(
+        self,
+        system: ExtendedSpaceSystem,
+        variables: t.Sequence[ExtendedSpaceBiasVariable],
+        **kwargs,
+    ) -> None:
+        if "bounded" in kwargs:
+            raise TypeError(
+                "bounded is set from the bounds of the dynamical variables; "
+                "do not pass it"
+            )
+        bias_variables, bounded = _biasVariables(system, variables)
+        super().__init__(
+            system.getExtensionSystem(), bias_variables, bounded=bounded, **kwargs
+        )
+
+    def step(self, simulation, steps: int) -> None:
+        """Advance an :class:`~openxps.ExtendedSpaceSimulation` by ``steps`` steps."""
+        super().step(_extensionSimulation(simulation), steps)
+
+    stepTogether = staticmethod(ExtendedSpaceOPES.stepTogether)
+
+    def getCollectiveVariables(self, simulation):
+        """Current values of the biased dynamical variables, in MD units."""
+        return super().getCollectiveVariables(_extensionSimulation(simulation))
+
+    def getBiasEnergy(self, context: mm.Context):
+        """The total bias energy in an :class:`~openxps.ExtendedSpaceContext`."""
+        return super().getBiasEnergy(_extensionContext(context))
+
+    def getComponentBiasEnergies(self, context: mm.Context):
+        """The OPES and OPES-explore bias energies in an
+        :class:`~openxps.ExtendedSpaceContext`."""
+        return super().getComponentBiasEnergies(_extensionContext(context))
+
+    def updateContext(self, context: mm.Context) -> None:
+        """Push the current biases into an :class:`~openxps.ExtendedSpaceContext`."""
+        super().updateContext(_extensionContext(context))
