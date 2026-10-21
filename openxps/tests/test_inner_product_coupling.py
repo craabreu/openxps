@@ -201,23 +201,58 @@ def test_extension_energy_equals_coupling_energy_when_linear(case):
     assert extension.getPotentialEnergy()._value == pytest.approx(physical, rel=1e-6)
 
 
-def test_parameter_derivatives_are_requested_with_energy(monkeypatch):
-    """Derivatives are read together with the energy, which some forces require."""
+def _derivative_requests(monkeypatch, nan_without_energy=False):
+    """Record getState calls that request derivatives, optionally faking a force
+    that returns NaN derivatives unless the energy is also requested."""
     requests = []
     get_state = mm.Context.getState
 
-    def spy(self, *args, **kwargs):
-        requests.append(kwargs)
-        return get_state(self, *args, **kwargs)
+    class NaNDerivatives:
+        def __init__(self, state):
+            self._state = state
 
-    context = _context(
+        def getEnergyParameterDerivatives(self):
+            derivatives = self._state.getEnergyParameterDerivatives()
+            return dict.fromkeys(derivatives, math.nan)
+
+    def spy(self, *args, **kwargs):
+        state = get_state(self, *args, **kwargs)
+        if not kwargs.get("getParameterDerivatives"):
+            return state
+        requests.append(bool(kwargs.get("getEnergy")))
+        if nan_without_energy and not kwargs.get("getEnergy"):
+            return NaNDerivatives(state)
+        return state
+
+    monkeypatch.setattr(mm.Context, "getState", spy)
+    return requests
+
+
+def _scaling_context():
+    return _context(
         _ipc("scaling*10*r^2", ["scaling"], [_dv("lam")], {"scaling": "lam"})
     )
-    monkeypatch.setattr(mm.Context, "getState", spy)
+
+
+def test_energy_is_not_requested_for_ordinary_forces(monkeypatch):
+    context = _scaling_context()
+    requests = _derivative_requests(monkeypatch)
     context.synchronize()
-    derivative_requests = [r for r in requests if r.get("getParameterDerivatives")]
-    assert derivative_requests
-    assert all(r.get("getEnergy") for r in derivative_requests)
+    context.synchronize()
+    assert requests == [False, False]
+
+
+def test_energy_is_requested_after_nan_derivatives(monkeypatch):
+    """Forces such as SlicedNonbondedForce give NaN derivatives without the energy."""
+    context = _scaling_context()
+    name = "derivative_with_respect_to_scaling"
+    expected = context.getExtensionContext().getParameter(name)
+    requests = _derivative_requests(monkeypatch, nan_without_energy=True)
+    context.synchronize()
+    assert requests == [False, True]
+    assert context.getExtensionContext().getParameter(name) == pytest.approx(expected)
+    context.synchronize()
+    assert requests == [False, True, True]
 
 
 def test_sliced_nonbonded_force_scaling_derivative():
