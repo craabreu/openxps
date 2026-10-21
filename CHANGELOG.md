@@ -8,8 +8,16 @@
   `ExtendedSpaceMetadynamics` is built on OpenMM's metadynamics. OPES, OPES-explore
   and their combination (OPES_COM), several samplers stepped together, multiple
   walkers and checkpoints are those of openmm-opes, now a dependency.
+- `ExtendedSpaceSystem` warns when a `CustomNonbondedForce` in the physical system uses
+  a long-range correction and depends on a parameter the coupling changes at every
+  step. OpenMM then recomputes the correction on the CPU at every step, which in a
+  1,500-atom system took longer than the step itself.
 
 ### Changed
+- PyTorch, Lightning and pandas are no longer installed with openxps. Only
+  `ForceMatchingRegressor` uses them; install them with `pip install
+  openxps[regression]` or from conda-forge. `import openxps` no longer loads them,
+  which makes it about 2 seconds faster.
 - When the physical integrator of a `SplitIntegrator` takes the substeps, the
   extension context is updated after the second half of a step only in the last step
   of a call to `step`. The update only serves observers, since the next step redoes
@@ -17,6 +25,11 @@
   halves the force evaluations spent on its energy derivatives.
 
 ### Fixed
+- An integrator from `openxps.integrators` pickled on its own keeps its Python
+  attributes. OpenMM pickles integrators as XML only, so a `CSVRIntegrator` failed at
+  its first step after unpickling and every integrator lost `forceFirst` and its
+  temperature and other properties. A `CSVRIntegrator` now also continues the random
+  stream it had when pickled.
 - `InnerProductCoupling` works with forces that compute parameter derivatives only
   along with the energy, such as `SlicedNonbondedForce` from openmm-nonbonded-slicing,
   which gave NaN forces on the dynamical variables (#68).

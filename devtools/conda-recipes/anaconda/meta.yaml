@@ -25,10 +25,12 @@ requirements:
     - openmm-opes >=0.2.0
     - cvpack
     - pyyaml
-    - pandas
     - typing-extensions
+  run_constrained:
+    # Optional, for ForceMatchingRegressor
     - pytorch
     - lightning
+    - pandas
 
 test:
   imports:

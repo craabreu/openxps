@@ -26,7 +26,6 @@ from .metadynamics import (  # noqa: F401
     ExtendedSpaceMetadynamics,
 )
 from .opes import ExtendedSpaceCombinedOPES, ExtendedSpaceOPES  # noqa: F401
-from .regression import ForceMatchingRegressor  # noqa: F401
 from .simulation import ExtendedSpaceSimulation  # noqa: F401
 from .system import ExtendedSpaceSystem  # noqa: F401
 
@@ -57,3 +56,13 @@ __all__ = [
     "SymmetricVerletIntegrator",
     "ForceMatchingRegressor",
 ]
+
+
+def __getattr__(name: str):
+    # ForceMatchingRegressor needs the optional PyTorch, Lightning and pandas, so its
+    # module is imported only when the class is first used.
+    if name == "ForceMatchingRegressor":
+        from .regression import ForceMatchingRegressor  # noqa: PLC0415
+
+        return ForceMatchingRegressor
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

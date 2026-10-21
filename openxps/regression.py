@@ -14,11 +14,19 @@ import typing as t
 import warnings
 
 import numpy as np
-import pandas as pd
-import torch
-from lightning import pytorch as pl
-from torch import nn
-from torch.utils.data import DataLoader, TensorDataset
+
+try:
+    import pandas as pd
+    import torch
+    from lightning import pytorch as pl
+    from torch import nn
+    from torch.utils.data import DataLoader, TensorDataset
+except ImportError as error:
+    raise ImportError(
+        "ForceMatchingRegressor requires PyTorch, Lightning and pandas. Install them "
+        "with `pip install openxps[regression]` or `conda install -c conda-forge "
+        "pytorch lightning pandas`."
+    ) from error
 
 from .bounds import PeriodicBounds
 from .dynamical_variable import DynamicalVariable
@@ -275,6 +283,11 @@ class ForceMatchingRegressor:
 
     where :math:`d` is the number of dynamical variables and
     :math:`{\bf f}({\bf s}) = -\nabla_{\bf s} U({\bf s})` is the predicted force.
+
+    .. note::
+        This class needs PyTorch, Lightning and pandas, which are not installed with
+        openxps. Install them with ``pip install openxps[regression]`` or
+        ``conda install -c conda-forge pytorch lightning pandas``.
 
     Parameters
     ----------
