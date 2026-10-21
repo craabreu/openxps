@@ -175,6 +175,7 @@ class TestGradMatch:
         x = torch.randn(4, 2)
         G = torch.randn(4, 2)
         batch = (x, G)
+        model.log = lambda *args, **kwargs: None  # no Trainer to log to
         loss = model.training_step(batch, 0)
 
         assert isinstance(loss, torch.Tensor)
@@ -188,6 +189,7 @@ class TestGradMatch:
         x = torch.randn(4, 2)
         G = torch.randn(4, 2)
         batch = (x, G)
+        model.log = lambda *args, **kwargs: None  # no Trainer to log to
         loss = model.validation_step(batch, 0)
 
         assert isinstance(loss, torch.Tensor)
@@ -634,6 +636,23 @@ class TestFitBehavior:
             warnings.simplefilter("always")
             regressor.fit(np.zeros((20, 2)), np.zeros((20, 2)), seed=1)
         assert not [w for w in caught if "exists and is not empty" in str(w.message)]
+
+    @pytest.mark.parametrize("verbose", [False, True])
+    @pytest.mark.parametrize("validation_fraction", [0.2, 0.0])
+    def test_fit_emits_no_lightning_warnings(self, validation_fraction, verbose):
+        """Lightning's advice about workers, SLURM and validation doesn't apply here."""
+        dvs = create_test_dynamical_variables()
+        regressor = ForceMatchingRegressor(
+            dvs,
+            num_kernels=5,
+            num_epochs=1,
+            validation_fraction=validation_fraction,
+            verbose=verbose,
+        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            regressor.fit(np.zeros((20, 2)), np.zeros((20, 2)), seed=1)
+        assert [str(w.message) for w in caught if "lightning" in w.filename] == []
 
 
 class _FakeTrainer:
