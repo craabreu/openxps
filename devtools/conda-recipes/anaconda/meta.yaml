@@ -22,6 +22,7 @@ requirements:
     - python >=3.10
     - numpy
     - openmm >=8.4
+    - openmm-opes >=0.2.0
     - cvpack
     - pyyaml
     - pandas

@@ -8,6 +8,7 @@ dependencies:
   - pip
   - numpy
   - openmm
+  - openmm-opes
   - cvpack
   - pyyaml
   - pandas
