@@ -11,7 +11,12 @@ import pytest
 from openmm import unit as mmunit
 from openmmtools import testsystems
 
-from openxps import CollectiveVariableCoupling, DynamicalVariable, ExtendedSpaceSystem
+from openxps import (
+    CollectiveVariableCoupling,
+    DynamicalVariable,
+    ExtendedSpaceSystem,
+    InnerProductCoupling,
+)
 from openxps.bounds import CircularBounds, NoBounds, ReflectiveBounds
 
 
@@ -181,3 +186,82 @@ def test_coupling_reuse_raises_clear_error():
     assert other.system.getNumForces() == num_forces
     system = ExtendedSpaceSystem(other.system, copy.deepcopy(coupling))
     assert system.getNumForces() > num_forces
+
+
+# Long-range corrections of forces whose parameters change at every step
+
+
+def _lj_force(parameter=None):
+    """A periodic CustomNonbondedForce with the long-range correction on."""
+    scaling = f"{parameter}*" if parameter else ""
+    force = mm.CustomNonbondedForce(f"{scaling}4*((0.3/r)^12-(0.3/r)^6)")
+    force.setName("SoftCore")
+    force.setNonbondedMethod(mm.CustomNonbondedForce.CutoffPeriodic)
+    force.setCutoffDistance(1.0)
+    force.setUseLongRangeCorrection(True)
+    for _ in range(2):
+        force.addParticle([])
+    if parameter:
+        force.addGlobalParameter(parameter, 1.0)
+        force.addEnergyParameterDerivative(parameter)
+    return force
+
+
+def _lam():
+    return DynamicalVariable(
+        "lam",
+        mmunit.dimensionless,
+        1 * mmunit.dalton * mmunit.nanometer**2,
+        ReflectiveBounds(0, 1, mmunit.dimensionless),
+    )
+
+
+def _periodic_system():
+    system = mm.System()
+    system.setDefaultPeriodicBoxVectors(
+        mm.Vec3(3, 0, 0), mm.Vec3(0, 3, 0), mm.Vec3(0, 0, 3)
+    )
+    system.addParticle(12.0)
+    system.addParticle(12.0)
+    return system
+
+
+def _inner(force):
+    return InnerProductCoupling([force], [_lam()], functions={"scaling": "lam"})
+
+
+def _nested(inner_parameter):
+    """A CustomCVForce around the nonbonded force, scaled by its own parameter."""
+    outer = mm.CustomCVForce("scaling*x" if not inner_parameter else "x")
+    outer.addCollectiveVariable("x", _lj_force("scaling" if inner_parameter else None))
+    outer.addGlobalParameter("scaling", 1.0)
+    outer.addEnergyParameterDerivative("scaling")
+    return outer
+
+
+@pytest.mark.parametrize(
+    "force, warns",
+    [
+        (lambda: _lj_force("scaling"), True),
+        (lambda: _nested(inner_parameter=True), True),
+        (lambda: _nested(inner_parameter=False), False),
+    ],
+    ids=["direct", "nested-with-parameter", "nested-without-parameter"],
+)
+def test_long_range_correction_on_a_changing_parameter_warns(force, warns, recwarn):
+    ExtendedSpaceSystem(_periodic_system(), _inner(force()))
+    messages = [str(w.message) for w in recwarn if "long-range" in str(w.message)]
+    if warns:
+        assert len(messages) == 1
+        assert "SoftCore" in messages[0]
+        assert "scaling" in messages[0]
+        assert "setUseLongRangeCorrection(False)" in messages[0]
+    else:
+        assert messages == []
+
+
+def test_no_warning_without_long_range_correction(recwarn):
+    force = _lj_force("scaling")
+    force.setUseLongRangeCorrection(False)
+    ExtendedSpaceSystem(_periodic_system(), _inner(force))
+    assert not [w for w in recwarn if "long-range" in str(w.message)]
