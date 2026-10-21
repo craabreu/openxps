@@ -70,7 +70,7 @@ integration of the physical and extension systems.
 
 ### Installation
 
-OpenXPS requires Python 3.10 or newer and OpenMM 8.4 or newer. Install it from the
+OpenXPS requires Python 3.11 or newer and OpenMM 8.4 or newer. Install it from the
 [mdtools] conda channel:
 
 ```bash

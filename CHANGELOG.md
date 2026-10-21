@@ -7,7 +7,9 @@
   on-the-fly probability enhanced sampling, built on the openmm-opes package the way
   `ExtendedSpaceMetadynamics` is built on OpenMM's metadynamics. OPES, OPES-explore
   and their combination (OPES_COM), several samplers stepped together, multiple
-  walkers and checkpoints are those of openmm-opes, now a dependency.
+  walkers and checkpoints are those of openmm-opes, now a dependency. openmm-opes
+  needs Python 3.11, so openxps requires Python 3.11 or newer as well; Python 3.10
+  reached its end of life in October 2026.
 - `ExtendedSpaceSystem` warns when a `CustomNonbondedForce` in the physical system uses
   a long-range correction and depends on a parameter the coupling changes at every
   step. OpenMM then recomputes the correction on the CPU at every step, which in a
