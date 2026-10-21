@@ -57,8 +57,9 @@ mdtools conda channel:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="n">openxps</span>
 </pre></div>
 </div>
-<p>PyTorch and Lightning, which <a class="reference internal" href="api/ForceMatchingRegressor.html#openxps.ForceMatchingRegressor" title="openxps.ForceMatchingRegressor"><code class="xref py py-class docutils literal notranslate"><span class="pre">ForceMatchingRegressor</span></code></a> uses, are
-installed as dependencies.</p>
+<p><code class="xref py py-class docutils literal notranslate"><span class="pre">ForceMatchingRegressor</span></code> also needs PyTorch, Lightning and pandas, which
+are not installed by default. Add them with <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">openxps[regression]</span></code> or
+<code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">-c</span> <span class="pre">conda-forge</span> <span class="pre">pytorch</span> <span class="pre">lightning</span> <span class="pre">pandas</span></code>.</p>
 </section>
 <section id="usage">
 <h2>Usage<a class="headerlink" href="#usage" title="Link to this heading">¶</a></h2>
