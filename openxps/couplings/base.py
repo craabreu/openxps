@@ -282,6 +282,60 @@ class Coupling(Serializable):
         """
         raise NotImplementedError("Subclasses must implement this method.")
 
+    def getEnergyDerivativeNames(self) -> tuple[str, ...]:
+        """Get the parameters whose energy derivatives this coupling reads.
+
+        An integrator that computes these derivatives along with the forces of a
+        step can pass them to :meth:`updateExtensionDerivatives`, which saves a
+        second evaluation of the forces.
+
+        Returns
+        -------
+        tuple[str, ...]
+            The names of the physical-context parameters, empty if the coupling
+            does not read energy derivatives.
+        """
+        return ()
+
+    def updateExtensionCollectiveVariables(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+    ) -> None:
+        """Send the current collective variable values to the extension context.
+
+        This is the part of :meth:`updateExtensionContext` that does not involve
+        energy derivatives. By default, it is all of it.
+
+        Parameters
+        ----------
+        physical_context
+            The physical context to get the collective variable values from.
+        extension_context
+            The extension context to update.
+        """
+        self.updateExtensionContext(physical_context, extension_context)
+
+    def updateExtensionDerivatives(
+        self,
+        extension_context: mm.Context,
+        derivatives: t.Mapping[str, float],
+    ) -> None:
+        """Send precomputed energy derivatives to the extension context.
+
+        This is the part of :meth:`updateExtensionContext` that involves energy
+        derivatives, with their values taken from ``derivatives`` instead of being
+        computed. By default, there is no such part.
+
+        Parameters
+        ----------
+        extension_context
+            The extension context to update.
+        derivatives
+            The derivatives of the physical energy with respect to the parameters
+            returned by :meth:`getEnergyDerivativeNames`.
+        """
+
     def getCollectiveVariableValues(
         self, physical_context: mm.Context
     ) -> dict[str, float]:
@@ -449,6 +503,30 @@ class CouplingSum(Coupling):
     ):
         for coupling in self._couplings:
             coupling.updateExtensionContext(physical_context, extension_context)
+
+    def getEnergyDerivativeNames(self) -> tuple[str, ...]:
+        names = []
+        for coupling in self._couplings:
+            names.extend(coupling.getEnergyDerivativeNames())
+        return tuple(dict.fromkeys(names))
+
+    def updateExtensionCollectiveVariables(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+    ) -> None:
+        for coupling in self._couplings:
+            coupling.updateExtensionCollectiveVariables(
+                physical_context, extension_context
+            )
+
+    def updateExtensionDerivatives(
+        self,
+        extension_context: mm.Context,
+        derivatives: t.Mapping[str, float],
+    ) -> None:
+        for coupling in self._couplings:
+            coupling.updateExtensionDerivatives(extension_context, derivatives)
 
 
 CouplingSum.registerTag("!openxps.CouplingSum")

@@ -369,5 +369,26 @@ class InnerProductCoupling(Coupling):
                     extension_context, self._derivativeName(name), value
                 )
 
+    def getEnergyDerivativeNames(self) -> tuple[str, ...]:
+        return tuple(sorted(self._dynamic_parameters))
+
+    def updateExtensionCollectiveVariables(
+        self,
+        physical_context: mm.Context,
+        extension_context: mm.Context,
+    ) -> None:
+        # Everything this coupling sends to the extension context is a derivative
+        return
+
+    def updateExtensionDerivatives(
+        self,
+        extension_context: mm.Context,
+        derivatives: t.Mapping[str, float],
+    ) -> None:
+        for name in self._dynamic_parameters:
+            mmswig.Context_setParameter(
+                extension_context, self._derivativeName(name), derivatives[name]
+            )
+
 
 InnerProductCoupling.registerTag("!openxps.InnerProductCoupling")
