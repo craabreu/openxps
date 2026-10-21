@@ -60,6 +60,13 @@ def _restore_integrator(cls: type, xml: str, attributes: dict) -> mm.Integrator:
     return integrator
 
 
+def _copy_without_capture(integrator: mm.Integrator) -> mm.Integrator:
+    """Copy an integrator for use as an extension integrator."""
+    if isinstance(integrator, IntegratorMixin):
+        return integrator._withoutEnergyDerivatives()
+    return deepcopy(integrator)
+
+
 def _decorrelate_random_seed(physical: mm.Integrator, extension: mm.Integrator) -> None:
     if hasattr(physical, "getRandomNumberSeed"):
         seed = physical.getRandomNumberSeed()
@@ -170,6 +177,15 @@ class ExtendedSpaceIntegrator(mm.Integrator, ABC):
         self._coupling = coupling
         self._dynamical_variables = coupling.getDynamicalVariables()
         self._capture_point = None
+        extension = self._extension_integrator
+        if (
+            isinstance(extension, IntegratorMixin)
+            and extension.getEnergyDerivativeNames()
+        ):
+            raise ValueError(
+                "The extension integrator must not compute energy derivatives; pass "
+                "energyDerivatives only to the physical integrator."
+            )
         physical = self._physical_integrator
         if (
             isinstance(physical, IntegratorMixin)
@@ -332,7 +348,7 @@ class LockstepIntegrator(ExtendedSpaceIntegrator):
     ) -> None:
         self._assume_valid = assume_force_first
         if extension_integrator is None:
-            extension_integrator = deepcopy(physical_integrator)
+            extension_integrator = _copy_without_capture(physical_integrator)
             _decorrelate_random_seed(physical_integrator, extension_integrator)
         elif not np.isclose(
             mmswig.Integrator_getStepSize(physical_integrator),
@@ -502,7 +518,7 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         self._assume_valid = assume_symmetric
         physical_step_size = mmswig.Integrator_getStepSize(physical_integrator)
         if extension_integrator is None:
-            extension_integrator = deepcopy(physical_integrator)
+            extension_integrator = _copy_without_capture(physical_integrator)
             _decorrelate_random_seed(physical_integrator, extension_integrator)
             extension_step_size = physical_step_size / 2
             extension_integrator.setStepSize(extension_step_size)

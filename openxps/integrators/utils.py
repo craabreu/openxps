@@ -9,6 +9,8 @@
 
 import textwrap
 import typing as t
+import xml.etree.ElementTree as ET
+from copy import deepcopy
 
 import openmm as mm
 from cvpack.units import Quantity
@@ -29,7 +31,7 @@ class IntegratorMixin:
     """A mixin for integrators that provides extra functionality."""
 
     _forceFirst: bool = False
-    _energy_derivatives: tuple[str, ...] = ()
+    _energy_derivatives: tuple[str, ...] | None = None
 
     def __repr__(self) -> str:
         """Return a human-readable version of each integrator step."""
@@ -158,7 +160,48 @@ class IntegratorMixin:
         tuple[str, ...]
             The names given as ``energyDerivatives`` at construction.
         """
+        if self._energy_derivatives is None:
+            # Lost if OpenMM unpickled the integrator, which keeps only its XML
+            self._energy_derivatives = self._readEnergyDerivatives()
         return self._energy_derivatives
+
+    def _readEnergyDerivatives(self) -> tuple[str, ...]:
+        """Recover the captured parameters from the computation steps."""
+        prefix = "deriv(energy, "
+        names = {}
+        for index in range(self.getNumComputations()):
+            kind, variable, expression = self.getComputationStep(index)
+            if kind == mm.CustomIntegrator.ComputeGlobal and variable.startswith(
+                CAPTURE_PREFIX
+            ):
+                names[int(variable[len(CAPTURE_PREFIX) :])] = expression[
+                    len(prefix) : -1
+                ]
+        return tuple(names[k] for k in sorted(names))
+
+    def _withoutEnergyDerivatives(self) -> "IntegratorMixin":
+        """Return a copy of the integrator that computes no energy derivatives.
+
+        Computation steps cannot be removed from a :OpenMM:`CustomIntegrator`, so the
+        copy is rebuilt from its XML serialization without the capture steps.
+        """
+        root = ET.fromstring(mm.XmlSerializer.serialize(self))
+        for section, key in (
+            ("GlobalVariables", "name"),
+            ("Computations", "computationVariable"),
+        ):
+            parent = root.find(section)
+            for element in list(parent):
+                if element.get(key, "").startswith(CAPTURE_PREFIX):
+                    parent.remove(element)
+        copy = self.__class__.__new__(self.__class__)
+        copy.this = mm.XmlSerializer.deserialize(
+            ET.tostring(root, encoding="unicode")
+        ).this
+        attributes = {key: value for key, value in vars(self).items() if key != "this"}
+        copy.__dict__.update(deepcopy(attributes))
+        copy._energy_derivatives = ()
+        return copy
 
     def getCapturePoint(self) -> str:
         """Get where in a step the energy derivatives are computed.
@@ -183,7 +226,7 @@ class IntegratorMixin:
         """
         return {
             name: self.getGlobalVariableByName(f"{CAPTURE_PREFIX}{index}")
-            for index, name in enumerate(self._energy_derivatives)
+            for index, name in enumerate(self.getEnergyDerivativeNames())
         }
 
     def _init_energy_derivatives(self, names: t.Iterable[str]) -> None:

@@ -445,3 +445,37 @@ def test_barostat_runs_and_extension_is_current():
     assert np.isfinite(after_step)
     context.synchronize()
     assert extension.getParameter("derivative_with_respect_to_scaling") == after_step
+
+
+@pytest.mark.parametrize(
+    "make",
+    [
+        lambda names: xps.LockstepIntegrator(_ggmt(names)),
+        lambda names: xps.SplitIntegrator(_verlet(2, names)),
+    ],
+    ids=["lockstep", "split"],
+)
+def test_default_extension_integrator_does_not_capture(make):
+    captured = _context(_inner(), make(NAMES))
+    extension = captured.getIntegrator().getExtensionIntegrator()
+    assert _capture_indices(extension) == []
+    assert extension.getEnergyDerivativeNames() == ()
+    assert captured.getIntegrator()._capture_point is not None
+    current = _context(_inner(), make(()))
+    np.testing.assert_allclose(
+        _trajectory(captured), _trajectory(current), rtol=1e-10, atol=1e-12
+    )
+
+
+def test_capturing_extension_integrator_raises():
+    integrator = xps.LockstepIntegrator(_ggmt(), _ggmt(NAMES))
+    with pytest.raises(ValueError, match="extension integrator"):
+        xps.ExtendedSpaceContext(
+            xps.ExtendedSpaceSystem(_system(), _inner()), integrator, REFERENCE
+        )
+
+
+def test_names_survive_standalone_pickle():
+    # OpenMM pickles an integrator as XML only, so the names come from its steps
+    integrator = pickle.loads(pickle.dumps(_verlet(1, ("scaling", "other"))))
+    assert integrator.getEnergyDerivativeNames() == ("scaling", "other")
