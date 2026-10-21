@@ -455,8 +455,14 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
     If the physical integrator is one of the integrators in :mod:`openxps.integrators`
     built with ``energyDerivatives``, the derivatives read by the coupling are taken
     from the force evaluation at the end of its steps instead of a separate
-    evaluation. When the physical integrator takes several substeps, every substep
-    computes the energy and only the last value is used.
+    evaluation. When the physical integrator takes several substeps, only the last
+    substep of a half step computes them.
+
+    The extension system only needs the derivatives before it moves, so when the
+    physical integrator takes the substeps, the extension context is updated after
+    the second half of a step only in the last step of a call to :meth:`step`, for
+    observers. Earlier steps skip that update and, with ``energyDerivatives``, the
+    derivative computation in that half.
 
     Raises
     ------
@@ -577,6 +583,9 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             self._end_integrator = self._physical_integrator
             ratio = extension_step_size / (2 * physical_step_size)
         self._num_substeps = int(np.rint(ratio))
+        self._physical_takes_substeps = (
+            self._end_integrator is self._physical_integrator
+        )
 
     def configure(
         self,
@@ -617,11 +626,38 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
             The number of time steps to advance the simulation.
         """
         step_count = self._physical_context.getStepCount()
-        for _ in range(steps):
-            self._end_integrator.step(self._num_substeps)
-            self._update_middle_context(self._physical_context, self._extension_context)
+        contexts = (self._physical_context, self._extension_context)
+        for i in range(steps):
+            self._substeps(derivatives=True)
+            self._update_middle_context(*contexts)
             self._middle_integrator.step(1)
-            self._update_end_context(self._physical_context, self._extension_context)
-            self._end_integrator.step(self._num_substeps)
-            self._update_middle_context(self._physical_context, self._extension_context)
+            self._update_end_context(*contexts)
+            # After the second half, the extension update only serves observers when
+            # the physical integrator takes the substeps: the next step recomputes
+            # the derivatives before the extension system moves again.
+            final = i == steps - 1 or not self._physical_takes_substeps
+            self._substeps(derivatives=final)
+            if final:
+                self._update_middle_context(*contexts)
         self._physical_context.setStepCount(step_count + steps)
+
+    def _substeps(self, derivatives: bool) -> None:
+        """Advance the integrator with the smaller step size by its substeps.
+
+        When the physical integrator takes the substeps and captures energy
+        derivatives, only the last substep computes them, and none does if they are
+        not needed.
+        """
+        integrator = self._end_integrator
+        count = self._num_substeps
+        if self._capture_point is None or not self._physical_takes_substeps:
+            integrator.step(count)
+            return
+        integrator.setCaptureEnabled(False)
+        if derivatives:
+            if count > 1:
+                integrator.step(count - 1)
+            integrator.setCaptureEnabled(True)
+            integrator.step(1)
+        else:
+            integrator.step(count)

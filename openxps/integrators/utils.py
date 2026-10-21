@@ -23,6 +23,7 @@ BLOCK_END = 8
 
 #: Prefix of the global variables that hold captured energy derivatives.
 CAPTURE_PREFIX = "xpsEnergyDerivative"
+CAPTURE_FLAG = "xpsCaptureEnergyDerivatives"
 
 T = t.TypeVar("T")
 
@@ -186,14 +187,25 @@ class IntegratorMixin:
         copy is rebuilt from its XML serialization without the capture steps.
         """
         root = ET.fromstring(mm.XmlSerializer.serialize(self))
-        for section, key in (
-            ("GlobalVariables", "name"),
-            ("Computations", "computationVariable"),
-        ):
-            parent = root.find(section)
-            for element in list(parent):
-                if element.get(key, "").startswith(CAPTURE_PREFIX):
-                    parent.remove(element)
+        variables = root.find("GlobalVariables")
+        for element in list(variables):
+            name = element.get("name", "")
+            if name.startswith(CAPTURE_PREFIX) or name == CAPTURE_FLAG:
+                variables.remove(element)
+        computations = root.find("Computations")
+        in_block = False
+        for element in list(computations):
+            if element.get("computationExpression", "").startswith(CAPTURE_FLAG):
+                in_block = True  # the if block that holds the capture steps
+            elif element.get("computationVariable", "").startswith(CAPTURE_PREFIX):
+                pass  # a capture step
+            elif in_block and element.get("computationType") == str(
+                mm.CustomIntegrator.BlockEnd
+            ):
+                in_block = False
+            else:
+                continue
+            computations.remove(element)
         copy = self.__class__.__new__(self.__class__)
         copy.this = mm.XmlSerializer.deserialize(
             ET.tostring(root, encoding="unicode")
@@ -229,6 +241,41 @@ class IntegratorMixin:
             for index, name in enumerate(self.getEnergyDerivativeNames())
         }
 
+    def isCaptureEnabled(self) -> bool:
+        """Whether the steps compute the energy derivatives.
+
+        Returns
+        -------
+        bool
+            False if the integrator was built without ``energyDerivatives`` or
+            :meth:`setCaptureEnabled` turned the computation off.
+        """
+        return bool(self.getEnergyDerivativeNames()) and (
+            self.getGlobalVariableByName(CAPTURE_FLAG) != 0
+        )
+
+    def setCaptureEnabled(self, enabled: bool) -> None:
+        """Turn the computation of the energy derivatives on or off.
+
+        While it is off, the steps skip the derivative computations, so that OpenMM
+        evaluates the forces alone, and :meth:`getCapturedDerivatives` keeps returning
+        the last values computed. :class:`~openxps.SplitIntegrator` uses this to
+        compute the derivatives in the last of the substeps of a half step only.
+
+        Parameters
+        ----------
+        enabled
+            Whether the steps compute the energy derivatives.
+
+        Raises
+        ------
+        ValueError
+            If the integrator was built without ``energyDerivatives``.
+        """
+        if not self.getEnergyDerivativeNames():
+            raise ValueError("The integrator was built without energyDerivatives.")
+        self.setGlobalVariableByName(CAPTURE_FLAG, 1.0 if enabled else 0.0)
+
     def _init_energy_derivatives(self, names: t.Iterable[str]) -> None:
         self._energy_derivatives = tuple(names)
 
@@ -239,13 +286,20 @@ class IntegratorMixin:
         ``"start"`` and, with ``"end"``, after its last position update and position
         constraint and before its last use of ``f``, so that OpenMM computes the
         energy and the forces in a single evaluation.
+
+        The computations sit in an if block on a global variable that
+        :meth:`setCaptureEnabled` controls. When the block is skipped, OpenMM does not
+        compute the energy.
         """
-        if point != self.getCapturePoint():
+        if point != self.getCapturePoint() or not self._energy_derivatives:
             return
+        self.addGlobalVariable(CAPTURE_FLAG, 1)
+        self.beginIfBlock(f"{CAPTURE_FLAG} > 0.5")
         for index, name in enumerate(self._energy_derivatives):
             variable = f"{CAPTURE_PREFIX}{index}"
             self.addGlobalVariable(variable, 0)
             self.addComputeGlobal(variable, f"deriv(energy, {name})")
+        self.endBlock()
 
 
 def add_property(property: str, unit: mmunit.Unit) -> t.Callable[[type[T]], type[T]]:

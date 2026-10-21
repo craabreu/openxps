@@ -8,9 +8,17 @@
   each step. With `energyDerivatives=coupling.getEnergyDerivativeNames()` as the
   physical integrator of a `LockstepIntegrator` or `SplitIntegrator`, an
   `InnerProductCoupling` no longer evaluates its forces a second time after each
-  physical step.
+  physical step. The computation can be switched off with `setCaptureEnabled`, and a
+  `SplitIntegrator` whose physical integrator takes substeps does it in the last
+  substep of a half step only.
 - Couplings expose what they send to the extension context as
   `updateExtensionCollectiveVariables` and `updateExtensionDerivatives`.
+
+### Changed
+- When the physical integrator of a `SplitIntegrator` takes the substeps, the
+  extension context is updated after the second half of a step only in the last step
+  of a call to `step`. The update only serves observers, since the next step
+  recomputes the derivatives before the extension system moves again.
 
 ### Fixed
 - `InnerProductCoupling` works with forces that compute parameter derivatives only

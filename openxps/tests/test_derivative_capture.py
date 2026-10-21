@@ -14,7 +14,7 @@ from openmm import unit as mmunit
 
 import openxps as xps
 from openxps.bounds import NoBounds, ReflectiveBounds
-from openxps.integrators.utils import CAPTURE_PREFIX
+from openxps.integrators.utils import CAPTURE_FLAG, CAPTURE_PREFIX
 
 REFERENCE = mm.Platform.getPlatformByName("Reference")
 DIMENSIONLESS = mmunit.dimensionless
@@ -206,12 +206,25 @@ def _uses_forces(expression):
     return re.search(r"\bf\b", expression) is not None
 
 
+def _assert_capture_block(integrator):
+    """Capture steps sit alone in an if block on the capture flag."""
+    steps = _steps(integrator)
+    indices = _capture_indices(integrator)
+    assert indices == list(range(indices[0], indices[-1] + 1))
+    assert tuple(steps[indices[0] - 1]) == (
+        mm.CustomIntegrator.IfBlockStart,
+        "",
+        f"{CAPTURE_FLAG} > 0.5",
+    )
+    assert steps[indices[-1] + 1][0] == mm.CustomIntegrator.BlockEnd
+
+
 def _assert_capture_point(integrator):
     """Capture steps must share a force evaluation the integrator already does."""
     steps = _steps(integrator)
     first = _capture_indices(integrator)[0]
     if integrator.getCapturePoint() == "start":
-        assert first == 1
+        assert first == 2
         assert steps[0][0] == mm.CustomIntegrator.UpdateContextState
     else:
         later = steps[first:]
@@ -235,7 +248,8 @@ def test_capture_steps_share_a_force_evaluation(name):
     plain = INTEGRATORS[name]()
     integrator = INTEGRATORS[name](["scaling", "other"])
     assert integrator.getEnergyDerivativeNames() == ("scaling", "other")
-    assert integrator.getNumComputations() == plain.getNumComputations() + 2
+    # The two capture steps and the if block around them
+    assert integrator.getNumComputations() == plain.getNumComputations() + 4
     assert [_steps(integrator)[i][2] for i in _capture_indices(integrator)] == [
         "deriv(energy, scaling)",
         "deriv(energy, other)",
@@ -244,6 +258,47 @@ def test_capture_steps_share_a_force_evaluation(name):
         "start" if integrator.isForceFirst() else "end"
     )
     _assert_capture_point(integrator)
+    _assert_capture_block(integrator)
+    assert integrator.isCaptureEnabled()
+
+
+@pytest.mark.parametrize("name", list(INTEGRATORS))
+def test_disabled_capture_keeps_the_values(name):
+    """With capture disabled, a step evaluates no derivatives and keeps the old ones."""
+    system = _system()
+    system.addForce(_bond_force())
+    integrator = INTEGRATORS[name](["scaling"])
+    integrator.setRandomNumberSeed(1)
+    context = mm.Context(system, integrator, REFERENCE)
+    integrator.registerWithSystem(system, False)
+    context.setPositions(POSITIONS)
+    context.setVelocities(VELOCITIES)
+
+    def derivative():
+        state = context.getState(getEnergy=True, getParameterDerivatives=True)
+        return state.getEnergyParameterDerivatives()["scaling"]
+
+    integrator.step(3)
+    captured = integrator.getCapturedDerivatives()
+    integrator.setCaptureEnabled(False)
+    assert not integrator.isCaptureEnabled()
+    integrator.step(2)
+    assert integrator.getCapturedDerivatives() == captured
+    assert derivative() != pytest.approx(captured["scaling"])
+    integrator.setCaptureEnabled(True)
+    assert integrator.isCaptureEnabled()
+    before = derivative()
+    integrator.step(1)
+    after = derivative()
+    expected = before if integrator.getCapturePoint() == "start" else after
+    assert integrator.getCapturedDerivatives() == pytest.approx({"scaling": expected})
+
+
+def test_capture_control_without_the_option():
+    integrator = INTEGRATORS["SymmetricVerlet"]()
+    assert not integrator.isCaptureEnabled()
+    with pytest.raises(ValueError, match="energyDerivatives"):
+        integrator.setCaptureEnabled(False)
 
 
 @pytest.mark.parametrize("name", list(INTEGRATORS))
@@ -401,13 +456,61 @@ def test_split_rejects_start_capture():
         )
 
 
-def test_extension_context_is_current_after_step():
-    context = _context(_inner(), CASES["lockstep-start"](NAMES))
+@pytest.mark.parametrize("case", list(CASES))
+@pytest.mark.parametrize("names", [NAMES, ()], ids=["capture", "getstate"])
+def test_extension_context_is_current_after_step(case, names):
+    context = _context(_inner(), CASES[case](names))
     context.getIntegrator().step(7)
     extension = context.getExtensionContext()
     after_step = extension.getParameter("derivative_with_respect_to_scaling")
     context.synchronize()
     assert extension.getParameter("derivative_with_respect_to_scaling") == after_step
+
+
+def _counting_verlet(step_size):
+    """A capturing integrator that counts the substeps in which capture was enabled."""
+    integrator = _verlet(step_size, NAMES)
+    integrator.addGlobalVariable("captures", 0)
+    integrator.addComputeGlobal("captures", f"captures + {CAPTURE_FLAG}")
+    return integrator
+
+
+@pytest.mark.parametrize(
+    "make, expected",
+    [
+        (lambda p: xps.LockstepIntegrator(p, _ggmt(), assume_force_first=True), 3),
+        (lambda p: xps.SplitIntegrator(p, _verlet(0.5)), 3),
+        (lambda p: xps.SplitIntegrator(p, _verlet(2)), 4),
+        (lambda p: xps.SplitIntegrator(p, _verlet(4)), 4),
+    ],
+    ids=[
+        "lockstep",
+        "split-physical-middle",
+        "split-one-substep",
+        "split-two-substeps",
+    ],
+)
+def test_split_captures_once_per_half_step(make, expected):
+    """A physical integrator taking substeps captures in the last substep of the first
+    half of every step and of the second half of the last step only."""
+    physical = _counting_verlet(1)
+    context = _context(_inner(), make(physical))
+    context.getIntegrator().step(3)
+    assert physical.getGlobalVariableByName("captures") == expected
+    assert physical.isCaptureEnabled()
+
+
+def test_split_defers_the_observer_update():
+    """On the getState path, the extension update after the second half of a step is
+    done once per call, as the next step recomputes it before the extension moves."""
+    coupling = _inner()
+    calls = []
+    update = coupling.updateExtensionContext
+    coupling.updateExtensionContext = lambda *args: calls.append(update(*args))
+    context = _context(coupling, xps.SplitIntegrator(_verlet(1), _verlet(4)))
+    calls.clear()  # the context synchronizes when created
+    context.getIntegrator().step(3)
+    assert len(calls) == 4
 
 
 def test_step_zero():
@@ -460,6 +563,13 @@ def test_default_extension_integrator_does_not_capture(make):
     extension = captured.getIntegrator().getExtensionIntegrator()
     assert _capture_indices(extension) == []
     assert extension.getEnergyDerivativeNames() == ()
+    assert not extension.isCaptureEnabled()
+    blocks = (mm.CustomIntegrator.IfBlockStart, mm.CustomIntegrator.BlockEnd)
+    assert not any(kind in blocks for kind, _, _ in _steps(extension))
+    physical = captured.getIntegrator().getPhysicalIntegrator()
+    # The if block (2 steps, 1 variable) and one capture step and variable per name
+    assert extension.getNumComputations() == physical.getNumComputations() - 3
+    assert extension.getNumGlobalVariables() == physical.getNumGlobalVariables() - 2
     assert captured.getIntegrator()._capture_point is not None
     current = _context(_inner(), make(()))
     np.testing.assert_allclose(
