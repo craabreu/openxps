@@ -82,9 +82,9 @@ class ExtendedSpaceOPES(openmm_opes.OPES):
 
     A bias potential is applied to dynamical variables of an
     :class:`~openxps.ExtendedSpaceSystem` to enhance the sampling of the physical
-    coordinates coupled to them. This is :OpenMMOPES:`opes` acting on the extension
-    system: OPES and OPES-explore (``exploreMode=True``), multiple walkers and all
-    other options are those of openmm-opes, documented there.
+    coordinates coupled to them. This is :OpenMMOPES:`OPES <opes>` acting on the
+    extension system: OPES and OPES-explore (``exploreMode=True``), multiple walkers
+    and all other options are those of openmm-opes, documented there.
 
     Parameters
     ----------
@@ -99,7 +99,7 @@ class ExtendedSpaceOPES(openmm_opes.OPES):
         :class:`~openxps.bounds.NoBounds` are rejected, since the bias is stored on
         a finite grid. Periodic and reflective variables cannot be mixed.
     **kwargs
-        The remaining arguments of :OpenMMOPES:`opes` (``temperature``,
+        The remaining arguments of :OpenMMOPES:`OPES <opes>` (``temperature``,
         ``barrier``, ``frequency``, ``varianceFrequency``, ...), except ``bounded``,
         which follows from the variables' bounds.
 
@@ -137,14 +137,14 @@ class ExtendedSpaceOPES(openmm_opes.OPES):
     ...     frequency=100,
     ...     varianceFrequency=None,
     ... )
+    >>> integrator = openmm.LangevinMiddleIntegrator(
+    ...     300 * unit.kelvin, 1 / unit.picosecond, 2 * unit.femtosecond
+    ... )
+    >>> integrator.setRandomNumberSeed(1234)
     >>> simulation = xps.ExtendedSpaceSimulation(
     ...     model.topology,
     ...     system,
-    ...     xps.LockstepIntegrator(
-    ...         openmm.LangevinMiddleIntegrator(
-    ...             300 * unit.kelvin, 1 / unit.picosecond, 2 * unit.femtosecond
-    ...         )
-    ...     ),
+    ...     xps.LockstepIntegrator(integrator),
     ...     openmm.Platform.getPlatformByName("Reference"),
     ... )
     >>> context = simulation.context
@@ -181,7 +181,7 @@ class ExtendedSpaceOPES(openmm_opes.OPES):
     def stepTogether(simulation, samplers, steps: int) -> None:
         """Advance a simulation biased by several extended-space samplers at once.
 
-        See :OpenMMOPES:`opes`. The samplers may be :class:`ExtendedSpaceOPES` or
+        See :OpenMMOPES:`OPES <opes>`. The samplers may be :class:`ExtendedSpaceOPES` or
         :class:`ExtendedSpaceCombinedOPES` objects acting on the same extension
         system.
         """
@@ -203,9 +203,9 @@ class ExtendedSpaceOPES(openmm_opes.OPES):
 class ExtendedSpaceCombinedOPES(openmm_opes.CombinedOPES):
     """OPES and OPES-explore combined (OPES_COM) on dynamical variables.
 
-    This is :OpenMMOPES:`combined-opes` acting on the extension system of an
-    :class:`~openxps.ExtendedSpaceSystem`: both components deposit kernels on the
-    same dynamical variables, and the total bias is their sum. See
+    This is :OpenMMOPES:`CombinedOPES <combined-opes>` acting on the extension
+    system of an :class:`~openxps.ExtendedSpaceSystem`: both components deposit
+    kernels on the same dynamical variables, and the total bias is their sum. See
     :class:`ExtendedSpaceOPES` for how the variables are handled; the same notes
     on kernels and ``extraBias`` apply.
 
@@ -219,9 +219,10 @@ class ExtendedSpaceCombinedOPES(openmm_opes.CombinedOPES):
         The dynamical variables to bias and their kernel widths, as
         :class:`~openxps.ExtendedSpaceBiasVariable` objects.
     **kwargs
-        The remaining arguments of :OpenMMOPES:`combined-opes` (``temperature``,
-        ``barrier``, ``exploreBarrier``, ``frequency``, ``varianceFrequency``, ...),
-        except ``bounded``, which follows from the variables' bounds.
+        The remaining arguments of :OpenMMOPES:`CombinedOPES <combined-opes>`
+        (``temperature``, ``barrier``, ``exploreBarrier``, ``frequency``,
+        ``varianceFrequency``, ...), except ``bounded``, which follows from the
+        variables' bounds.
 
     Example
     -------
@@ -247,14 +248,14 @@ class ExtendedSpaceCombinedOPES(openmm_opes.CombinedOPES):
     ...     frequency=100,
     ...     varianceFrequency=None,
     ... )
+    >>> integrator = openmm.LangevinMiddleIntegrator(
+    ...     300 * unit.kelvin, 1 / unit.picosecond, 2 * unit.femtosecond
+    ... )
+    >>> integrator.setRandomNumberSeed(1234)
     >>> simulation = xps.ExtendedSpaceSimulation(
     ...     model.topology,
     ...     system,
-    ...     xps.LockstepIntegrator(
-    ...         openmm.LangevinMiddleIntegrator(
-    ...             300 * unit.kelvin, 1 / unit.picosecond, 2 * unit.femtosecond
-    ...         )
-    ...     ),
+    ...     xps.LockstepIntegrator(integrator),
     ...     openmm.Platform.getPlatformByName("Reference"),
     ... )
     >>> context = simulation.context

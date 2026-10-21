@@ -72,9 +72,12 @@ class ExtendedSpaceBiasVariable(Serializable):
     """
     A dynamical variable augmented with a bias kernel.
 
-    The kernel shape depends on the bounds of the dynamical variable. It is a von
-    Mises kernel for :class:`PeriodicBounds` and a Gaussian mirrored across both
-    walls for :class:`ReflectiveBounds`.
+    In :class:`ExtendedSpaceMetadynamics`, the kernel shape depends on the bounds of
+    the dynamical variable: a von Mises kernel for :class:`PeriodicBounds` and a
+    Gaussian mirrored across both walls for :class:`ReflectiveBounds`. In
+    :class:`~openxps.ExtendedSpaceOPES` and :class:`~openxps.ExtendedSpaceCombinedOPES`,
+    the kernels are those of openmm-opes, and ``sigma`` is the standard deviation of
+    the unbiased distribution of the variable.
 
     Parameters
     ----------

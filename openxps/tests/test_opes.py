@@ -13,6 +13,7 @@ from openxps.opes import _biasVariables, _extensionContext, _extensionSimulation
 
 REFERENCE = openmm.Platform.getPlatformByName("Reference")
 KELVIN = unit.kelvin
+KJ = unit.kilojoules_per_mole
 MASS = 3 * unit.dalton * (unit.nanometer / unit.radian) ** 2
 
 
@@ -200,6 +201,11 @@ def test_opes_methods_accept_openxps_and_extension_objects():
     sampler.updateContext(context)  # must not raise
     sampler.updateContext(extension)
     assert sampler.getBiasEnergy(context) == sampler.getBiasEnergy(extension)
+    # step and stepTogether accept the converted simulation too, as openmm-opes
+    # passes it around internally
+    sampler.step(_extensionSimulation(simulation), 10)
+    xps.ExtendedSpaceOPES.stepTogether(_extensionSimulation(simulation), [sampler], 10)
+    assert simulation.currentStep == 40
 
 
 class _Replay:
@@ -236,35 +242,47 @@ def test_opes_matches_plain_openmm_opes_on_the_extension_system():
     model, system = _alanine_system(dv)
     plain_extension = openmm.XmlSerializer.clone(system.getExtensionSystem())
     frequency = 10
+    # No kernel merging and a low barrier, so that counts and kernel weights
+    # (which depend on the bias energy at each deposition) both carry information
     sampler = _opes(
         system,
         [xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)],
         frequency=frequency,
+        barrier=5 * unit.kilojoules_per_mole,
+        compressionThreshold=0,
     )
     simulation = _simulation(model, system)
-    values = []
+    values, energies = [], []
     for _ in range(8):
         sampler.step(simulation, frequency)
         (value,) = simulation.context.getDynamicalVariableValues()
         values.append(value.value_in_unit(unit.radian))
+        energies.append(sampler.getBiasEnergy(simulation.context))
 
     bias_variable, bounded = _plain_bias_variable(dv, 18 * unit.degree)
     plain = openmm_opes.OPES(
         plain_extension,
         [bias_variable],
         temperature=300 * KELVIN,
-        barrier=20 * unit.kilojoules_per_mole,
+        barrier=5 * unit.kilojoules_per_mole,
         frequency=frequency,
         varianceFrequency=None,
         bounded=bounded,
+        compressionThreshold=0,
     )
     context = openmm.Context(
         plain_extension, openmm.VerletIntegrator(1 * unit.femtosecond), REFERENCE
     )
     context.setPositions([openmm.Vec3(0, 0, 0)])
-    plain.step(_Replay(context, values, frequency), frequency * len(values))
+    replay = _Replay(context, values, frequency)
+    for energy in energies:
+        plain.step(replay, frequency)
+        assert plain.getBiasEnergy(context).value_in_unit(KJ) == pytest.approx(
+            energy.value_in_unit(KJ), abs=1e-9
+        )
+    assert abs(energies[-1].value_in_unit(unit.kilojoules_per_mole)) > 1e-3
 
-    assert plain.getNumKernels() == sampler.getNumKernels()
+    assert plain.getNumKernels() == sampler.getNumKernels() == len(values)
     np.testing.assert_allclose(plain.getBias(), sampler.getBias(), rtol=1e-10)
     np.testing.assert_allclose(
         plain.getFreeEnergy(), sampler.getFreeEnergy(), rtol=1e-10
@@ -328,30 +346,42 @@ def test_combined_opes_matches_plain_combined_opes():
         system,
         [xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)],
         frequency=frequency,
+        barrier=5 * unit.kilojoules_per_mole,
+        exploreBarrier=4 * unit.kilojoules_per_mole,
+        compressionThreshold=0,
     )
     simulation = _simulation(model, system)
-    values = []
+    values, energies = [], []
     for _ in range(8):
         sampler.step(simulation, frequency)
         (value,) = simulation.context.getDynamicalVariableValues()
         values.append(value.value_in_unit(unit.radian))
+        energies.append(sampler.getComponentBiasEnergies(simulation.context))
     bias_variable, bounded = _plain_bias_variable(dv, 18 * unit.degree)
     plain = openmm_opes.CombinedOPES(
         plain_extension,
         [bias_variable],
         temperature=300 * KELVIN,
-        barrier=20 * unit.kilojoules_per_mole,
-        exploreBarrier=10 * unit.kilojoules_per_mole,
+        barrier=5 * unit.kilojoules_per_mole,
+        exploreBarrier=4 * unit.kilojoules_per_mole,
         frequency=frequency,
         varianceFrequency=None,
         bounded=bounded,
+        compressionThreshold=0,
     )
     context = openmm.Context(
         plain_extension, openmm.VerletIntegrator(1 * unit.femtosecond), REFERENCE
     )
     context.setPositions([openmm.Vec3(0, 0, 0)])
-    plain.step(_Replay(context, values, frequency), frequency * len(values))
-    assert plain.getNumKernels() == sampler.getNumKernels()
+    replay = _Replay(context, values, frequency)
+    for expected in energies:
+        plain.step(replay, frequency)
+        for actual, value in zip(plain.getComponentBiasEnergies(context), expected):
+            assert actual.value_in_unit(KJ) == pytest.approx(
+                value.value_in_unit(KJ), abs=1e-9
+            )
+    assert abs(energies[-1][0].value_in_unit(KJ)) > 1e-3
+    assert plain.getNumKernels() == sampler.getNumKernels() == (8, 8)
     np.testing.assert_allclose(plain.getBias(), sampler.getBias(), rtol=1e-10)
 
 
@@ -364,7 +394,8 @@ def test_samplers_step_together_on_their_own_schedules():
     groups = {opes._force.getForceGroup(), combined._force.getForceGroup()}
     assert len(groups) == 2
     simulation = _simulation(model, system)
-    xps.ExtendedSpaceOPES.stepTogether(simulation, [opes, combined], 60)
+    xps.ExtendedSpaceOPES.stepTogether(simulation, [opes, combined], 40)
+    xps.ExtendedSpaceCombinedOPES.stepTogether(simulation, [opes, combined], 20)
     assert simulation.currentStep == 60
     assert opes.getNumKernels() >= 1
     assert all(n >= 1 for n in combined.getNumKernels())
