@@ -12,6 +12,14 @@
 - Couplings expose what they send to the extension context as
   `updateExtensionCollectiveVariables` and `updateExtensionDerivatives`.
 
+### Fixed
+- `InnerProductCoupling` works with forces that compute parameter derivatives only
+  along with the energy, such as `SlicedNonbondedForce` from openmm-nonbonded-slicing,
+  which gave NaN forces on the dynamical variables (#68).
+- `ForceMatchingRegressor.fit` no longer shows Lightning warnings that don't apply
+  to it, about data loader workers, a missing validation set, SLURM, and Lightning's
+  use of a deprecated PyTorch API (#70).
+
 ## 0.2.0
 
 This release rewrites most of the package, so code written for 0.1.0 needs to be
