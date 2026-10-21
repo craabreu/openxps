@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### New
+- `ExtendedSpaceOPES` and `ExtendedSpaceCombinedOPES` bias dynamical variables with
+  on-the-fly probability enhanced sampling, built on the openmm-opes package the way
+  `ExtendedSpaceMetadynamics` is built on OpenMM's metadynamics. OPES, OPES-explore
+  and their combination (OPES_COM), several samplers stepped together, multiple
+  walkers and checkpoints are those of openmm-opes, now a dependency.
+
 ### Changed
 - When the physical integrator of a `SplitIntegrator` takes the substeps, the
   extension context is updated after the second half of a step only in the last step

@@ -61,6 +61,8 @@ integration of the physical and extension systems.
 * [Lockstep][LockstepIntegrator] and [multiple time-step][SplitIntegrator]
   integration of the two systems, with the thermostats listed above.
 * [Extended phase-space metadynamics][ExtendedSpaceMetadynamics].
+* Extended phase-space OPES, in its [conventional][ExtendedSpaceOPES] and
+  [combined][ExtendedSpaceCombinedOPES] (OPES_COM) forms, built on [openmm-opes].
 * [`ForceMatchingRegressor`][ForceMatchingRegressor], which fits free-energy surfaces
   to mean forces with radial basis functions.
 * [`ExtensionWriter`][ExtensionWriter], which reports extension-system data through
@@ -208,6 +210,9 @@ Copyright (c) 2024-2026 [C. Abreu](https://github.com/craabreu)
 [LockstepIntegrator]: https://craabreu.github.io/openxps/latest/api/LockstepIntegrator.html
 [SplitIntegrator]: https://craabreu.github.io/openxps/latest/api/SplitIntegrator.html
 [ExtendedSpaceMetadynamics]: https://craabreu.github.io/openxps/latest/api/ExtendedSpaceMetadynamics.html
+[ExtendedSpaceOPES]: https://craabreu.github.io/openxps/latest/api/ExtendedSpaceOPES.html
+[ExtendedSpaceCombinedOPES]: https://craabreu.github.io/openxps/latest/api/ExtendedSpaceCombinedOPES.html
+[openmm-opes]: https://craabreu.github.io/openmm-opes/
 [ForceMatchingRegressor]: https://craabreu.github.io/openxps/latest/api/ForceMatchingRegressor.html
 [ExtensionWriter]: https://craabreu.github.io/openxps/latest/api/ExtensionWriter.html
 
