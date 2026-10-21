@@ -10,6 +10,11 @@
   halves the force evaluations spent on its energy derivatives.
 
 ### Fixed
+- An integrator from `openxps.integrators` pickled on its own keeps its Python
+  attributes. OpenMM pickles integrators as XML only, so a `CSVRIntegrator` failed at
+  its first step after unpickling and every integrator lost `forceFirst` and its
+  temperature and other properties. A `CSVRIntegrator` now also continues the random
+  stream it had when pickled.
 - `InnerProductCoupling` works with forces that compute parameter derivatives only
   along with the energy, such as `SlicedNonbondedForce` from openmm-nonbonded-slicing,
   which gave NaN forces on the dynamical variables (#68).
