@@ -25,6 +25,7 @@ from .metadynamics import (  # noqa: F401
     ExtendedSpaceBiasVariable,
     ExtendedSpaceMetadynamics,
 )
+from .opes import ExtendedSpaceOPES  # noqa: F401
 from .regression import ForceMatchingRegressor  # noqa: F401
 from .simulation import ExtendedSpaceSimulation  # noqa: F401
 from .system import ExtendedSpaceSystem  # noqa: F401
@@ -44,6 +45,7 @@ __all__ = [
     "DynamicalVariable",
     "ExtendedSpaceMetadynamics",
     "ExtendedSpaceBiasVariable",
+    "ExtendedSpaceOPES",
     "ExtendedSpaceSimulation",
     "LockstepIntegrator",
     "SplitIntegrator",

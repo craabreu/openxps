@@ -3,6 +3,7 @@
 import cvpack
 import numpy as np
 import openmm
+import openmm_opes
 import pytest
 from openmm import app, unit
 from openmmtools import testsystems
@@ -94,3 +95,177 @@ def test_conversions_pass_converted_objects_through():
     extension = _extensionContext(simulation.context)
     assert extension is simulation.context.getExtensionContext()
     assert _extensionContext(extension) is extension
+
+
+def _opes(system, variables, **kwargs):
+    settings = {
+        "temperature": 300 * KELVIN,
+        "barrier": 20 * unit.kilojoules_per_mole,
+        "frequency": 10,
+        "varianceFrequency": None,
+    }
+    settings.update(kwargs)
+    return xps.ExtendedSpaceOPES(system, variables, **settings)
+
+
+def _simulation(model, system, seed=1):
+    integrator = openmm.LangevinMiddleIntegrator(
+        300 * KELVIN, 1 / unit.picosecond, 2 * unit.femtosecond
+    )
+    integrator.setRandomNumberSeed(seed)
+    simulation = xps.ExtendedSpaceSimulation(
+        model.topology, system, xps.LockstepIntegrator(integrator), REFERENCE
+    )
+    simulation.context.setPositions(model.positions)
+    simulation.context.setVelocitiesToTemperature(300 * KELVIN, seed)
+    simulation.context.setDynamicalVariableValues([180 * unit.degree])
+    simulation.context.setDynamicalVariableVelocitiesToTemperature(300 * KELVIN, seed)
+    return simulation
+
+
+def test_opes_adds_one_force_to_the_extension_system():
+    dv = _circular_dv()
+    _, system = _alanine_system(dv)
+    before = system.getExtensionSystem().getNumForces()
+    sampler = _opes(system, [xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)])
+    extension = system.getExtensionSystem()
+    assert extension.getNumForces() == before + 1
+    assert isinstance(sampler, openmm_opes.OPES)
+    assert sampler.variables[0].periodic
+    assert not sampler.bounded
+
+
+def test_opes_rejects_bounded_and_forwards_other_keywords():
+    dv = _reflective_dv()
+    _, system = _alanine_system(dv, cv=cvpack.Distance(0, 1, name="d"))
+    variable = xps.ExtendedSpaceBiasVariable(dv, 0.05 * unit.nanometer)
+    with pytest.raises(TypeError, match="bounded"):
+        _opes(system, [variable], bounded=True)
+    sampler = _opes(system, [variable], exploreMode=True, kernelShape="compact")
+    assert sampler.bounded
+    assert sampler.exploreMode
+    with pytest.raises(ValueError, match="frequency"):
+        _opes(system, [variable], frequency=0)
+
+
+def test_opes_rejects_mixed_periodicity():
+    phi0, s = _circular_dv(), _reflective_dv()
+    model = testsystems.AlanineDipeptideVacuum()
+    coupling = xps.HarmonicCoupling(
+        cvpack.Torsion(6, 8, 14, 16, name="phi"),
+        phi0,
+        1000 * unit.kilojoules_per_mole / unit.radian**2,
+    ) + xps.HarmonicCoupling(
+        cvpack.Distance(0, 1, name="d"),
+        s,
+        1000 * unit.kilojoules_per_mole / unit.nanometer**2,
+    )
+    system = xps.ExtendedSpaceSystem(model.system, coupling)
+    with pytest.raises(ValueError, match="mixed periodic"):
+        _opes(
+            system,
+            [
+                xps.ExtendedSpaceBiasVariable(phi0, 18 * unit.degree),
+                xps.ExtendedSpaceBiasVariable(s, 0.05 * unit.nanometer),
+            ],
+        )
+
+
+def test_opes_step_and_collective_variables():
+    dv = _circular_dv()
+    model, system = _alanine_system(dv)
+    sampler = _opes(system, [xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)])
+    simulation = _simulation(model, system)
+    sampler.step(simulation, 50)
+    assert simulation.currentStep == 50
+    assert sampler.getNumKernels() >= 1
+    (value,) = sampler.getCollectiveVariables(simulation)
+    (dv_value,) = simulation.context.getDynamicalVariableValues()
+    assert value == pytest.approx(dv_value.value_in_unit(unit.radian), abs=1e-6)
+    assert sampler.getFreeEnergy().shape == (sampler.variables[0].gridWidth,)
+
+
+def test_opes_methods_accept_openxps_and_extension_objects():
+    dv = _circular_dv()
+    model, system = _alanine_system(dv)
+    sampler = _opes(system, [xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)])
+    simulation = _simulation(model, system)
+    sampler.step(simulation, 20)
+    context = simulation.context
+    extension = context.getExtensionContext()
+    assert sampler.getBiasEnergy(context) == sampler.getBiasEnergy(extension)
+    assert sampler.getCollectiveVariables(simulation) == sampler.getCollectiveVariables(
+        _extensionSimulation(simulation)
+    )
+    sampler.updateContext(context)  # must not raise
+    sampler.updateContext(extension)
+    assert sampler.getBiasEnergy(context) == sampler.getBiasEnergy(extension)
+
+
+class _Replay:
+    """A stand-alone 'simulation' of an extension system that replays recorded values.
+
+    openmm-opes needs only ``context``, ``currentStep`` and ``step``.
+    """
+
+    def __init__(self, context, values, frequency):
+        self.context = context
+        self.currentStep = 0
+        self._values = values
+        self._frequency = frequency
+
+    def step(self, steps):
+        self.currentStep += steps
+        if self.currentStep % self._frequency == 0:
+            value = self._values[self.currentStep // self._frequency - 1]
+            self.context.setPositions([openmm.Vec3(value, 0, 0)])
+
+
+def _plain_bias_variable(dv, sigma):
+    """The BiasVariable the openxps classes would build, on a throwaway system."""
+    _, system = _alanine_system(dv)
+    (bias_variable,), bounded = _biasVariables(
+        system, [xps.ExtendedSpaceBiasVariable(dv, sigma)]
+    )
+    return bias_variable, bounded
+
+
+def test_opes_matches_plain_openmm_opes_on_the_extension_system():
+    """The adapter deposits what a plain OPES would deposit on the extension system."""
+    dv = _circular_dv()
+    model, system = _alanine_system(dv)
+    plain_extension = openmm.XmlSerializer.clone(system.getExtensionSystem())
+    frequency = 10
+    sampler = _opes(
+        system,
+        [xps.ExtendedSpaceBiasVariable(dv, 18 * unit.degree)],
+        frequency=frequency,
+    )
+    simulation = _simulation(model, system)
+    values = []
+    for _ in range(8):
+        sampler.step(simulation, frequency)
+        (value,) = simulation.context.getDynamicalVariableValues()
+        values.append(value.value_in_unit(unit.radian))
+
+    bias_variable, bounded = _plain_bias_variable(dv, 18 * unit.degree)
+    plain = openmm_opes.OPES(
+        plain_extension,
+        [bias_variable],
+        temperature=300 * KELVIN,
+        barrier=20 * unit.kilojoules_per_mole,
+        frequency=frequency,
+        varianceFrequency=None,
+        bounded=bounded,
+    )
+    context = openmm.Context(
+        plain_extension, openmm.VerletIntegrator(1 * unit.femtosecond), REFERENCE
+    )
+    context.setPositions([openmm.Vec3(0, 0, 0)])
+    plain.step(_Replay(context, values, frequency), frequency * len(values))
+
+    assert plain.getNumKernels() == sampler.getNumKernels()
+    np.testing.assert_allclose(plain.getBias(), sampler.getBias(), rtol=1e-10)
+    np.testing.assert_allclose(
+        plain.getFreeEnergy(), sampler.getFreeEnergy(), rtol=1e-10
+    )
