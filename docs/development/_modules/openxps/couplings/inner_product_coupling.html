@@ -46,6 +46,7 @@
 
 <span class="sd">"""</span>
 
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
@@ -219,6 +220,7 @@
         <span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span> <span class="o">=</span> <span class="n">parameters</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_force_groups</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_request_energy</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="n">forces</span><span class="p">,</span> <span class="n">dynamical_variables</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getDynamicParameters</span><span class="p">()</span>
 
@@ -233,6 +235,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">_functions</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"functions"</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_parameters</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s2">"parameters"</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_force_groups</span> <span class="o">=</span> <span class="n">state</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">"force_groups"</span><span class="p">,</span> <span class="nb">set</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_request_energy</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">__setstate__</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getDynamicParameters</span><span class="p">()</span>
 
@@ -409,16 +412,34 @@
         <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
         <span class="n">extension_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">derivatives</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getDerivatives</span><span class="p">(</span><span class="n">physical_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_energy</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_request_energy</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="n">math</span><span class="o">.</span><span class="n">isnan</span><span class="p">,</span> <span class="n">derivatives</span><span class="o">.</span><span class="n">values</span><span class="p">())):</span>
+            <span class="c1"># Some forces compute parameter derivatives only along with the energy and</span>
+            <span class="c1"># return NaN otherwise, such as SlicedNonbondedForce from the</span>
+            <span class="c1"># openmm-nonbonded-slicing plugin. Request the energy from now on.</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_request_energy</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">derivatives</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_getDerivatives</span><span class="p">(</span><span class="n">physical_context</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">derivatives</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span>
+                <span class="n">extension_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">value</span>
+            <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_getDerivatives</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">physical_context</span><span class="p">:</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="p">,</span> <span class="n">energy</span><span class="p">:</span> <span class="nb">bool</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]:</span>
         <span class="n">groups</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">&lt;&lt;</span> <span class="n">group</span> <span class="k">for</span> <span class="n">group</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_force_groups</span><span class="p">)</span> <span class="ow">or</span> <span class="o">-</span><span class="mi">1</span>
         <span class="n">state</span> <span class="o">=</span> <span class="n">mm</span><span class="o">.</span><span class="n">Context</span><span class="o">.</span><span class="n">getState</span><span class="p">(</span>
-            <span class="n">physical_context</span><span class="p">,</span> <span class="n">getParameterDerivatives</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span>
+            <span class="n">physical_context</span><span class="p">,</span>
+            <span class="n">getEnergy</span><span class="o">=</span><span class="n">energy</span><span class="p">,</span>
+            <span class="n">getParameterDerivatives</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">getEnergyParameterDerivatives</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span><span class="p">:</span>
-                <span class="n">mmswig</span><span class="o">.</span><span class="n">Context_setParameter</span><span class="p">(</span>
-                    <span class="n">extension_context</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_derivativeName</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="n">value</span>
-                <span class="p">)</span></div>
-</div>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="n">value</span>
+            <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">state</span><span class="o">.</span><span class="n">getEnergyParameterDerivatives</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_dynamic_parameters</span>
+        <span class="p">}</span></div>
 
 
 
@@ -468,7 +489,7 @@
       &#169;2024-2026 C. Abreu.
       
       |
-      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.1</a>
       &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
       
     </div>
