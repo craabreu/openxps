@@ -48,6 +48,7 @@
 <span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">t</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
@@ -246,6 +247,19 @@
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">records</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">columns</span><span class="p">)</span>
 
 
+<span class="c1">#: Lightning warnings that don't apply to fitting a small in-memory data set</span>
+<span class="n">_BENIGN_LIGHTNING_WARNINGS</span> <span class="o">=</span> <span class="p">(</span>
+    <span class="c1"># The data loaders use few workers on purpose: the data are small tensors in memory</span>
+    <span class="sa">r</span><span class="s2">"The '\w+' does not have many workers"</span><span class="p">,</span>
+    <span class="c1"># A validation step is always defined, but validation_fraction=0 means no data</span>
+    <span class="sa">r</span><span class="s2">"You defined a `validation_step` but have no `val_dataloader`"</span><span class="p">,</span>
+    <span class="c1"># Raised on any machine with SLURM installed, even when it is not being used</span>
+    <span class="sa">r</span><span class="s2">"The `srun` command is available on your system but is not used"</span><span class="p">,</span>
+    <span class="c1"># Lightning's own use of an API deprecated by recent PyTorch versions</span>
+    <span class="sa">r</span><span class="s2">"`isinstance\(treespec, LeafSpec\)` is deprecated"</span><span class="p">,</span>
+<span class="p">)</span>
+
+
 <span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">_quiet_lightning</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">"""Silence Lightning's informational log messages."""</span>
@@ -258,6 +272,15 @@
     <span class="k">finally</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">logger</span><span class="p">,</span> <span class="n">level</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">loggers</span><span class="p">,</span> <span class="n">levels</span><span class="p">):</span>
             <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">level</span><span class="p">)</span>
+
+
+<span class="nd">@contextlib</span><span class="o">.</span><span class="n">contextmanager</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">_ignore_benign_lightning_warnings</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">Iterator</span><span class="p">[</span><span class="kc">None</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">"""Ignore Lightning warnings that don't apply to this regressor."""</span>
+    <span class="k">with</span> <span class="n">warnings</span><span class="o">.</span><span class="n">catch_warnings</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">message</span> <span class="ow">in</span> <span class="n">_BENIGN_LIGHTNING_WARNINGS</span><span class="p">:</span>
+            <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">yield</span>
 
 
 <div class="viewcode-block" id="ForceMatchingRegressor">
@@ -472,7 +495,11 @@
         <span class="n">recorder</span> <span class="o">=</span> <span class="n">_LearningCurveRecorder</span><span class="p">()</span>
 
         <span class="n">quiet</span> <span class="o">=</span> <span class="n">contextlib</span><span class="o">.</span><span class="n">nullcontext</span><span class="p">()</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_verbose</span> <span class="k">else</span> <span class="n">_quiet_lightning</span><span class="p">()</span>
-        <span class="k">with</span> <span class="n">quiet</span><span class="p">,</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp_dir</span><span class="p">:</span>
+        <span class="k">with</span> <span class="p">(</span>
+            <span class="n">quiet</span><span class="p">,</span>
+            <span class="n">_ignore_benign_lightning_warnings</span><span class="p">(),</span>
+            <span class="n">tempfile</span><span class="o">.</span><span class="n">TemporaryDirectory</span><span class="p">()</span> <span class="k">as</span> <span class="n">tmp_dir</span><span class="p">,</span>
+        <span class="p">):</span>
             <span class="n">trainer_kwargs</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="s2">"max_epochs"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_num_epochs</span><span class="p">,</span>
                 <span class="s2">"accelerator"</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">_accelerator</span><span class="p">,</span>
