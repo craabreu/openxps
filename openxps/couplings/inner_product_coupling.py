@@ -9,6 +9,7 @@ Inner product coupling.
 
 """
 
+import math
 import typing as t
 
 import cvpack
@@ -180,6 +181,7 @@ class InnerProductCoupling(Coupling):
         ]
         self._parameters = parameters
         self._force_groups = set()
+        self._request_energy = False
         super().__init__(forces, dynamical_variables)
         self._dynamic_parameters = self._getDynamicParameters()
 
@@ -194,6 +196,7 @@ class InnerProductCoupling(Coupling):
         self._functions = state["functions"]
         self._parameters = state["parameters"]
         self._force_groups = state.get("force_groups", set())
+        self._request_energy = False
         super().__setstate__(state)
         self._dynamic_parameters = self._getDynamicParameters()
 
@@ -359,15 +362,33 @@ class InnerProductCoupling(Coupling):
         physical_context: mm.Context,
         extension_context: mm.Context,
     ) -> None:
+        derivatives = self._getDerivatives(physical_context, self._request_energy)
+        if not self._request_energy and any(map(math.isnan, derivatives.values())):
+            # Some forces compute parameter derivatives only along with the energy and
+            # return NaN otherwise, such as SlicedNonbondedForce from the
+            # openmm-nonbonded-slicing plugin. Request the energy from now on.
+            self._request_energy = True
+            derivatives = self._getDerivatives(physical_context, True)
+        for name, value in derivatives.items():
+            mmswig.Context_setParameter(
+                extension_context, self._derivativeName(name), value
+            )
+
+    def _getDerivatives(
+        self, physical_context: mm.Context, energy: bool
+    ) -> dict[str, float]:
         groups = sum(1 << group for group in self._force_groups) or -1
         state = mm.Context.getState(
-            physical_context, getParameterDerivatives=True, groups=groups
+            physical_context,
+            getEnergy=energy,
+            getParameterDerivatives=True,
+            groups=groups,
         )
-        for name, value in state.getEnergyParameterDerivatives().items():
-            if name in self._dynamic_parameters:
-                mmswig.Context_setParameter(
-                    extension_context, self._derivativeName(name), value
-                )
+        return {
+            name: value
+            for name, value in state.getEnergyParameterDerivatives().items()
+            if name in self._dynamic_parameters
+        }
 
 
 InnerProductCoupling.registerTag("!openxps.InnerProductCoupling")
