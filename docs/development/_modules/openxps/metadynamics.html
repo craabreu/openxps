@@ -56,7 +56,7 @@
 <span class="kn">from</span><span class="w"> </span><span class="nn">.bounds</span><span class="w"> </span><span class="kn">import</span> <span class="n">NoBounds</span><span class="p">,</span> <span class="n">PeriodicBounds</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.dynamical_variable</span><span class="w"> </span><span class="kn">import</span> <span class="n">DynamicalVariable</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">.system</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtendedSpaceSystem</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">preprocess_args</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">ExtensionSimulation</span><span class="p">,</span> <span class="n">preprocess_args</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">_von_mises</span><span class="p">(</span><span class="n">displacement</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">period</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
@@ -93,17 +93,6 @@
     <span class="p">)</span>
 
 
-<span class="k">class</span><span class="w"> </span><span class="nc">_SimulationWrapper</span><span class="p">:</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">:</span> <span class="n">mmapp</span><span class="o">.</span><span class="n">Simulation</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_simulation</span> <span class="o">=</span> <span class="n">simulation</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">context</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span><span class="o">.</span><span class="n">getExtensionContext</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">step</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">step</span>
-
-    <span class="nd">@property</span>
-    <span class="k">def</span><span class="w"> </span><span class="nf">currentStep</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_simulation</span><span class="o">.</span><span class="n">currentStep</span>
-
-
 <div class="viewcode-block" id="ExtendedSpaceBiasVariable">
 <a class="viewcode-back" href="../../api/ExtendedSpaceBiasVariable.html#openxps.ExtendedSpaceBiasVariable">[docs]</a>
 <span class="nd">@dataclass</span><span class="p">(</span><span class="n">frozen</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -111,9 +100,12 @@
 <span class="w">    </span><span class="sd">"""</span>
 <span class="sd">    A dynamical variable augmented with a bias kernel.</span>
 
-<span class="sd">    The kernel shape depends on the bounds of the dynamical variable. It is a von</span>
-<span class="sd">    Mises kernel for :class:`PeriodicBounds` and a Gaussian mirrored across both</span>
-<span class="sd">    walls for :class:`ReflectiveBounds`.</span>
+<span class="sd">    In :class:`ExtendedSpaceMetadynamics`, the kernel shape depends on the bounds of</span>
+<span class="sd">    the dynamical variable: a von Mises kernel for :class:`PeriodicBounds` and a</span>
+<span class="sd">    Gaussian mirrored across both walls for :class:`ReflectiveBounds`. In</span>
+<span class="sd">    :class:`~openxps.ExtendedSpaceOPES` and :class:`~openxps.ExtendedSpaceCombinedOPES`,</span>
+<span class="sd">    the kernels are those of openmm-opes, and ``sigma`` is the standard deviation of</span>
+<span class="sd">    the unbiased distribution of the variable.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -330,7 +322,7 @@
 <div class="viewcode-block" id="ExtendedSpaceMetadynamics.step">
 <a class="viewcode-back" href="../../api/ExtendedSpaceMetadynamics.html#openxps.ExtendedSpaceMetadynamics.step">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">step</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">simulation</span><span class="p">,</span> <span class="n">steps</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">_SimulationWrapper</span><span class="p">(</span><span class="n">simulation</span><span class="p">),</span> <span class="n">steps</span><span class="p">)</span></div>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">ExtensionSimulation</span><span class="p">(</span><span class="n">simulation</span><span class="p">),</span> <span class="n">steps</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="ExtendedSpaceMetadynamics.getCollectiveVariables">

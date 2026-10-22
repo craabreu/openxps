@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>ExtendedSpaceCombinedOPES &#8212; OpenXPS dev  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+    <link rel="stylesheet" type="text/css" href="../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../_static/alabaster.css?v=27fed22d" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css?v=572d9513" />
+    <script src="../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=ccdb6887"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="ExtendedSpaceContext" href="ExtendedSpaceContext.html" />
+    <link rel="prev" title="ExtendedSpaceBiasVariable" href="ExtendedSpaceBiasVariable.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <section id="extendedspacecombinedopes">
+<h1>ExtendedSpaceCombinedOPES<a class="headerlink" href="#extendedspacecombinedopes" title="Link to this heading">¶</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceCombinedOPES">
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">openxps.</span></span><span class="sig-name descname"><span class="pre">ExtendedSpaceCombinedOPES</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">system</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">variables</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/opes.html#ExtendedSpaceCombinedOPES"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceCombinedOPES" title="Link to this definition">¶</a></dt>
+<dd><p>OPES and OPES-explore combined (OPES_COM) on dynamical variables.</p>
+<p>This is <a class="extlink-OpenMMOPES reference external" href="https://craabreu.github.io/openmm-opes/latest/api/combined-opes/">CombinedOPES</a> acting on the extension
+system of an <a class="reference internal" href="ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem" title="openxps.ExtendedSpaceSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceSystem</span></code></a>: both components deposit
+kernels on the same dynamical variables, and the total bias is their sum. See
+<a class="reference internal" href="ExtendedSpaceOPES.html#openxps.ExtendedSpaceOPES" title="openxps.ExtendedSpaceOPES"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceOPES</span></code></a> for how the variables are handled; the same notes
+on kernels and <code class="docutils literal notranslate"><span class="pre">extraBias</span></code> apply.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>system</strong> (<a class="reference internal" href="ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem" title="openxps.system.ExtendedSpaceSystem"><em>ExtendedSpaceSystem</em></a>) – The <a class="reference internal" href="ExtendedSpaceSystem.html#openxps.ExtendedSpaceSystem" title="openxps.ExtendedSpaceSystem"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceSystem</span></code></a> to be simulated. The bias force
+is added to its extension system when this object is created, so it must
+be created before the simulation or context that uses the system.</p></li>
+<li><p><strong>variables</strong> (<em>Sequence</em><em>[</em><a class="reference internal" href="ExtendedSpaceBiasVariable.html#openxps.ExtendedSpaceBiasVariable" title="openxps.metadynamics.ExtendedSpaceBiasVariable"><em>ExtendedSpaceBiasVariable</em></a><em>]</em>) – The dynamical variables to bias and their kernel widths, as
+<a class="reference internal" href="ExtendedSpaceBiasVariable.html#openxps.ExtendedSpaceBiasVariable" title="openxps.ExtendedSpaceBiasVariable"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceBiasVariable</span></code></a> objects.</p></li>
+<li><p><strong>**kwargs</strong> – The remaining arguments of <a class="extlink-OpenMMOPES reference external" href="https://craabreu.github.io/openmm-opes/latest/api/combined-opes/">CombinedOPES</a>
+(<code class="docutils literal notranslate"><span class="pre">temperature</span></code>, <code class="docutils literal notranslate"><span class="pre">barrier</span></code>, <code class="docutils literal notranslate"><span class="pre">exploreBarrier</span></code>, <code class="docutils literal notranslate"><span class="pre">frequency</span></code>,
+<code class="docutils literal notranslate"><span class="pre">varianceFrequency</span></code>, …), except <code class="docutils literal notranslate"><span class="pre">bounded</span></code>, which follows from the
+variables’ bounds.</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openxps</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xps</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmm</span><span class="w"> </span><span class="kn">import</span> <span class="n">unit</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">cvpack</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">openmm</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">openmmtools</span><span class="w"> </span><span class="kn">import</span> <span class="n">testsystems</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">model</span> <span class="o">=</span> <span class="n">testsystems</span><span class="o">.</span><span class="n">AlanineDipeptideVacuum</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi</span> <span class="o">=</span> <span class="n">cvpack</span><span class="o">.</span><span class="n">Torsion</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">14</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">"phi"</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">mass</span> <span class="o">=</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">dalton</span><span class="o">*</span><span class="p">(</span><span class="n">unit</span><span class="o">.</span><span class="n">nanometer</span><span class="o">/</span><span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">)</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">phi0</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">DynamicalVariable</span><span class="p">(</span><span class="s2">"phi0"</span><span class="p">,</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="p">,</span> <span class="n">mass</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">CircularBounds</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">kappa</span> <span class="o">=</span> <span class="mi">1000</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">radian</span><span class="o">**</span><span class="mi">2</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">system</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSystem</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">model</span><span class="o">.</span><span class="n">system</span><span class="p">,</span> <span class="n">xps</span><span class="o">.</span><span class="n">HarmonicCoupling</span><span class="p">(</span><span class="n">phi</span><span class="p">,</span> <span class="n">phi0</span><span class="p">,</span> <span class="n">kappa</span><span class="p">)</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">opes</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceCombinedOPES</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">system</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="p">[</span><span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceBiasVariable</span><span class="p">(</span><span class="n">phi0</span><span class="p">,</span> <span class="mi">18</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">degrees</span><span class="p">)],</span>
+<span class="gp">... </span>    <span class="n">temperature</span><span class="o">=</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">barrier</span><span class="o">=</span><span class="mi">20</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">exploreBarrier</span><span class="o">=</span><span class="mi">10</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kilojoules_per_mole</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">frequency</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">varianceFrequency</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span> <span class="o">=</span> <span class="n">openmm</span><span class="o">.</span><span class="n">LangevinMiddleIntegrator</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">unit</span><span class="o">.</span><span class="n">picosecond</span><span class="p">,</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">femtosecond</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">integrator</span><span class="o">.</span><span class="n">setRandomNumberSeed</span><span class="p">(</span><span class="mi">1234</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">simulation</span> <span class="o">=</span> <span class="n">xps</span><span class="o">.</span><span class="n">ExtendedSpaceSimulation</span><span class="p">(</span>
+<span class="gp">... </span>    <span class="n">model</span><span class="o">.</span><span class="n">topology</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">system</span><span class="p">,</span>
+<span class="gp">... </span>    <span class="n">xps</span><span class="o">.</span><span class="n">LockstepIntegrator</span><span class="p">(</span><span class="n">integrator</span><span class="p">),</span>
+<span class="gp">... </span>    <span class="n">openmm</span><span class="o">.</span><span class="n">Platform</span><span class="o">.</span><span class="n">getPlatformByName</span><span class="p">(</span><span class="s2">"Reference"</span><span class="p">),</span>
+<span class="gp">... </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span> <span class="o">=</span> <span class="n">simulation</span><span class="o">.</span><span class="n">context</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setPositions</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">positions</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setVelocitiesToTemperature</span><span class="p">(</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setDynamicalVariableValues</span><span class="p">([</span><span class="mi">180</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">degree</span><span class="p">])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">context</span><span class="o">.</span><span class="n">setDynamicalVariableVelocitiesToTemperature</span><span class="p">(</span><span class="mi">300</span> <span class="o">*</span> <span class="n">unit</span><span class="o">.</span><span class="n">kelvin</span><span class="p">,</span> <span class="mi">1234</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">opes</span><span class="o">.</span><span class="n">step</span><span class="p">(</span><span class="n">simulation</span><span class="p">,</span> <span class="mi">200</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">opes</span><span class="o">.</span><span class="n">getNumKernels</span><span class="p">()</span>  <span class="c1"># each component merged its second kernel</span>
+<span class="go">(1, 1)</span>
+</pre></div>
+</div>
+<p class="rubric">Methods</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceCombinedOPES.getBiasEnergy">
+<span class="sig-name descname"><span class="pre">getBiasEnergy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/opes.html#ExtendedSpaceCombinedOPES.getBiasEnergy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceCombinedOPES.getBiasEnergy" title="Link to this definition">¶</a></dt>
+<dd><p>The total bias energy in an <a class="reference internal" href="ExtendedSpaceContext.html#openxps.ExtendedSpaceContext" title="openxps.ExtendedSpaceContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceContext</span></code></a>.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceCombinedOPES.getCollectiveVariables">
+<span class="sig-name descname"><span class="pre">getCollectiveVariables</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simulation</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/opes.html#ExtendedSpaceCombinedOPES.getCollectiveVariables"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceCombinedOPES.getCollectiveVariables" title="Link to this definition">¶</a></dt>
+<dd><p>Current values of the biased dynamical variables, in MD units.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceCombinedOPES.getComponentBiasEnergies">
+<span class="sig-name descname"><span class="pre">getComponentBiasEnergies</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/opes.html#ExtendedSpaceCombinedOPES.getComponentBiasEnergies"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceCombinedOPES.getComponentBiasEnergies" title="Link to this definition">¶</a></dt>
+<dd><p>The OPES and OPES-explore bias energies in an
+<a class="reference internal" href="ExtendedSpaceContext.html#openxps.ExtendedSpaceContext" title="openxps.ExtendedSpaceContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceContext</span></code></a>.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceCombinedOPES.step">
+<span class="sig-name descname"><span class="pre">step</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/opes.html#ExtendedSpaceCombinedOPES.step"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceCombinedOPES.step" title="Link to this definition">¶</a></dt>
+<dd><p>Advance an <a class="reference internal" href="ExtendedSpaceSimulation.html#openxps.ExtendedSpaceSimulation" title="openxps.ExtendedSpaceSimulation"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceSimulation</span></code></a> by <code class="docutils literal notranslate"><span class="pre">steps</span></code> steps.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceCombinedOPES.stepTogether">
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">stepTogether</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">simulation</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">samplers</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">steps</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#openxps.ExtendedSpaceCombinedOPES.stepTogether" title="Link to this definition">¶</a></dt>
+<dd><p>Advance a simulation biased by several extended-space samplers at once.</p>
+<p>See <a class="extlink-OpenMMOPES reference external" href="https://craabreu.github.io/openmm-opes/latest/api/opes/">OPES</a>. The samplers may be <a class="reference internal" href="ExtendedSpaceOPES.html#openxps.ExtendedSpaceOPES" title="openxps.ExtendedSpaceOPES"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceOPES</span></code></a> or
+<a class="reference internal" href="#openxps.ExtendedSpaceCombinedOPES" title="openxps.ExtendedSpaceCombinedOPES"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceCombinedOPES</span></code></a> objects acting on the same extension
+system.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="openxps.ExtendedSpaceCombinedOPES.updateContext">
+<span class="sig-name descname"><span class="pre">updateContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">context</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/openxps/opes.html#ExtendedSpaceCombinedOPES.updateContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#openxps.ExtendedSpaceCombinedOPES.updateContext" title="Link to this definition">¶</a></dt>
+<dd><p>Push the current biases into an <a class="reference internal" href="ExtendedSpaceContext.html#openxps.ExtendedSpaceContext" title="openxps.ExtendedSpaceContext"><code class="xref py py-class docutils literal notranslate"><span class="pre">ExtendedSpaceContext</span></code></a>.</p>
+<dl class="field-list simple">
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">OpenXPS dev</a></h1>
+
+
+
+
+
+
+
+
+
+
+
+<h3><a href="../index.html">Table of Contents</a></h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../getting_started.html">Getting Started</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="main.html">Core</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="DynamicalVariable.html">DynamicalVariable</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceBiasVariable.html">ExtendedSpaceBiasVariable</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">ExtendedSpaceCombinedOPES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceContext.html">ExtendedSpaceContext</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceMetadynamics.html">ExtendedSpaceMetadynamics</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceOPES.html">ExtendedSpaceOPES</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSimulation.html">ExtendedSpaceSimulation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtendedSpaceSystem.html">ExtendedSpaceSystem</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ExtensionWriter.html">ExtensionWriter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="LockstepIntegrator.html">LockstepIntegrator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="SplitIntegrator.html">SplitIntegrator</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="bounds.html">Bounds</a></li>
+<li class="toctree-l2"><a class="reference internal" href="couplings.html">Couplings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">Integrators</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../references.html">Bibliography</a></li>
+</ul>
+
+<search id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2024-2026 C. Abreu.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.2.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+      |
+      <a href="../_sources/api/ExtendedSpaceCombinedOPES.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>

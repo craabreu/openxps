@@ -1,0 +1,15 @@
+ExtendedSpaceCombinedOPES
+=========================
+
+.. currentmodule:: openxps
+.. autoclass:: ExtendedSpaceCombinedOPES
+    :member-order: alphabetical
+
+    .. rubric:: Methods
+
+    .. automethod:: getBiasEnergy
+    .. automethod:: getCollectiveVariables
+    .. automethod:: getComponentBiasEnergies
+    .. automethod:: step
+    .. automethod:: stepTogether
+    .. automethod:: updateContext

@@ -6,8 +6,10 @@ Core
 
     DynamicalVariable
     ExtendedSpaceBiasVariable
+    ExtendedSpaceCombinedOPES
     ExtendedSpaceContext
     ExtendedSpaceMetadynamics
+    ExtendedSpaceOPES
     ExtendedSpaceSimulation
     ExtendedSpaceSystem
     ExtensionWriter
