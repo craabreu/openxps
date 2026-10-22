@@ -411,6 +411,10 @@ extlinks = {
         "https://craabreu.github.io/cvpack/latest/api/%s.html",
         "cvpack.%s",
     ),
+    "OpenMMOPES": (
+        "https://craabreu.github.io/openmm-opes/latest/api/%s/",
+        "openmm_opes.%s",
+    ),
 }
 
 # Copy button configuration

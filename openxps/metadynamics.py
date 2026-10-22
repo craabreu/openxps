@@ -19,7 +19,7 @@ from openmm import unit as mmunit
 from .bounds import NoBounds, PeriodicBounds
 from .dynamical_variable import DynamicalVariable
 from .system import ExtendedSpaceSystem
-from .utils import preprocess_args
+from .utils import ExtensionSimulation, preprocess_args
 
 
 def _von_mises(displacement: np.ndarray, sigma: float, period: float) -> np.ndarray:
@@ -56,25 +56,17 @@ def _axis_kernel(
     )
 
 
-class _SimulationWrapper:
-    def __init__(self, simulation: mmapp.Simulation):
-        self._simulation = simulation
-        self.context = simulation.context.getExtensionContext()
-        self.step = simulation.step
-
-    @property
-    def currentStep(self):
-        return self._simulation.currentStep
-
-
 @dataclass(frozen=True)
 class ExtendedSpaceBiasVariable(Serializable):
     """
     A dynamical variable augmented with a bias kernel.
 
-    The kernel shape depends on the bounds of the dynamical variable. It is a von
-    Mises kernel for :class:`PeriodicBounds` and a Gaussian mirrored across both
-    walls for :class:`ReflectiveBounds`.
+    In :class:`ExtendedSpaceMetadynamics`, the kernel shape depends on the bounds of
+    the dynamical variable: a von Mises kernel for :class:`PeriodicBounds` and a
+    Gaussian mirrored across both walls for :class:`ReflectiveBounds`. In
+    :class:`~openxps.ExtendedSpaceOPES` and :class:`~openxps.ExtendedSpaceCombinedOPES`,
+    the kernels are those of openmm-opes, and ``sigma`` is the standard deviation of
+    the unbiased distribution of the variable.
 
     Parameters
     ----------
@@ -286,7 +278,7 @@ class ExtendedSpaceMetadynamics(mmapp.Metadynamics):
         self._updateTable()
 
     def step(self, simulation, steps):
-        super().step(_SimulationWrapper(simulation), steps)
+        super().step(ExtensionSimulation(simulation), steps)
 
     def getCollectiveVariables(self, simulation):
         return self._force.getCollectiveVariableValues(

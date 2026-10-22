@@ -336,3 +336,22 @@ class Function(Serializable):
 
 
 Function.registerTag("!openxps.utils.Function")
+
+
+class ExtensionSimulation:
+    """A view of an extended-space simulation that exposes its extension context.
+
+    OpenMM's :class:`~openmm.app.Metadynamics` and openmm-opes's samplers read
+    ``simulation.context``, ``simulation.currentStep`` and call ``simulation.step``;
+    this view hands them the extension context, where the bias lives, while stepping
+    the whole extended-space simulation.
+    """
+
+    def __init__(self, simulation) -> None:
+        self._simulation = simulation
+        self.context = simulation.context.getExtensionContext()
+        self.step = simulation.step
+
+    @property
+    def currentStep(self) -> int:
+        return self._simulation.currentStep

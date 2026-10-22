@@ -19,9 +19,10 @@ requirements:
     - versioningit
     - pip
   run:
-    - python >=3.10
+    - python >=3.11
     - numpy
     - openmm >=8.4
+    - openmm-opes >=0.2.0
     - cvpack
     - pyyaml
     - typing-extensions

@@ -92,6 +92,6 @@ def test_unknown_attribute():
 
 
 def test_declared_python_floor():
-    """PEP 604 annotations at import time require Python >= 3.10."""
+    """openmm-opes requires Python >= 3.11."""
     requires_python = metadata.metadata("openxps")["Requires-Python"]
-    assert requires_python == ">=3.10"
+    assert requires_python == ">=3.11"

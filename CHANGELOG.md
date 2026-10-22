@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### New
+- `ExtendedSpaceOPES` and `ExtendedSpaceCombinedOPES` bias dynamical variables with
+  on-the-fly probability enhanced sampling, built on the openmm-opes package the way
+  `ExtendedSpaceMetadynamics` is built on OpenMM's metadynamics. OPES, OPES-explore
+  and their combination (OPES_COM), several samplers stepped together, multiple
+  walkers and checkpoints are those of openmm-opes, now a dependency. openmm-opes
+  needs Python 3.11, so openxps requires Python 3.11 or newer as well; Python 3.10
+  reached its end of life in October 2026.
+- `ExtendedSpaceSystem` warns when a `CustomNonbondedForce` in the physical system uses
+  a long-range correction and depends on a parameter the coupling changes at every
+  step. OpenMM then recomputes the correction on the CPU at every step, which in a
+  1,500-atom system took longer than the step itself.
+
 ### Changed
 - PyTorch, Lightning and pandas are no longer installed with openxps. Only
   `ForceMatchingRegressor` uses them; install them with `pip install
@@ -12,12 +25,6 @@
   of a call to `step`. The update only serves observers, since the next step redoes
   it before the extension system moves again. With an `InnerProductCoupling`, this
   halves the force evaluations spent on its energy derivatives.
-
-### New
-- `ExtendedSpaceSystem` warns when a `CustomNonbondedForce` in the physical system uses
-  a long-range correction and depends on a parameter the coupling changes at every
-  step. OpenMM then recomputes the correction on the CPU at every step, which in a
-  1,500-atom system took longer than the step itself.
 
 ### Fixed
 - An integrator from `openxps.integrators` pickled on its own keeps its Python
