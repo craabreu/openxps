@@ -387,7 +387,9 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
     ValueError
         If the physical and extension integrators are not symmetric in terms of
         operator splitting, or do not have a step size ratio equal to an even integer
-        number.
+        number. Also raised when a context is created with a coupling that requires
+        a :class:`LockstepIntegrator`, such as an :class:`InnerProductCoupling` with
+        embedded functions.
 
     Example
     -------
@@ -503,6 +505,11 @@ class SplitIntegrator(ExtendedSpaceIntegrator):
         extension_context: mm.Context,
         coupling: Coupling,
     ) -> None:
+        if coupling.requiresLockstep():
+            raise ValueError(
+                "The coupling has embedded functions, which require a "
+                "LockstepIntegrator."
+            )
         super().configure(physical_context, extension_context, coupling)
         if self._middle_integrator is self._physical_integrator:
             self._update_middle_context = self._coupling.updatePhysicalContext

@@ -287,6 +287,7 @@ class ExtendedSpaceContext(mm.Context):
             positions.append(mm.Vec3(value, 0, 0))
         self._extension_context.setPositions(positions)
         self._coupling.updatePhysicalContext(self, self._extension_context)
+        self._coupling.updateExtensionContext(self, self._extension_context)
 
     def getDynamicalVariableValues(self) -> tuple[mmunit.Quantity]:
         """

@@ -46,6 +46,21 @@ class InnerProductCoupling(Coupling):
     such as :class:`SplitIntegrator`, where the derivatives are held fixed during the
     extension substeps.
 
+    The functions :math:`u_i` can also depend on the dynamical variables through
+    scalar functions :math:`f_i({\bf s}), g_i({\bf s}), \ldots` passed as
+    ``embedded_functions``, i.e.,
+
+    .. math::
+
+        U = \sum_{i=1}^n \lambda_i({\bf s})
+            u_i\big({\bf r}, f_i({\bf s}), g_i({\bf s}), \ldots\big)
+
+    The forces on the dynamical variables remain exact, but the derivatives
+    :math:`\partial U / \partial f_i, \partial U / \partial g_i, \ldots` change with
+    :math:`{\bf s}` at fixed :math:`{\bf r}`. They must therefore be refreshed after
+    every step, which only :class:`LockstepIntegrator` does, and the extension
+    potential energy no longer equals the coupling energy.
+
     Functions receive the dynamical variables wrapped into their bounds, so periodic
     and reflective variables enter them with the same values reported by
     :meth:`ExtendedSpaceContext.getDynamicalVariableValues`.
@@ -59,13 +74,21 @@ class InnerProductCoupling(Coupling):
     ----------
     forces
         A sequence of :OpenMM:`Force` objects whose sum depends linearly on a vector of
-        :math:`n` global context parameters.
+        :math:`n` global context parameters, except for those defined as embedded
+        functions.
     dynamical_variables
         The dynamical variables of the extended phase-space system.
     functions
         A dictionary defining global context parameters (keys) as mathematical functions
         (values) of the dynamical variables. It is not necessary to include identity
         functions (i.e., ``key=value``).
+    embedded_functions
+        A dictionary defining global context parameters (keys) that are arguments of
+        the functions :math:`u_i`, rather than coefficients of the inner product, as
+        mathematical functions (values) of the dynamical variables. Their names must
+        differ from those of the prefactor functions, which is not a restriction,
+        since they can have the same expressions. A coupling with embedded functions
+        requires a :class:`LockstepIntegrator`.
     **parameters
         Named parameters that appear in the mathematical expressions.
 
@@ -149,6 +172,7 @@ class InnerProductCoupling(Coupling):
         forces: t.Iterable[mm.Force],
         dynamical_variables: t.Iterable[DynamicalVariable],
         functions: dict[str, str] | None = None,
+        embedded_functions: dict[str, str] | None = None,
         **parameters: mmunit.Quantity,
     ) -> None:
         forces = list(forces)
@@ -179,6 +203,10 @@ class InnerProductCoupling(Coupling):
             Function(name, expression, **parameters)
             for name, expression in (functions or {}).items()
         ]
+        self._embedded_functions = [
+            Function(name, expression, **parameters)
+            for name, expression in (embedded_functions or {}).items()
+        ]
         self._parameters = parameters
         self._force_groups = set()
         self._request_energy = False
@@ -188,28 +216,41 @@ class InnerProductCoupling(Coupling):
     def __getstate__(self) -> dict[str, t.Any]:
         state = super().__getstate__()
         state["functions"] = self._functions
+        state["embedded_functions"] = self._embedded_functions
         state["parameters"] = self._parameters
         state["force_groups"] = self._force_groups
         return state
 
     def __setstate__(self, state: dict[str, t.Any]) -> None:
         self._functions = state["functions"]
+        self._embedded_functions = state.get("embedded_functions", [])
         self._parameters = state["parameters"]
         self._force_groups = state.get("force_groups", set())
         self._request_energy = False
         super().__setstate__(state)
         self._dynamic_parameters = self._getDynamicParameters()
 
+    def _allFunctions(self) -> list[Function]:
+        return self._functions + self._embedded_functions
+
     def _getDynamicParameters(self) -> set[str]:
+        if both := {fn.getName() for fn in self._functions} & {
+            fn.getName() for fn in self._embedded_functions
+        }:
+            raise ValueError(
+                "These parameters are defined as both functions and embedded "
+                "functions: " + ", ".join(sorted(both))
+            )
         all_force_parameters = {
             force.getGlobalParameterName(index)
             for force in self._forces
             for index in range(force.getNumGlobalParameters())
         }
-        function_names = {fn.getName() for fn in self._functions}
-        if self._functions:
+        functions = self._allFunctions()
+        function_names = {fn.getName() for fn in functions}
+        if functions:
             function_variables = set.union(
-                *(fn.getVariables() for fn in self._functions),
+                *(fn.getVariables() for fn in functions),
             )
         else:
             function_variables = set()
@@ -222,7 +263,7 @@ class InnerProductCoupling(Coupling):
 
         all_dvs = {dv.name for dv in self._dynamical_variables}
 
-        for fn in self._functions:
+        for fn in functions:
             if unknown := fn.getVariables() - all_dvs:
                 raise ValueError(
                     f"Function {fn.getName()} depends on names that are neither "
@@ -231,7 +272,7 @@ class InnerProductCoupling(Coupling):
                 )
 
         if functions_missing_dvs := [
-            fn.getName() for fn in self._functions if not (fn.getVariables() & all_dvs)
+            fn.getName() for fn in functions if not (fn.getVariables() & all_dvs)
         ]:
             raise ValueError(
                 "These functions do not depend on any dynamical variables: "
@@ -290,16 +331,18 @@ class InnerProductCoupling(Coupling):
         Returns
         -------
         InnerProductCoupling
-            A coupling with all forces, dynamical variables, functions and
-            parameters of the merged couplings.
+            A coupling with all forces, dynamical variables, functions, embedded
+            functions and parameters of the merged couplings.
 
         Raises
         ------
         ValueError
             If two couplings define the same dynamical variable, function or
-            parameter differently.
+            parameter differently, or a parameter is embedded in one coupling but
+            not in another.
         """
         forces, dvs, functions, parameters = [], {}, {}, {}
+        embedded = {}
         for coupling in couplings:
             forces.extend(coupling.getForces())
             for dv in coupling.getDynamicalVariables():
@@ -308,12 +351,21 @@ class InnerProductCoupling(Coupling):
                         f'The dynamical variable "{dv.name}" has conflicting '
                         "definitions in the couplings."
                     )
-            for fn in coupling._functions:
+            for fn in coupling._allFunctions():
                 name, expression = fn.getName(), fn.getExpression()
                 if functions.setdefault(name, expression) != expression:
                     raise ValueError(
                         f'The function "{name}" has conflicting definitions in the '
                         f"couplings: {functions[name]} != {expression}"
+                    )
+            for name in coupling._dynamic_parameters:
+                is_embedded = any(
+                    fn.getName() == name for fn in coupling._embedded_functions
+                )
+                if embedded.setdefault(name, is_embedded) != is_embedded:
+                    raise ValueError(
+                        f'The parameter "{name}" is embedded in some couplings but '
+                        "not in others."
                     )
             for name, value in coupling._parameters.items():
                 if name in parameters and parameters[name] != value:
@@ -322,7 +374,13 @@ class InnerProductCoupling(Coupling):
                         f"couplings: {parameters[name]} != {value}"
                     )
                 parameters[name] = value
-        return cls(forces, list(dvs.values()), functions, **parameters)
+        return cls(
+            forces,
+            list(dvs.values()),
+            {name: fn for name, fn in functions.items() if not embedded[name]},
+            {name: fn for name, fn in functions.items() if embedded[name]},
+            **parameters,
+        )
 
     @staticmethod
     def _derivativeName(parameter: str) -> str:
@@ -335,7 +393,7 @@ class InnerProductCoupling(Coupling):
         for parameter in self._dynamic_parameters:
             flipped_force.addGlobalParameter(self._derivativeName(parameter), 0.0)
         bounds = {dv.name: dv.bounds for dv in self._dynamical_variables}
-        for fn in self._functions:
+        for fn in self._allFunctions():
             flipped_force.addCollectiveVariable(
                 fn.getName(), fn.createCollectiveVariable(dv_indices, bounds)
             )
@@ -345,6 +403,13 @@ class InnerProductCoupling(Coupling):
                     dv.name, dv.createCollectiveVariable(dv_indices[dv.name])
                 )
         return flipped_force
+
+    def requiresLockstep(self) -> bool:
+        """
+        Whether the coupling requires a :class:`LockstepIntegrator`, which is the case
+        if it has embedded functions.
+        """
+        return bool(self._embedded_functions)
 
     def getForceGroups(self) -> set[int]:
         """
