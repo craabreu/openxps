@@ -14,8 +14,17 @@
   a long-range correction and depends on a parameter the coupling changes at every
   step. OpenMM then recomputes the correction on the CPU at every step, which in a
   1,500-atom system took longer than the step itself.
+- `InnerProductCoupling` takes `embedded_functions`, functions of the dynamical
+  variables that enter the energy terms as arguments rather than as coefficients, as
+  in U = Σᵢ λᵢ(s) uᵢ(r, fᵢ(s), gᵢ(s), …). The forces on the dynamical variables stay
+  exact, but the energy derivatives change with the dynamical variables, so a
+  coupling with embedded functions requires a `LockstepIntegrator` and a
+  `SplitIntegrator` rejects it.
 
 ### Changed
+- `ExtendedSpaceContext.setDynamicalVariableValues` also updates the extension
+  context, which then has the energy derivatives at the new values without a call
+  to `synchronize`.
 - PyTorch, Lightning and pandas are no longer installed with openxps. Only
   `ForceMatchingRegressor` uses them; install them with `pip install
   openxps[regression]` or from conda-forge. `import openxps` no longer loads them,

@@ -161,6 +161,18 @@ class Coupling(Serializable):
         """
         return self._dynamical_variables[index]
 
+    def requiresLockstep(self) -> bool:
+        """Whether the coupling requires a :class:`LockstepIntegrator`.
+
+        Returns
+        -------
+        bool
+            True if the forces on the dynamical variables are only exact right after
+            the contexts are synchronized, so that an operator splitting scheme such
+            as :class:`SplitIntegrator` would apply outdated ones.
+        """
+        return False
+
     def getProtectedParameters(self) -> set[str]:
         """Get parameters of the physical context that should not be manually modified.
 
@@ -416,6 +428,9 @@ class CouplingSum(Coupling):
     def getCouplings(self) -> t.Sequence[Coupling]:
         """Get the couplings included in the summed coupling."""
         return self._couplings
+
+    def requiresLockstep(self) -> bool:
+        return any(coupling.requiresLockstep() for coupling in self._couplings)
 
     def getProtectedParameters(self) -> set[str]:
         return set.union(

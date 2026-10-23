@@ -122,6 +122,36 @@ CASES = {
         lambda: _ipc("lam^2*10*r^2", ["lam"], [_dv("lam")]),
         [0.3],
     ),
+    "nonlinear embedded function": (
+        lambda: _ipc(
+            "scaling*10*r^2*(1+gamma^2) + scaling*exp(-gamma)*r",
+            ["scaling", "gamma"],
+            [_dv("lam")],
+            {"scaling": "(1-cos(pi*lam))/2"},
+            embedded_functions={"gamma": "sin(lam)^2+lam"},
+            pi=math.pi,
+        ),
+        [0.3],
+    ),
+    "nonlinear embedded function with the form of a prefactor": (
+        lambda: _ipc(
+            "a*10*r^2*(1+b^2)",
+            ["a", "b"],
+            [_dv("lam")],
+            {"a": "lam^2"},
+            embedded_functions={"b": "lam^2"},
+        ),
+        [0.3],
+    ),
+    "nonlinear embedded identity": (
+        lambda: _ipc(
+            "gamma*10*r^2*(1+gamma^2)",
+            ["gamma"],
+            [_dv("lam")],
+            embedded_functions={"gamma": "lam"},
+        ),
+        [0.3],
+    ),
     "sum sharing a function": (
         lambda: (
             _ipc("scaling*10*r^2", ["scaling"], [_dv("lam")], {"scaling": "lam^2"})
@@ -373,6 +403,98 @@ def test_force_without_global_parameters_is_rejected():
         xps.InnerProductCoupling([mm.HarmonicBondForce()], [_dv("lam")])
 
 
+def _embedded_coupling():
+    return _ipc(
+        "scaling*10*r^2*(1+gamma^2)",
+        ["scaling", "gamma"],
+        [_dv("lam")],
+        {"scaling": "lam"},
+        embedded_functions={"gamma": "lam^2"},
+    )
+
+
+def test_setting_variables_refreshes_derivatives():
+    """Without an explicit synchronization, the extension force is up to date."""
+    context = _context(_embedded_coupling())
+    context.setDynamicalVariableValues([0.3])
+    state = context.getExtensionContext().getState(getForces=True)
+    force = state.getForces()._value[0][0]
+    h = 1e-5
+    gradient = (
+        _physical_energy(context, [0.3 + h]) - _physical_energy(context, [0.3 - h])
+    ) / (2 * h)
+    assert force == pytest.approx(-gradient, rel=1e-5)
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        _embedded_coupling,
+        lambda: _ipc(
+            "gamma*r^2*(1+gamma^2)",
+            ["gamma"],
+            [_dv("lam")],
+            embedded_functions={"gamma": "lam"},
+        ),
+        lambda: _ipc("a*r", ["a"], [_dv("a")]) + _embedded_coupling(),
+    ],
+    ids=["embedded function", "embedded identity", "sum"],
+)
+def test_embedded_functions_require_lockstep(factory):
+    coupling = factory()
+    assert coupling.requiresLockstep()
+    system = xps.ExtendedSpaceSystem(_two_particles(), coupling)
+    integrator = xps.SplitIntegrator(
+        xps.integrators.SymmetricVerletIntegrator(0.001),
+        xps.integrators.SymmetricVerletIntegrator(0.0005),
+    )
+    with pytest.raises(ValueError, match="require a LockstepIntegrator"):
+        xps.ExtendedSpaceContext(system, integrator, REFERENCE)
+
+
+def test_linear_coupling_does_not_require_lockstep():
+    assert not _ipc("lam^2*10*r^2", ["lam"], [_dv("lam")]).requiresLockstep()
+
+
+def test_embedded_functions_survive_copy_and_yaml():
+    total = _embedded_coupling() + _ipc(
+        "r^2*exp(-delta)", ["delta"], [_dv("lam")], embedded_functions={"delta": "lam"}
+    )
+    for coupling in (
+        total,
+        copy(total),
+        deepcopy(total),
+        yaml.safe_load(yaml.safe_dump(total)),
+    ):
+        (merged,) = coupling.getCouplings()
+        assert merged.requiresLockstep()
+        names = sorted(fn.getName() for fn in merged._embedded_functions)
+        assert names == ["delta", "gamma"]
+
+
+def test_sum_rejects_parameter_embedded_in_only_one_coupling():
+    linear = _ipc("scaling*3*r", ["scaling"], [_dv("lam")], {"scaling": "lam^2"})
+    embedded = _ipc(
+        "r^2*exp(-scaling)",
+        ["scaling"],
+        [_dv("lam")],
+        embedded_functions={"scaling": "lam^2"},
+    )
+    with pytest.raises(ValueError, match='"scaling" is embedded in some'):
+        _ = linear + embedded
+
+
+def test_parameter_both_function_and_embedded_function_is_rejected():
+    with pytest.raises(ValueError, match="both functions and embedded functions"):
+        _ipc(
+            "scaling*r",
+            ["scaling"],
+            [_dv("lam")],
+            {"scaling": "lam"},
+            embedded_functions={"scaling": "lam"},
+        )
+
+
 def test_function_named_as_dynamical_variable_is_rejected():
     with pytest.raises(ValueError, match="same names as dynamical variables"):
         xps.InnerProductCoupling(
@@ -380,7 +502,7 @@ def test_function_named_as_dynamical_variable_is_rejected():
         )
 
 
-def _oscillator_context(integrator, bounds):
+def _oscillator_context(integrator, bounds, embedded=False):
     system = mm.System()
     system.addParticle(10.0)
     system.addParticle(10.0)
@@ -390,9 +512,18 @@ def _oscillator_context(integrator, bounds):
     lam = xps.DynamicalVariable(
         "lam", DIMENSIONLESS, 0.5 * mmunit.dalton * mmunit.nanometer**2, bounds
     )
-    coupling = _ipc(
-        "scaling*50*r^2", ["scaling"], [lam], {"scaling": "(1-cos(3*lam))/2"}
-    )
+    if embedded:
+        coupling = _ipc(
+            "scaling*50*(r-gamma)^2",
+            ["scaling", "gamma"],
+            [lam],
+            {"scaling": "(1-cos(3*lam))/2"},
+            embedded_functions={"gamma": "0.1*lam^2"},
+        )
+    else:
+        coupling = _ipc(
+            "scaling*50*r^2", ["scaling"], [lam], {"scaling": "(1-cos(3*lam))/2"}
+        )
     context = xps.ExtendedSpaceContext(
         xps.ExtendedSpaceSystem(system, coupling), integrator, REFERENCE
     )
@@ -421,7 +552,20 @@ def _oscillator_context(integrator, bounds):
 )
 def test_dynamics_conserve_energy(integrator, bounds):
     """Total energy of physical and extension systems is conserved."""
-    context = _oscillator_context(integrator(), bounds)
+    _assert_energy_conserved(_oscillator_context(integrator(), bounds))
+
+
+@pytest.mark.parametrize(
+    "bounds",
+    [NoBounds(0, 1, DIMENSIONLESS), ReflectiveBounds(0, 1, DIMENSIONLESS)],
+    ids=["unbounded", "reflective"],
+)
+def test_lockstep_dynamics_with_embedded_functions_conserve_energy(bounds):
+    integrator = xps.LockstepIntegrator(mm.VerletIntegrator(0.0005))
+    _assert_energy_conserved(_oscillator_context(integrator, bounds, embedded=True))
+
+
+def _assert_energy_conserved(context):
     extension = context.getExtensionContext()
     energies = []
     for _ in range(50):
